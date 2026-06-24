@@ -1,0 +1,49 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local runtime data. These folders may contain private statements,
+# parsed transactions, SQLite databases, and review files.
+data/*
+output/*
+processed/*
+review_files/*
+inbox/*
+
+!data/.gitkeep
+!output/.gitkeep
+!processed/.gitkeep
+!review_files/.gitkeep
+!inbox/.gitkeep
+
+# Secrets and local configuration
+.env
+.env.*
+*.key
+*.pem
+*.p12
+
+# Databases and local caches
+*.db
+*.sqlite
+*.sqlite3
+*.parquet
+*.pkl
+
+# Statement/source files are sensitive by default.
+*.eml
+*.msg
+*.pdf
+*.html
+*.htm
+*.txt
+*.csv
+*.tsv
+*.xls
+*.xlsx
+
+# Keep dependency metadata trackable even though spreadsheets are ignored.
+!requirements.txt
