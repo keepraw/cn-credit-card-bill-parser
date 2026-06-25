@@ -38,3 +38,12 @@ def test_legacy_xlsx_import_preserves_duplicate_like_rows(tmp_path):
     assert statement.parser_name == "legacy_xlsx"
     assert len(statement.transactions) == 2
     assert statement.transactions[0].description == statement.transactions[1].description
+
+
+def test_legacy_xlsx_future_bill_dates_roll_back_one_year():
+    from datetime import date
+
+    from ccparser.parsers.legacy_xlsx import parse_legacy_bill_date
+
+    assert parse_legacy_bill_date(date(2026, 12, 15), today=date(2026, 6, 25)).isoformat() == "2025-12-15"
+    assert parse_legacy_bill_date(date(2026, 6, 25), today=date(2026, 6, 25)).isoformat() == "2026-06-25"

@@ -1,5 +1,6 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -69,8 +70,8 @@ def parse(context: SourceContext) -> ParsedStatement:
 def parse_row(context: SourceContext, row: dict[str, Any], excel_row_number: int) -> Transaction | None:
     bank = normalize_spaces(str(row.get("银行名称", "")))
     card_last4 = normalize_card(row.get("卡号"))
-    transaction_date = parse_date(row.get("交易日期"))
-    posting_date = parse_date(row.get("入账日期")) or transaction_date
+    transaction_date = parse_legacy_bill_date(row.get("交易日期"))
+    posting_date = parse_legacy_bill_date(row.get("入账日期")) or transaction_date
     description = normalize_spaces(str(row.get("交易详情", "")))
     transaction_currency = normalize_currency(row.get("交易币种"))
     settlement_currency = normalize_currency(row.get("入账币种"))
@@ -129,8 +130,24 @@ def parse_legacy_amount(value: object) -> Decimal | None:
         return value
     return parse_amount(value)
 
+def parse_legacy_bill_date(value: object, today: date | None = None) -> date | None:
+    parsed = parse_date(value)
+    if not parsed:
+        return None
+
+    reference = today or date.today()
+    while parsed > reference:
+        shifted = shift_year(parsed, -1)
+        if not shifted or shifted == parsed:
+            break
+        parsed = shifted
+    return parsed
 
 
-
-
-
+def shift_year(value: date, years: int) -> date | None:
+    try:
+        return value.replace(year=value.year + years)
+    except ValueError:
+        if value.month == 2 and value.day == 29:
+            return date(value.year + years, 2, 28)
+        return None
