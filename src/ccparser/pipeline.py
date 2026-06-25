@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 import re
 
-from .config import DB_PATH, INBOX_DIR, OUTPUT_DIR, PROCESSED_DIR, REVIEW_FILES_DIR, SUPPORTED_SUFFIXES
+from .config import BACKUP_DIR, DB_PATH, INBOX_DIR, OUTPUT_DIR, PROCESSED_DIR, REVIEW_FILES_DIR, SUPPORTED_SUFFIXES
 from .db import Database
 from .dedupe import assign_ids
 from .exporters import export_outputs
@@ -13,105 +13,151 @@ from .extractors import extract_source
 from .models import ReviewItem
 from .parsers.registry import parse_statement
 
+PendingMove = tuple[Path, Path, str | None]
+
 
 def ensure_directories() -> None:
-    for directory in [INBOX_DIR, OUTPUT_DIR, PROCESSED_DIR, REVIEW_FILES_DIR, DB_PATH.parent]:
+    for directory in [INBOX_DIR, OUTPUT_DIR, PROCESSED_DIR, REVIEW_FILES_DIR, DB_PATH.parent, BACKUP_DIR]:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-def run() -> tuple[int, int]:
+def run() -> tuple[int, int, Path | None]:
     ensure_directories()
+    backup_path = create_run_backup()
     db = Database(DB_PATH)
     review_items: list[ReviewItem] = []
+    pending_moves: list[PendingMove] = []
     processed_count = 0
     inserted_count = 0
 
     try:
-        for path in sorted(INBOX_DIR.iterdir()):
-            if not path.is_file() or path.suffix.lower() not in SUPPORTED_SUFFIXES:
-                continue
-            try:
-                source = extract_source(path)
-                if db.file_processed(source.file_hash):
-                    review_items.append(ReviewItem(
-                        reason="duplicate_file",
-                        source_file_name=source.file_name,
-                        source_file_hash=source.file_hash,
-                        detail="SHA256 already exists in database; file skipped.",
-                    ))
-                    move_file(path, PROCESSED_DIR, build_duplicate_name(path, source.file_hash))
+        with db.transaction():
+            for path in sorted(INBOX_DIR.iterdir()):
+                if not path.is_file() or path.suffix.lower() not in SUPPORTED_SUFFIXES:
                     continue
 
-                if not source.text.strip():
-                    review_items.append(ReviewItem(
-                        reason="empty_text",
-                        source_file_name=source.file_name,
-                        source_file_hash=source.file_hash,
-                        detail="No text extracted. If this is a scanned PDF, install optional OCR dependencies.",
-                    ))
-                    move_file(path, REVIEW_FILES_DIR, build_review_name(path, "no_text", source.file_hash))
-                    continue
+                file_review_items: list[ReviewItem] = []
+                file_pending_moves: list[PendingMove] = []
+                file_processed_count = 0
+                file_inserted_count = 0
 
-                statement = parse_statement(source)
-                key = assign_ids(statement)
-                db.upsert_statement(statement, key, source.file_hash, source.file_name, source.source_type)
+                try:
+                    with db.transaction():
+                        source = extract_source(path)
+                        if db.file_processed(source.file_hash):
+                            file_review_items.append(ReviewItem(
+                                reason="duplicate_file",
+                                source_file_name=source.file_name,
+                                source_file_hash=source.file_hash,
+                                detail="SHA256 already exists in database; file skipped.",
+                            ))
+                            file_pending_moves.append((path, PROCESSED_DIR, build_duplicate_name(path, source.file_hash)))
+                            continue
 
-                for warning in statement.warnings:
-                    review_items.append(ReviewItem(
-                        reason=warning,
-                        source_file_name=source.file_name,
-                        source_file_hash=source.file_hash,
-                        bank=statement.bank,
-                        card_last4=statement.card_last4,
-                        statement_key=key,
-                        detail=f"Parser {statement.parser_name} confidence={statement.confidence}",
-                    ))
+                        if not source.text.strip():
+                            file_review_items.append(ReviewItem(
+                                reason="empty_text",
+                                source_file_name=source.file_name,
+                                source_file_hash=source.file_hash,
+                                detail="No text extracted. If this is a scanned PDF, install optional OCR dependencies.",
+                            ))
+                            file_pending_moves.append((path, REVIEW_FILES_DIR, build_review_name(path, "no_text", source.file_hash)))
+                            continue
 
-                for transaction in statement.transactions:
-                    if transaction.confidence < 0.7:
-                        review_items.append(ReviewItem(
-                            reason="low_confidence_transaction",
-                            source_file_name=source.file_name,
-                            source_file_hash=source.file_hash,
-                            bank=transaction.bank,
-                            card_last4=transaction.card_last4,
-                            transaction_id=transaction.transaction_id,
-                            statement_key=transaction.statement_key,
-                            detail=f"confidence={transaction.confidence}",
-                            raw_text=transaction.raw_text,
-                        ))
-                    if db.transaction_exists(transaction.transaction_id):
-                        review_items.append(ReviewItem(
-                            reason="duplicate_transaction",
-                            source_file_name=source.file_name,
-                            source_file_hash=source.file_hash,
-                            bank=transaction.bank,
-                            card_last4=transaction.card_last4,
-                            transaction_id=transaction.transaction_id,
-                            statement_key=transaction.statement_key,
-                            detail="Transaction hash already exists; skipped from formal output.",
-                            raw_text=transaction.raw_text,
-                        ))
-                        continue
-                    db.insert_transaction(transaction)
-                    inserted_count += 1
+                        statement = parse_statement(source)
+                        key = assign_ids(statement)
+                        db.upsert_statement(statement, key, source.file_hash, source.file_name, source.source_type)
 
-                db.mark_file_processed(source.file_hash, source.file_name, source.source_type)
-                move_file(path, PROCESSED_DIR, build_processed_name(path, statement, source.source_type, source.file_hash))
-                processed_count += 1
-            except Exception as exc:
-                review_items.append(ReviewItem(
-                    reason="file_processing_error",
-                    source_file_name=path.name,
-                    source_file_hash="",
-                    detail=str(exc),
-                ))
-                move_file(path, REVIEW_FILES_DIR, build_review_name(path, "error", ""))
+                        for warning in statement.warnings:
+                            file_review_items.append(ReviewItem(
+                                reason=warning,
+                                source_file_name=source.file_name,
+                                source_file_hash=source.file_hash,
+                                bank=statement.bank,
+                                card_last4=statement.card_last4,
+                                statement_key=key,
+                                detail=f"Parser {statement.parser_name} confidence={statement.confidence}",
+                            ))
 
-        export_outputs(OUTPUT_DIR, db.fetch_transactions(), review_items)
-        return processed_count, inserted_count
+                        for transaction in statement.transactions:
+                            if transaction.confidence < 0.7:
+                                file_review_items.append(ReviewItem(
+                                    reason="low_confidence_transaction",
+                                    source_file_name=source.file_name,
+                                    source_file_hash=source.file_hash,
+                                    bank=transaction.bank,
+                                    card_last4=transaction.card_last4,
+                                    transaction_id=transaction.transaction_id,
+                                    statement_key=transaction.statement_key,
+                                    detail=f"confidence={transaction.confidence}",
+                                    raw_text=transaction.raw_text,
+                                ))
+                            if db.transaction_exists(transaction.transaction_id):
+                                file_review_items.append(ReviewItem(
+                                    reason="duplicate_transaction",
+                                    source_file_name=source.file_name,
+                                    source_file_hash=source.file_hash,
+                                    bank=transaction.bank,
+                                    card_last4=transaction.card_last4,
+                                    transaction_id=transaction.transaction_id,
+                                    statement_key=transaction.statement_key,
+                                    detail="Transaction hash already exists; skipped from formal output.",
+                                    raw_text=transaction.raw_text,
+                                ))
+                                continue
+                            db.insert_transaction(transaction)
+                            file_inserted_count += 1
+
+                        db.mark_file_processed(source.file_hash, source.file_name, source.source_type)
+                        file_pending_moves.append((path, PROCESSED_DIR, build_processed_name(path, statement, source.source_type, source.file_hash)))
+                        file_processed_count = 1
+                except Exception as exc:
+                    file_review_items = [ReviewItem(
+                        reason="file_processing_error",
+                        source_file_name=path.name,
+                        source_file_hash="",
+                        detail=str(exc),
+                    )]
+                    file_pending_moves = [(path, REVIEW_FILES_DIR, build_review_name(path, "error", ""))]
+                    file_processed_count = 0
+                    file_inserted_count = 0
+
+                review_items.extend(file_review_items)
+                pending_moves.extend(file_pending_moves)
+                processed_count += file_processed_count
+                inserted_count += file_inserted_count
+
+            export_outputs(OUTPUT_DIR, db.fetch_transactions(), review_items)
+
+        for path, target_dir, new_name in pending_moves:
+            if path.exists():
+                move_file(path, target_dir, new_name)
+        return processed_count, inserted_count, backup_path
     finally:
         db.close()
+
+
+def create_run_backup() -> Path | None:
+    backup_sources = [OUTPUT_DIR, PROCESSED_DIR, REVIEW_FILES_DIR, DB_PATH.parent]
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup_root = BACKUP_DIR / timestamp
+    copied_any = False
+
+    for source_dir in backup_sources:
+        if not source_dir.exists():
+            continue
+        files = [path for path in source_dir.iterdir() if path.is_file() and path.name != ".gitkeep"]
+        if not files:
+            continue
+        target_dir = backup_root / source_dir.name
+        target_dir.mkdir(parents=True, exist_ok=True)
+        for source_path in files:
+            shutil.copy2(source_path, target_dir / source_path.name)
+            copied_any = True
+
+    if not copied_any:
+        return None
+    return backup_root
 
 
 def move_file(path: Path, target_dir: Path, new_name: str | None = None) -> None:
@@ -166,4 +212,3 @@ def original_stem(stem: str) -> str:
     if parts and parts[0] in {"error", "no_text"} and len(parts) >= 4:
         return parts[-1]
     return stem
-

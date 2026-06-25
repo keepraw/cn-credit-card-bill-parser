@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 
@@ -21,9 +21,13 @@ def main() -> None:
         print(f"Format profile written to: {report_path}")
         return
 
-    processed_count, inserted_count = run()
+    processed_count, inserted_count, backup_path = run()
     print(f"Processed files: {processed_count}")
     print(f"Inserted transactions: {inserted_count}")
+    if backup_path:
+        print(f"Backup: {backup_path}")
+    else:
+        print("Backup: no existing runtime files to copy")
     print("Outputs:")
     print(" - output/unified_transactions.xlsx")
     print(" - output/review.xlsx")

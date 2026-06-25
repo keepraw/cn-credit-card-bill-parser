@@ -1,5 +1,7 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
 
 from .models import ReviewItem
@@ -118,20 +120,36 @@ def export_outputs(output_dir: Path, transactions: list[dict[str, object]], revi
         {"item": DESCRIPTION, "value": SUMMARY_NOTE},
     ])
 
-    unified_path = output_dir / "unified_transactions.xlsx"
-    with pd.ExcelWriter(unified_path, engine="openpyxl") as writer:
-        friendly_frame.to_excel(writer, sheet_name=TRANSACTION_SHEET, index=False)
-        unified_frame.to_excel(writer, sheet_name=STANDARD_SHEET, index=False)
-        summary_frame.to_excel(writer, sheet_name=SUMMARY_SHEET, index=False)
-        _format_workbook(writer.book)
-        _hide_columns_by_header(writer.book[STANDARD_SHEET], STANDARD_HIDDEN_COLUMNS)
+    with tempfile.TemporaryDirectory(prefix=".staging-", dir=output_dir) as staging_name:
+        staging_dir = Path(staging_name)
+        unified_path = staging_dir / "unified_transactions.xlsx"
+        review_path = staging_dir / "review.xlsx"
 
-    review_path = output_dir / "review.xlsx"
-    with pd.ExcelWriter(review_path, engine="openpyxl") as writer:
-        _friendly_review(review_frame).to_excel(writer, sheet_name=REVIEW_SHEET, index=False)
-        review_frame.to_excel(writer, sheet_name=STANDARD_SHEET, index=False)
-        _format_workbook(writer.book)
-        _hide_columns_by_header(writer.book[STANDARD_SHEET], REVIEW_HIDDEN_COLUMNS)
+        with pd.ExcelWriter(unified_path, engine="openpyxl") as writer:
+            friendly_frame.to_excel(writer, sheet_name=TRANSACTION_SHEET, index=False)
+            unified_frame.to_excel(writer, sheet_name=STANDARD_SHEET, index=False)
+            summary_frame.to_excel(writer, sheet_name=SUMMARY_SHEET, index=False)
+            _format_workbook(writer.book)
+            _hide_columns_by_header(writer.book[STANDARD_SHEET], STANDARD_HIDDEN_COLUMNS)
+
+        with pd.ExcelWriter(review_path, engine="openpyxl") as writer:
+            _friendly_review(review_frame).to_excel(writer, sheet_name=REVIEW_SHEET, index=False)
+            review_frame.to_excel(writer, sheet_name=STANDARD_SHEET, index=False)
+            _format_workbook(writer.book)
+            _hide_columns_by_header(writer.book[STANDARD_SHEET], REVIEW_HIDDEN_COLUMNS)
+
+        _validate_workbook(unified_path, {
+            TRANSACTION_SHEET: FRIENDLY_COLUMNS,
+            STANDARD_SHEET: UNIFIED_COLUMNS,
+            SUMMARY_SHEET: ["item", "value"],
+        })
+        _validate_workbook(review_path, {
+            REVIEW_SHEET: [REASON, SOURCE_FILE, BANK, CARD_LAST4, DESCRIPTION, RAW_TEXT],
+            STANDARD_SHEET: REVIEW_COLUMNS,
+        })
+
+        os.replace(unified_path, output_dir / "unified_transactions.xlsx")
+        os.replace(review_path, output_dir / "review.xlsx")
 
 
 def _friendly_transactions(frame):
@@ -223,3 +241,22 @@ def _hide_columns_by_header(sheet, headers: set[str]) -> None:
     for cell in sheet[1]:
         if cell.value in headers:
             sheet.column_dimensions[cell.column_letter].hidden = True
+
+
+def _validate_workbook(path: Path, expected_sheets: dict[str, list[str]]) -> None:
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    try:
+        for sheet_name, expected_headers in expected_sheets.items():
+            if sheet_name not in workbook.sheetnames:
+                raise RuntimeError(f"Export validation failed for {path.name}: missing sheet {sheet_name!r}")
+            sheet = workbook[sheet_name]
+            rows = sheet.iter_rows(min_row=1, max_row=1, values_only=True)
+            headers = [value for value in next(rows, ()) if value is not None]
+            missing_headers = [header for header in expected_headers if header not in headers]
+            if missing_headers:
+                joined = ", ".join(str(header) for header in missing_headers)
+                raise RuntimeError(f"Export validation failed for {path.name}/{sheet_name}: missing headers {joined}")
+    finally:
+        workbook.close()

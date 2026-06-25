@@ -1,4 +1,4 @@
-.venv/
+﻿.venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -12,6 +12,7 @@ output/*
 processed/*
 review_files/*
 inbox/*
+backups/*
 
 !data/.gitkeep
 !output/.gitkeep
@@ -47,3 +48,4 @@ inbox/*
 
 # Keep dependency metadata trackable even though spreadsheets are ignored.
 !requirements.txt
+

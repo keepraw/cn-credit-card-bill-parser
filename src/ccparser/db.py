@@ -1,6 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
+from contextlib import contextmanager
 import sqlite3
+from collections.abc import Iterator
 from pathlib import Path
 
 from .models import ParsedStatement, Transaction
@@ -60,9 +62,40 @@ class Database:
         self.connection.row_factory = sqlite3.Row
         self.connection.executescript(SCHEMA)
         self.connection.commit()
+        self._transaction_depth = 0
 
     def close(self) -> None:
         self.connection.close()
+
+    @contextmanager
+    def transaction(self) -> Iterator[None]:
+        if self._transaction_depth > 0:
+            savepoint_name = f"sp_{self._transaction_depth}"
+            self.connection.execute(f"SAVEPOINT {savepoint_name}")
+            self._transaction_depth += 1
+            try:
+                yield
+            except Exception:
+                self.connection.execute(f"ROLLBACK TO {savepoint_name}")
+                self.connection.execute(f"RELEASE {savepoint_name}")
+                raise
+            else:
+                self.connection.execute(f"RELEASE {savepoint_name}")
+            finally:
+                self._transaction_depth -= 1
+            return
+
+        self.connection.execute("BEGIN")
+        self._transaction_depth = 1
+        try:
+            yield
+        except Exception:
+            self.connection.rollback()
+            raise
+        else:
+            self.connection.commit()
+        finally:
+            self._transaction_depth = 0
 
     def file_processed(self, file_hash: str) -> bool:
         row = self.connection.execute(
@@ -76,7 +109,7 @@ class Database:
             "INSERT OR IGNORE INTO processed_files (file_hash, file_name, source_type) VALUES (?, ?, ?)",
             (file_hash, file_name, source_type),
         )
-        self.connection.commit()
+        self._commit_if_needed()
 
     def upsert_statement(self, statement: ParsedStatement, statement_key: str, file_hash: str, file_name: str, source_type: str) -> None:
         self.connection.execute(
@@ -99,7 +132,7 @@ class Database:
             """,
             (statement_key, file_hash, file_name, source_type),
         )
-        self.connection.commit()
+        self._commit_if_needed()
 
     def transaction_exists(self, transaction_id: str) -> bool:
         row = self.connection.execute(
@@ -136,7 +169,7 @@ class Database:
                 transaction.raw_text,
             ),
         )
-        self.connection.commit()
+        self._commit_if_needed()
 
     def fetch_transactions(self) -> list[dict[str, object]]:
         rows = self.connection.execute(
@@ -152,3 +185,8 @@ class Database:
             """
         ).fetchall()
         return [dict(row) for row in rows]
+
+    def _commit_if_needed(self) -> None:
+        if self._transaction_depth == 0:
+            self.connection.commit()
+
