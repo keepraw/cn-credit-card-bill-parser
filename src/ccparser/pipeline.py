@@ -112,7 +112,7 @@ def run() -> tuple[int, int, Path | None]:
                         for transaction in statement.transactions:
                             if transaction.confidence < 0.7:
                                 logger.warning(
-                                    "Low confidence transaction: file=%s transaction_id=%s confidence=%s",
+                                    "Low confidence transaction routed to review: file=%s transaction_id=%s confidence=%s",
                                     source.file_name,
                                     transaction.transaction_id,
                                     transaction.confidence,
@@ -125,9 +125,10 @@ def run() -> tuple[int, int, Path | None]:
                                     card_last4=transaction.card_last4,
                                     transaction_id=transaction.transaction_id,
                                     statement_key=transaction.statement_key,
-                                    detail=f"confidence={transaction.confidence}",
+                                    detail=f"confidence={transaction.confidence}; not inserted into formal transactions",
                                     raw_text=transaction.raw_text,
                                 ))
+                                continue
                             if db.transaction_exists(transaction.transaction_id):
                                 logger.warning(
                                     "Duplicate transaction skipped: file=%s transaction_id=%s",

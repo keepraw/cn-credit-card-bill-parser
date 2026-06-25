@@ -22,6 +22,31 @@ BANK_ALIASES = {
 }
 
 
+NOISE_LINE_KEYWORDS = (
+    "温馨提示",
+    "友情提示",
+    "客服",
+    "客户服务",
+    "积分",
+    "活动",
+    "权益",
+    "广告",
+    "分期",
+    "手续费说明",
+    "利息说明",
+    "声明",
+    "条款",
+    "还款提醒",
+    "最低还款",
+    "到期还款",
+    "如有疑问",
+    "服务热线",
+    "www.",
+    "http://",
+    "https://",
+)
+
+
 def detect_bank(text: str) -> str:
     for bank, aliases in BANK_ALIASES.items():
         if any(alias.lower() in text.lower() for alias in aliases):
@@ -42,6 +67,8 @@ def parse_generic(context: SourceContext, bank: str | None = None, parser_name: 
         if not normalized or _looks_like_header(normalized):
             continue
         if _looks_like_metadata(normalized):
+            continue
+        if _looks_like_noise(normalized):
             continue
         transaction = _parse_line(normalized, context, parsed_bank, card_last4, default_year)
         if transaction:
@@ -76,6 +103,10 @@ def _looks_like_header(line: str) -> bool:
 def _looks_like_metadata(line: str) -> bool:
     metadata_words = ("账单周期", "账单期间", "账期", "到期还款日", "最低还款", "本期应还", "卡号尾号", "信用卡尾号")
     return any(word in line for word in metadata_words)
+
+
+def _looks_like_noise(line: str) -> bool:
+    return any(keyword.lower() in line.lower() for keyword in NOISE_LINE_KEYWORDS)
 
 
 def _parse_line(line: str, context: SourceContext, bank: str, card_last4: str, default_year: int) -> Transaction | None:
@@ -115,7 +146,14 @@ def _parse_parts(parts: list[str], raw_line: str, context: SourceContext, bank: 
     transaction_date = dates[0]
     posting_date = dates[1] if len(dates) > 1 else transaction_date
     currency = detect_currency(raw_line)
-    confidence = 0.82 if card_last4 else 0.68
+    confidence = _transaction_evidence_score(
+        raw_line,
+        has_card=bool(card_last4),
+        structured_columns=True,
+        date_count=len(dates),
+        has_amount=True,
+        description=description,
+    )
 
     return Transaction(
         bank=bank,
@@ -168,10 +206,45 @@ def _parse_free_text(line: str, context: SourceContext, bank: str, card_last4: s
         settlement_amount=amount,
         source_file_name=context.file_name,
         source_file_hash=context.file_hash,
-        confidence=0.65 if card_last4 else 0.55,
+        confidence=_transaction_evidence_score(
+            line,
+            has_card=bool(card_last4),
+            structured_columns=False,
+            date_count=len(date_matches),
+            has_amount=True,
+            description=description,
+        ),
         raw_text=line,
     )
 
 
 def _currency_only(value: str) -> bool:
     return value.upper() in {"CNY", "RMB", "USD", "HKD", "EUR", "JPY", "人民币", "美元", "港币"}
+
+
+def _transaction_evidence_score(
+    line: str,
+    *,
+    has_card: bool,
+    structured_columns: bool,
+    date_count: int,
+    has_amount: bool,
+    description: str,
+) -> float:
+    if _looks_like_noise(line):
+        return 0.2
+
+    score = 0.35
+    if date_count >= 2:
+        score += 0.2
+    elif date_count == 1:
+        score += 0.1
+    if has_amount:
+        score += 0.15
+    if has_card:
+        score += 0.15
+    if structured_columns:
+        score += 0.15
+    if description and description != "未识别交易":
+        score += 0.05
+    return min(score, 0.98)

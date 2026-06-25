@@ -87,6 +87,7 @@ STANDARD_HIDDEN_COLUMNS = {
 
 REVIEW_HIDDEN_COLUMNS = {"source_file_hash", "transaction_id", "statement_key", "raw_text"}
 MAX_EXCEL_TEXT_LENGTH = 1000
+EXCEL_FORMULA_PREFIXES = ("=", "+", "-", "@")
 
 
 def export_outputs(output_dir: Path, transactions: list[dict[str, object]], review_items: list[ReviewItem]) -> None:
@@ -108,7 +109,8 @@ def export_outputs(output_dir: Path, transactions: list[dict[str, object]], revi
             kind="stable",
             na_position="last",
         )
-    friendly_frame = _friendly_transactions(unified_frame)
+    friendly_frame = _escape_excel_formulas(_friendly_transactions(unified_frame))
+    unified_frame = _escape_excel_formulas(unified_frame)
 
     review_frame = pd.DataFrame([item.as_output_row() for item in review_items])
     if review_frame.empty:
@@ -116,12 +118,14 @@ def export_outputs(output_dir: Path, transactions: list[dict[str, object]], revi
     else:
         review_frame = review_frame.reindex(columns=REVIEW_COLUMNS)
         review_frame = _trim_excel_text(review_frame, ["raw_text"])
+    review_frame = _escape_excel_formulas(review_frame)
 
     summary_frame = pd.DataFrame([
         {"item": FORMAL_TRANSACTION_COUNT, "value": len(unified_frame)},
         {"item": REVIEW_ITEM_COUNT, "value": len(review_frame)},
         {"item": DESCRIPTION, "value": SUMMARY_NOTE},
     ])
+    summary_frame = _escape_excel_formulas(summary_frame)
 
     logger.warning("Preparing Excel export: output_dir=%s transactions=%s review_items=%s", output_dir, len(transactions), len(review_items))
     with tempfile.TemporaryDirectory(prefix=".staging-", dir=output_dir) as staging_name:
@@ -184,6 +188,15 @@ def _coerce_output_types(frame):
         if column in frame.columns:
             frame[column] = pd.to_datetime(frame[column], errors="coerce").dt.date
     return frame
+
+
+def _escape_excel_formulas(frame):
+    def escape(value):
+        if isinstance(value, str) and value[:1] in EXCEL_FORMULA_PREFIXES:
+            return "'" + value
+        return value
+
+    return frame.map(escape)
 
 
 def _trim_excel_text(frame, columns: list[str]):

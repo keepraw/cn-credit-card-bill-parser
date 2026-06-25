@@ -51,6 +51,20 @@ CREATE TABLE IF NOT EXISTS transactions (
     raw_text TEXT NOT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    applied_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_statements_period
+ON statements(bank, card_last4, statement_start, statement_end);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_dates
+ON transactions(transaction_date, posting_date);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_bank_card_date
+ON transactions(bank, card_last4, transaction_date);
 """
 
 

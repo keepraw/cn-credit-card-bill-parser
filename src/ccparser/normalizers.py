@@ -62,6 +62,13 @@ def _safe_date(year: int, month: int, day: int) -> date | None:
 
 
 def parse_amount(value: object, description: str = "") -> Decimal | None:
+    amount = parse_amount_raw(value)
+    if amount is None:
+        return None
+    return apply_sign_by_description(amount, description)
+
+
+def parse_amount_raw(value: object) -> Decimal | None:
     if value is None:
         return None
     text = str(value).strip()
@@ -83,9 +90,8 @@ def parse_amount(value: object, description: str = "") -> Decimal | None:
         return None
 
     if negative_by_format or credit_slash:
-        amount = -abs(amount)
-
-    return apply_sign_by_description(amount, description)
+        return -abs(amount)
+    return amount
 
 
 def apply_sign_by_description(amount: Decimal, description: str) -> Decimal:
@@ -95,6 +101,34 @@ def apply_sign_by_description(amount: Decimal, description: str) -> Decimal:
     if any(keyword in desc for keyword in POSITIVE_KEYWORDS):
         return abs(amount)
     return amount
+
+
+def resolve_amount_sign(
+    amount: Decimal,
+    *,
+    direction_field: str = "",
+    section: str = "",
+    raw_text: str = "",
+    description: str = "",
+) -> Decimal:
+    structured_text = normalize_spaces(f"{direction_field} {section}").lower()
+    credit_terms = ("存入", "贷记", "还款", "退款", "退货", "返现", "返还", "入账", "credit", "deposit", "payment", "refund")
+    debit_terms = ("支出", "借记", "消费", "取现", "费用", "debit", "expenditure", "purchase", "cash advance")
+
+    if any(term in structured_text for term in credit_terms):
+        return -abs(amount)
+    if any(term in structured_text for term in debit_terms):
+        return abs(amount)
+
+    raw = str(raw_text or "")
+    if re.search(r"^\s*\(.*\)\s*$", raw) or re.search(r"/\s*C\b", raw, flags=re.IGNORECASE):
+        return -abs(amount)
+    if re.search(r"/\s*D\b", raw, flags=re.IGNORECASE):
+        return abs(amount)
+    if amount < 0:
+        return amount
+
+    return apply_sign_by_description(amount, description)
 
 
 def detect_currency(*values: object) -> str:

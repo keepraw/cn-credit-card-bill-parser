@@ -19,6 +19,16 @@ REQUIRED_COLUMNS = {
     "入账金额",
 }
 
+COLUMN_ALIASES = {
+    "银行": "银行名称",
+    "卡尾号": "卡号",
+    "交易日": "交易日期",
+    "入账日": "入账日期",
+    "说明": "交易详情",
+    "结算币种": "入账币种",
+    "结算金额": "入账金额",
+}
+
 
 def parse(context: SourceContext) -> ParsedStatement:
     try:
@@ -30,6 +40,7 @@ def parse(context: SourceContext) -> ParsedStatement:
         sheet_name = "统一账单" if "统一账单" in workbook.sheet_names else workbook.sheet_names[0]
         frame = pd.read_excel(workbook, sheet_name=sheet_name)
     frame.columns = [normalize_header(column) for column in frame.columns]
+    frame = frame.rename(columns=COLUMN_ALIASES)
     missing = REQUIRED_COLUMNS - set(frame.columns)
     if missing:
         return ParsedStatement(

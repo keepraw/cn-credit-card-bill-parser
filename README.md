@@ -265,6 +265,130 @@ processed/农业银行_0179_202606.eml
 
 注意：同一天、同商户、同金额的多笔消费可能是真实多笔交易。程序会在同一账单内保留这些重复出现的交易，而不是机械删除。
 
+## 审计与重构路线图
+
+当前项目更接近一个个人本地半自动账单清洗工具：已经具备本地运行、事务回滚、运行备份、去重、复核表和原子导出等基础保护，但距离金融级可审计数据管道还需要继续补强 parser 准入、金额方向判定、导出安全、数据库迁移和数据血缘。
+
+### 高优先级风险
+
+| 编号 | 问题 | 涉及位置 | 风险等级 | 优先级 |
+| --- | --- | --- | --- | --- |
+| R1 | 通用 parser 可能把提示、广告、说明类文本误识别为正式交易 | `src/ccparser/parsers/generic.py`, `src/ccparser/pipeline.py` | 高 | 立即处理 |
+| R2 | Excel 导出未统一转义公式型文本，存在公式注入风险 | `src/ccparser/exporters.py` | 高 | 立即处理 |
+| R3 | 金额解析和金额方向判断耦合，描述关键字可能误翻转正负号 | `src/ccparser/normalizers.py`, 各银行 parser | 中高 | 立即处理 |
+| R4 | PDF 坐标解析依赖固定行距和表头中心点，模板漂移时可能错列 | `src/ccparser/parsers/boc.py` | 中 | 第二阶段 |
+| R5 | SQLite 缺少 schema version 和常用查询索引，大量历史账单下可维护性不足 | `src/ccparser/db.py` | 中 | 第一阶段 |
+| R6 | 各银行 parser 依赖硬编码 section 标题，失败后回退 generic 的边界不够安全 | `src/ccparser/parsers/*.py` | 中 | 第二阶段 |
+| R7 | parser 构造 `ParsedStatement`、warning、confidence 的样板代码重复 | `src/ccparser/parsers/*.py` | 低到中 | 第一阶段 |
+| R8 | 交易血缘字段不足，缺少 parser version、页码、行号、原始片段范围 | `src/ccparser/models.py`, `src/ccparser/db.py` | 中 | 第三阶段 |
+
+### Phase 1：低风险安全补丁
+
+目标是尽快降低误解析和数据污染风险，改动保持小步、可回归验证。
+
+1. 通用 parser 噪声过滤：增加提示、广告、积分、活动、手续费说明、客服提示等 blocklist。
+2. 交易证据评分：日期、金额、卡号、币种、交易区 section、列数等共同决定置信度。
+3. 低置信交易不进入正式交易表：进入 `review.xlsx`，由人工复核后再决定是否导入。
+4. 金额方向解耦：新增 `parse_amount_raw()` 和 `resolve_amount_sign()`，优先使用结构化方向字段，其次 section、原始符号，最后才使用描述关键字。
+5. Excel 公式注入防护：导出前转义以 `=`, `+`, `-`, `@` 开头的文本字段。
+6. SQLite 常用索引：为交易日期、入账日期、银行、卡尾号、账单键建立索引。
+7. parser 公共 build helper：集中处理 `missing_card_last4`、`missing_statement_period`、`no_transactions_found`、confidence 默认值等样板逻辑。
+
+建议先落地的补丁形态：
+
+```python
+def escape_excel_formula(value):
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@"):
+        return "'" + value
+    return value
+
+
+def should_insert_transaction(transaction):
+    return transaction.confidence >= 0.7
+```
+
+金额方向建议接口：
+
+```python
+def parse_amount_raw(value):
+    """只解析金额数值和原始符号，不读取商户描述。"""
+
+
+def resolve_amount_sign(amount, *, direction_field="", section="", raw_text="", description=""):
+    """按结构化方向字段、section、原始符号、描述关键字的优先级决定正负号。"""
+```
+
+建议索引：
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_statements_period
+ON statements(bank, card_last4, statement_start, statement_end);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_dates
+ON transactions(transaction_date, posting_date);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_bank_card_date
+ON transactions(bank, card_last4, transaction_date);
+```
+
+### TODO：未进行的改动
+
+本轮已完成 Phase 1 中的通用 parser 噪声过滤、交易证据评分基础、低置信交易只进 review、Excel 公式注入防护、SQLite 常用索引，以及金额解析解耦的基础接口。以下事项尚未落地：
+
+- 将各银行 parser 逐步迁移到 `parse_amount_raw()` + `resolve_amount_sign()`，减少描述关键字对金额方向的影响。
+- 抽取 parser 公共 build helper，集中处理 `ParsedStatement`、warning、confidence 和缺失字段提示。
+- 建立真正的 schema migration 执行机制；目前只创建了 `schema_migrations` 表和索引，尚未实现版本化迁移流程。
+- 实现容错 section matcher，覆盖空格、全角半角、标点、英文标题和标题别名。
+- 将 parser registry 改为 match score 机制，避免专属 parser 失败后无边界回退 generic。
+- 改造中国银行 PDF 行聚类和列识别，支持页面比例、动态表头、列边界和长商户 continuation row。
+- 建立每家银行的脱敏 fixture 测试集，覆盖标题变化、长商户换行、跨年账期和正负号方向。
+- 增加 parser version、source page、line number、raw span 等数据血缘字段。
+- 增强 review 工作流，区分低置信、疑似噪声、重复交易、金额方向不确定等复核原因。
+- 做 10 万级交易导入、查询、导出和 `EXPLAIN QUERY PLAN` 性能验证。
+### Phase 2：结构化重构
+
+目标是提高 parser 长期维护性，减少格式漂移导致的静默错误。
+
+1. section matcher 容错化：统一处理空格、全角半角、标点、英文标题和标题别名。
+2. parser registry 改成 match score：每个 parser 返回匹配分数和理由，而不是只靠字符串包含。
+3. PDF 行聚类和列识别改造：按页面宽高比例、动态表头、列边界和 continuation row 合并解析。
+4. fixture 测试集：每家银行保留脱敏样例，覆盖标题变化、长商户换行、跨年账期、正负号方向。
+5. schema migration：新增 `schema_migrations` 表，后续 schema 改动可重复、可追踪。
+
+section matcher 示例方向：
+
+```python
+def normalize_section_text(text):
+    return normalize_spaces(text).replace(" ", "").replace("　", "")
+
+
+def section_matches(line, aliases):
+    normalized = normalize_section_text(line)
+    return any(normalize_section_text(alias) in normalized for alias in aliases)
+```
+
+### Phase 3：金融级可审计增强
+
+目标是让系统具备长期审计和复盘能力。
+
+1. parser version：每条 statement 和 transaction 记录解析器版本。
+2. source span：记录来源文件、页码、行号、原始片段范围，便于回溯。
+3. Decimal 存储规范：数据库继续用文本保存 Decimal 原值，导出和排序时显式转换，避免 float 精度污染。
+4. review 工作流增强：低置信、重复、疑似噪声、金额方向不确定分开标记。
+5. 性能验证：对 10 万级交易执行导入、查询、导出和 `EXPLAIN QUERY PLAN` 检查。
+
+### 回归测试计划
+
+新增测试应覆盖以下场景：
+
+- 标题格式变化：`交易明细`、`交 易 明 细`、英文标题、全角标点都能进入正确 section。
+- 温馨提示含日期金额：不进入正式交易表，只进入 review。
+- 商户名含“退款/还款/退货”：正常消费不因商户名关键字被误翻转。
+- PDF 长商户名换行：能合并 continuation row，不错配金额列。
+- 同日同商户同金额多笔交易：同一账单内保留多笔真实交易。
+- Excel 公式注入文本：导出后以文本显示，不作为公式执行。
+- 大量交易导出排序：使用索引，导出结果稳定。
+
 ## 隐私和 Git 安全
 
 真实账单非常敏感。公开 GitHub 仓库时请务必注意：

@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from ccparser.normalizers import parse_amount, parse_date
+from ccparser.normalizers import parse_amount, parse_amount_raw, parse_date, resolve_amount_sign
 
 
 def test_parse_six_digit_date():
@@ -29,3 +29,13 @@ def test_parse_parentheses_negative():
 
 def test_parse_slash_credit_negative():
     assert parse_amount("2000.00/C", "入账") == Decimal("-2000.00")
+
+
+def test_parse_amount_raw_does_not_use_description_keywords():
+    assert parse_amount_raw("1000.00") == Decimal("1000.00")
+
+
+def test_resolve_amount_sign_structured_direction_overrides_description():
+    amount = Decimal("88.00")
+    assert resolve_amount_sign(amount, direction_field="支出", description="退款咨询服务中心") == Decimal("88.00")
+    assert resolve_amount_sign(amount, direction_field="存入", description="普通商户") == Decimal("-88.00")
