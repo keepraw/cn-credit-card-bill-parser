@@ -1,11 +1,12 @@
 ﻿from __future__ import annotations
 
+import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
 import re
 
-from .config import BACKUP_DIR, DB_PATH, INBOX_DIR, OUTPUT_DIR, PROCESSED_DIR, REVIEW_FILES_DIR, SUPPORTED_SUFFIXES
+from .config import BACKUP_DIR, DB_PATH, INBOX_DIR, LOG_DIR, OUTPUT_DIR, PROCESSED_DIR, REVIEW_FILES_DIR, SUPPORTED_SUFFIXES
 from .db import Database
 from .dedupe import assign_ids
 from .exporters import export_outputs
@@ -13,11 +14,12 @@ from .extractors import extract_source
 from .models import ReviewItem
 from .parsers.registry import parse_statement
 
+logger = logging.getLogger(__name__)
 PendingMove = tuple[Path, Path, str | None]
 
 
 def ensure_directories() -> None:
-    for directory in [INBOX_DIR, OUTPUT_DIR, PROCESSED_DIR, REVIEW_FILES_DIR, DB_PATH.parent, BACKUP_DIR]:
+    for directory in [INBOX_DIR, OUTPUT_DIR, PROCESSED_DIR, REVIEW_FILES_DIR, DB_PATH.parent, BACKUP_DIR, LOG_DIR]:
         directory.mkdir(parents=True, exist_ok=True)
 
 
@@ -30,12 +32,20 @@ def run() -> tuple[int, int, Path | None]:
     processed_count = 0
     inserted_count = 0
 
+    logger.warning("Parser run started: inbox=%s db=%s", INBOX_DIR, DB_PATH)
+    if backup_path:
+        logger.warning("Runtime backup created: %s", backup_path)
+    else:
+        logger.warning("Runtime backup skipped: no existing runtime files to copy")
+
     try:
         with db.transaction():
             for path in sorted(INBOX_DIR.iterdir()):
                 if not path.is_file() or path.suffix.lower() not in SUPPORTED_SUFFIXES:
+                    logger.debug("Skipping unsupported inbox entry: %s", path)
                     continue
 
+                logger.warning("Processing file: name=%s suffix=%s", path.name, path.suffix.lower())
                 file_review_items: list[ReviewItem] = []
                 file_pending_moves: list[PendingMove] = []
                 file_processed_count = 0
@@ -44,7 +54,15 @@ def run() -> tuple[int, int, Path | None]:
                 try:
                     with db.transaction():
                         source = extract_source(path)
+                        logger.debug(
+                            "Extracted source: file=%s source_type=%s hash=%s text_chars=%s",
+                            source.file_name,
+                            source.source_type,
+                            source.file_hash,
+                            len(source.text),
+                        )
                         if db.file_processed(source.file_hash):
+                            logger.warning("Duplicate file skipped: name=%s hash=%s", source.file_name, source.file_hash)
                             file_review_items.append(ReviewItem(
                                 reason="duplicate_file",
                                 source_file_name=source.file_name,
@@ -55,6 +73,7 @@ def run() -> tuple[int, int, Path | None]:
                             continue
 
                         if not source.text.strip():
+                            logger.warning("No text extracted: name=%s hash=%s", source.file_name, source.file_hash)
                             file_review_items.append(ReviewItem(
                                 reason="empty_text",
                                 source_file_name=source.file_name,
@@ -66,9 +85,20 @@ def run() -> tuple[int, int, Path | None]:
 
                         statement = parse_statement(source)
                         key = assign_ids(statement)
+                        logger.warning(
+                            "Parsed statement: file=%s parser=%s bank=%s card_last4=%s transactions=%s confidence=%s statement_key=%s",
+                            source.file_name,
+                            statement.parser_name,
+                            statement.bank,
+                            statement.card_last4,
+                            len(statement.transactions),
+                            statement.confidence,
+                            key,
+                        )
                         db.upsert_statement(statement, key, source.file_hash, source.file_name, source.source_type)
 
                         for warning in statement.warnings:
+                            logger.warning("Parser warning: file=%s reason=%s", source.file_name, warning)
                             file_review_items.append(ReviewItem(
                                 reason=warning,
                                 source_file_name=source.file_name,
@@ -81,6 +111,12 @@ def run() -> tuple[int, int, Path | None]:
 
                         for transaction in statement.transactions:
                             if transaction.confidence < 0.7:
+                                logger.warning(
+                                    "Low confidence transaction: file=%s transaction_id=%s confidence=%s",
+                                    source.file_name,
+                                    transaction.transaction_id,
+                                    transaction.confidence,
+                                )
                                 file_review_items.append(ReviewItem(
                                     reason="low_confidence_transaction",
                                     source_file_name=source.file_name,
@@ -93,6 +129,11 @@ def run() -> tuple[int, int, Path | None]:
                                     raw_text=transaction.raw_text,
                                 ))
                             if db.transaction_exists(transaction.transaction_id):
+                                logger.warning(
+                                    "Duplicate transaction skipped: file=%s transaction_id=%s",
+                                    source.file_name,
+                                    transaction.transaction_id,
+                                )
                                 file_review_items.append(ReviewItem(
                                     reason="duplicate_transaction",
                                     source_file_name=source.file_name,
@@ -112,6 +153,7 @@ def run() -> tuple[int, int, Path | None]:
                         file_pending_moves.append((path, PROCESSED_DIR, build_processed_name(path, statement, source.source_type, source.file_hash)))
                         file_processed_count = 1
                 except Exception as exc:
+                    logger.exception("File processing failed: file=%s", path.name)
                     file_review_items = [ReviewItem(
                         reason="file_processing_error",
                         source_file_name=path.name,
@@ -127,11 +169,16 @@ def run() -> tuple[int, int, Path | None]:
                 processed_count += file_processed_count
                 inserted_count += file_inserted_count
 
+            logger.warning("Exporting outputs: transactions=%s review_items=%s", len(db.fetch_transactions()), len(review_items))
             export_outputs(OUTPUT_DIR, db.fetch_transactions(), review_items)
 
         for path, target_dir, new_name in pending_moves:
             if path.exists():
+                logger.warning("Moving source file: from=%s to_dir=%s new_name=%s", path, target_dir, new_name or path.name)
                 move_file(path, target_dir, new_name)
+            else:
+                logger.warning("Pending move skipped because source is missing: %s", path)
+        logger.warning("Parser run finished: processed_files=%s inserted_transactions=%s", processed_count, inserted_count)
         return processed_count, inserted_count, backup_path
     finally:
         db.close()
@@ -145,14 +192,18 @@ def create_run_backup() -> Path | None:
 
     for source_dir in backup_sources:
         if not source_dir.exists():
+            logger.debug("Backup source does not exist: %s", source_dir)
             continue
         files = [path for path in source_dir.iterdir() if path.is_file() and path.name != ".gitkeep"]
         if not files:
+            logger.debug("Backup source has no runtime files: %s", source_dir)
             continue
         target_dir = backup_root / source_dir.name
         target_dir.mkdir(parents=True, exist_ok=True)
         for source_path in files:
-            shutil.copy2(source_path, target_dir / source_path.name)
+            target_path = target_dir / source_path.name
+            shutil.copy2(source_path, target_path)
+            logger.debug("Backed up file: from=%s to=%s", source_path, target_path)
             copied_any = True
 
     if not copied_any:

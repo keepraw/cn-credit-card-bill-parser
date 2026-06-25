@@ -13,6 +13,7 @@ processed/*
 review_files/*
 inbox/*
 backups/*
+logs/*
 
 !data/.gitkeep
 !output/.gitkeep
@@ -48,4 +49,5 @@ backups/*
 
 # Keep dependency metadata trackable even though spreadsheets are ignored.
 !requirements.txt
+
 

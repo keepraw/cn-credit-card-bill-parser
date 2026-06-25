@@ -1,10 +1,13 @@
 ﻿from __future__ import annotations
 
+import logging
 import os
 import tempfile
 from pathlib import Path
 
 from .models import ReviewItem
+
+logger = logging.getLogger(__name__)
 
 
 BANK = "\u94f6\u884c"
@@ -120,6 +123,7 @@ def export_outputs(output_dir: Path, transactions: list[dict[str, object]], revi
         {"item": DESCRIPTION, "value": SUMMARY_NOTE},
     ])
 
+    logger.warning("Preparing Excel export: output_dir=%s transactions=%s review_items=%s", output_dir, len(transactions), len(review_items))
     with tempfile.TemporaryDirectory(prefix=".staging-", dir=output_dir) as staging_name:
         staging_dir = Path(staging_name)
         unified_path = staging_dir / "unified_transactions.xlsx"
@@ -148,8 +152,10 @@ def export_outputs(output_dir: Path, transactions: list[dict[str, object]], revi
             STANDARD_SHEET: REVIEW_COLUMNS,
         })
 
+        logger.warning("Excel export validation passed; publishing outputs")
         os.replace(unified_path, output_dir / "unified_transactions.xlsx")
         os.replace(review_path, output_dir / "review.xlsx")
+        logger.warning("Excel outputs published: %s, %s", output_dir / "unified_transactions.xlsx", output_dir / "review.xlsx")
 
 
 def _friendly_transactions(frame):
@@ -250,6 +256,7 @@ def _validate_workbook(path: Path, expected_sheets: dict[str, list[str]]) -> Non
     try:
         for sheet_name, expected_headers in expected_sheets.items():
             if sheet_name not in workbook.sheetnames:
+                logger.error("Export validation failed: file=%s missing_sheet=%s", path.name, sheet_name)
                 raise RuntimeError(f"Export validation failed for {path.name}: missing sheet {sheet_name!r}")
             sheet = workbook[sheet_name]
             rows = sheet.iter_rows(min_row=1, max_row=1, values_only=True)
@@ -257,6 +264,10 @@ def _validate_workbook(path: Path, expected_sheets: dict[str, list[str]]) -> Non
             missing_headers = [header for header in expected_headers if header not in headers]
             if missing_headers:
                 joined = ", ".join(str(header) for header in missing_headers)
+                logger.error("Export validation failed: file=%s sheet=%s missing_headers=%s", path.name, sheet_name, joined)
                 raise RuntimeError(f"Export validation failed for {path.name}/{sheet_name}: missing headers {joined}")
     finally:
         workbook.close()
+
+
+

@@ -11,6 +11,7 @@ REVIEW_FILES_DIR = PROJECT_ROOT / "review_files"
 DATA_DIR = PROJECT_ROOT / "data"
 DB_PATH = DATA_DIR / "statements.db"
 BACKUP_DIR = PROJECT_ROOT / "backups"
+LOG_DIR = PROJECT_ROOT / "logs"
 
 SUPPORTED_SUFFIXES = {".eml", ".pdf", ".html", ".htm", ".txt", ".csv", ".xlsx"}
 
@@ -20,3 +21,4 @@ SOURCE_PRIORITY = {
     "copied_text": 20,
     "ocr_pdf": 10,
 }
+

@@ -153,6 +153,40 @@ PYTHONPATH=src .venv/bin/python -m ccparser.cli
 推荐的手工习惯仍然是：每次改代码后先运行测试，再用样本文件试跑；确认输出正常后，再把真实账单放入 `inbox/`。
 
 如果发现脚本更新导致输出异常，应先停止继续导入，再从最近一次 `backups/时间戳/` 恢复对应目录中的文件。
+## 日志和排错
+
+脚本默认启用本地日志，默认日志级别是 `WARNING`。日志只写在本机，不上传、不联网。
+
+每次运行会写两个日志文件：
+
+```text
+logs/parser.log              # 累积日志，方便长期追踪
+logs/runs/YYYYMMDD-HHMMSS.log # 单次运行日志，方便定位本次问题
+```
+
+正常运行时，命令行会打印本次运行日志路径。发生异常时，控制台会提示日志位置，完整 traceback 会写入日志文件。
+
+默认运行：
+
+```powershell
+.\run_parser.ps1
+```
+
+需要更详细排错时启用 DEBUG：
+
+```powershell
+$env:PYTHONPATH = "src"
+.\.venv\Scripts\python.exe -m ccparser.cli --debug
+```
+
+也可以显式指定级别：
+
+```powershell
+$env:PYTHONPATH = "src"
+.\.venv\Scripts\python.exe -m ccparser.cli --log-level INFO
+```
+
+日志会记录备份路径、处理到的文件名、解析器名称、数据库事务回滚、导出校验、文件移动和异常堆栈。日志不主动记录原始账单正文，但可能包含文件名、银行名、卡尾号、交易 ID、错误信息等本地敏感线索，因此 `logs/` 已加入 `.gitignore`，不要上传日志文件。
 ## 输出文件
 
 运行后主要看 `output/`：
@@ -300,6 +334,7 @@ Debian / Ubuntu / macOS：
 ### 可以直接把整个项目 git push 吗？
 
 可以，但前提是 `git status --short` 里不能出现真实账单、导出结果、数据库文件。`.gitignore` 已经做了保护，但提交前仍然要人工检查。
+
 
 
 
