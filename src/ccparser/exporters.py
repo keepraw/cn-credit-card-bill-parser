@@ -2,8 +2,11 @@
 
 import logging
 import os
+import re
 import tempfile
+import zipfile
 from pathlib import Path
+from xml.etree import ElementTree
 
 from .models import ReviewItem
 
@@ -88,6 +91,14 @@ STANDARD_HIDDEN_COLUMNS = {
 REVIEW_HIDDEN_COLUMNS = {"source_file_hash", "transaction_id", "statement_key", "raw_text"}
 MAX_EXCEL_TEXT_LENGTH = 1000
 EXCEL_FORMULA_PREFIXES = ("=", "+", "-", "@")
+ILLEGAL_XML_CHAR_RE = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff]")
+REQUIRED_XLSX_PARTS = {
+    "[Content_Types].xml",
+    "_rels/.rels",
+    "xl/workbook.xml",
+    "xl/_rels/workbook.xml.rels",
+    "xl/styles.xml",
+}
 
 
 def export_outputs(output_dir: Path, transactions: list[dict[str, object]], review_items: list[ReviewItem]) -> None:
@@ -150,15 +161,48 @@ def export_outputs(output_dir: Path, transactions: list[dict[str, object]], revi
             TRANSACTION_SHEET: FRIENDLY_COLUMNS,
             STANDARD_SHEET: UNIFIED_COLUMNS,
             SUMMARY_SHEET: ["item", "value"],
+        }, {
+            TRANSACTION_SHEET: len(friendly_frame),
+            STANDARD_SHEET: len(unified_frame),
+            SUMMARY_SHEET: len(summary_frame),
         })
         _validate_workbook(review_path, {
             REVIEW_SHEET: [REASON, SOURCE_FILE, BANK, CARD_LAST4, DESCRIPTION, RAW_TEXT],
             STANDARD_SHEET: REVIEW_COLUMNS,
+        }, {
+            REVIEW_SHEET: len(review_frame),
+            STANDARD_SHEET: len(review_frame),
         })
 
         logger.warning("Excel export validation passed; publishing outputs")
-        os.replace(unified_path, output_dir / "unified_transactions.xlsx")
-        os.replace(review_path, output_dir / "review.xlsx")
+        _publish_validated_workbooks([
+            (
+                unified_path,
+                output_dir / "unified_transactions.xlsx",
+                {
+                    TRANSACTION_SHEET: FRIENDLY_COLUMNS,
+                    STANDARD_SHEET: UNIFIED_COLUMNS,
+                    SUMMARY_SHEET: ["item", "value"],
+                },
+                {
+                    TRANSACTION_SHEET: len(friendly_frame),
+                    STANDARD_SHEET: len(unified_frame),
+                    SUMMARY_SHEET: len(summary_frame),
+                },
+            ),
+            (
+                review_path,
+                output_dir / "review.xlsx",
+                {
+                    REVIEW_SHEET: [REASON, SOURCE_FILE, BANK, CARD_LAST4, DESCRIPTION, RAW_TEXT],
+                    STANDARD_SHEET: REVIEW_COLUMNS,
+                },
+                {
+                    REVIEW_SHEET: len(review_frame),
+                    STANDARD_SHEET: len(review_frame),
+                },
+            ),
+        ])
         logger.warning("Excel outputs published: %s, %s", output_dir / "unified_transactions.xlsx", output_dir / "review.xlsx")
 
 
@@ -196,7 +240,13 @@ def _escape_excel_formulas(frame):
             return "'" + value
         return value
 
-    return frame.map(escape)
+    return frame.map(escape).map(_sanitize_excel_text)
+
+
+def _sanitize_excel_text(value):
+    if isinstance(value, str):
+        return ILLEGAL_XML_CHAR_RE.sub("", value)
+    return value
 
 
 def _trim_excel_text(frame, columns: list[str]):
@@ -262,7 +312,40 @@ def _hide_columns_by_header(sheet, headers: set[str]) -> None:
             sheet.column_dimensions[cell.column_letter].hidden = True
 
 
-def _validate_workbook(path: Path, expected_sheets: dict[str, list[str]]) -> None:
+def _publish_validated_workbooks(items: list[tuple[Path, Path, dict[str, list[str]], dict[str, int]]]) -> None:
+    rollback_paths: dict[Path, Path] = {}
+    published_paths: list[Path] = []
+    try:
+        for candidate, final_path, _expected_sheets, _expected_rows in items:
+            if final_path.exists():
+                rollback_path = candidate.parent / f"{final_path.name}.rollback"
+                os.replace(final_path, rollback_path)
+                rollback_paths[final_path] = rollback_path
+            os.replace(candidate, final_path)
+            published_paths.append(final_path)
+
+        for _candidate, final_path, expected_sheets, expected_rows in items:
+            _validate_workbook(final_path, expected_sheets, expected_rows)
+    except Exception:
+        for final_path in published_paths:
+            if final_path.exists():
+                failed_path = final_path.with_name(f"{final_path.name}.failed")
+                try:
+                    os.replace(final_path, failed_path)
+                except OSError:
+                    logger.exception("Failed to move invalid published Excel output aside: %s", final_path)
+        for final_path, rollback_path in rollback_paths.items():
+            if rollback_path.exists():
+                try:
+                    os.replace(rollback_path, final_path)
+                except OSError:
+                    logger.exception("Failed to restore previous Excel output: %s", final_path)
+        raise
+
+
+def _validate_workbook(path: Path, expected_sheets: dict[str, list[str]], expected_rows: dict[str, int] | None = None) -> None:
+    _validate_xlsx_package(path)
+
     from openpyxl import load_workbook
 
     workbook = load_workbook(path, read_only=True, data_only=True)
@@ -279,8 +362,74 @@ def _validate_workbook(path: Path, expected_sheets: dict[str, list[str]]) -> Non
                 joined = ", ".join(str(header) for header in missing_headers)
                 logger.error("Export validation failed: file=%s sheet=%s missing_headers=%s", path.name, sheet_name, joined)
                 raise RuntimeError(f"Export validation failed for {path.name}/{sheet_name}: missing headers {joined}")
+            if expected_rows is not None and sheet_name in expected_rows:
+                data_row_count = max(sheet.max_row - 1, 0)
+                if data_row_count != expected_rows[sheet_name]:
+                    logger.error(
+                        "Export validation failed: file=%s sheet=%s rows=%s expected_rows=%s",
+                        path.name,
+                        sheet_name,
+                        data_row_count,
+                        expected_rows[sheet_name],
+                    )
+                    raise RuntimeError(
+                        f"Export validation failed for {path.name}/{sheet_name}: "
+                        f"rows={data_row_count}, expected={expected_rows[sheet_name]}"
+                    )
     finally:
         workbook.close()
+
+
+def _validate_xlsx_package(path: Path) -> None:
+    try:
+        with zipfile.ZipFile(path) as archive:
+            corrupt_member = archive.testzip()
+            if corrupt_member:
+                raise RuntimeError(f"XLSX ZIP CRC validation failed for {path.name}: {corrupt_member}")
+
+            names = set(archive.namelist())
+            missing_parts = sorted(REQUIRED_XLSX_PARTS - names)
+            if not any(name.startswith("xl/worksheets/") and name.endswith(".xml") for name in names):
+                missing_parts.append("xl/worksheets/*.xml")
+            if missing_parts:
+                raise RuntimeError(f"XLSX package validation failed for {path.name}: missing {', '.join(missing_parts)}")
+
+            for member_name in sorted(names):
+                if not (member_name.endswith(".xml") or member_name.endswith(".rels")):
+                    continue
+                data = archive.read(member_name)
+                try:
+                    text = data.decode("utf-8")
+                except UnicodeDecodeError as exc:
+                    raise RuntimeError(f"XLSX XML validation failed for {path.name}/{member_name}: {exc}") from exc
+                illegal_match = ILLEGAL_XML_CHAR_RE.search(text)
+                if illegal_match:
+                    codepoint = ord(illegal_match.group())
+                    raise RuntimeError(
+                        f"XLSX XML validation failed for {path.name}/{member_name}: illegal XML character U+{codepoint:04X}"
+                    )
+                try:
+                    root = ElementTree.fromstring(data)
+                except ElementTree.ParseError as exc:
+                    raise RuntimeError(f"XLSX XML validation failed for {path.name}/{member_name}: {exc}") from exc
+                if member_name.endswith(".rels"):
+                    _validate_relationships(path, member_name, root)
+    except zipfile.BadZipFile as exc:
+        raise RuntimeError(f"XLSX ZIP validation failed for {path.name}: {exc}") from exc
+
+
+def _validate_relationships(path: Path, member_name: str, root) -> None:
+    relationship_ids: set[str] = set()
+    for relationship in root:
+        relationship_id = relationship.attrib.get("Id", "")
+        target = relationship.attrib.get("Target", "")
+        if not relationship_id:
+            raise RuntimeError(f"XLSX relationship validation failed for {path.name}/{member_name}: missing Id")
+        if relationship_id in relationship_ids:
+            raise RuntimeError(f"XLSX relationship validation failed for {path.name}/{member_name}: duplicate Id {relationship_id}")
+        if not target:
+            raise RuntimeError(f"XLSX relationship validation failed for {path.name}/{member_name}: empty target for {relationship_id}")
+        relationship_ids.add(relationship_id)
 
 
 

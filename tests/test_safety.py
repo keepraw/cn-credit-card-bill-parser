@@ -1,11 +1,13 @@
 ﻿from datetime import date
 from decimal import Decimal
+import zipfile
+from xml.etree import ElementTree
 
 import pytest
 
 from ccparser.db import Database
 from ccparser.dedupe import assign_ids
-from ccparser.exporters import export_outputs
+from ccparser.exporters import STANDARD_SHEET, TRANSACTION_SHEET, UNIFIED_COLUMNS, export_outputs, _validate_workbook
 from ccparser.models import ParsedStatement, SourceContext, Transaction
 
 
@@ -113,6 +115,109 @@ def test_export_escapes_excel_formula_text(tmp_path):
         assert standard.cell(row=2, column=raw_col).value.startswith("'@")
     finally:
         workbook.close()
+
+
+def test_export_creates_valid_xlsx_package_with_expected_rows(tmp_path):
+    output_dir = tmp_path / "output"
+    statement = make_statement()
+    transaction = statement.transactions[0]
+
+    export_outputs(output_dir, [transaction.as_output_row()], [])
+
+    xlsx_path = output_dir / "unified_transactions.xlsx"
+    with zipfile.ZipFile(xlsx_path) as archive:
+        assert archive.testzip() is None
+        for name in archive.namelist():
+            if name.endswith((".xml", ".rels")):
+                ElementTree.fromstring(archive.read(name))
+
+    _validate_workbook(
+        xlsx_path,
+        {
+            TRANSACTION_SHEET: [
+                "银行",
+                "卡尾号",
+                "交易日",
+                "入账日",
+                "说明",
+                "交易币种",
+                "交易金额",
+                "结算币种",
+                "结算金额",
+            ],
+            STANDARD_SHEET: UNIFIED_COLUMNS,
+        },
+        {TRANSACTION_SHEET: 1, STANDARD_SHEET: 1},
+    )
+
+
+def test_export_preserves_special_characters_in_valid_xml(tmp_path):
+    output_dir = tmp_path / "output"
+    statement = make_statement()
+    transaction = statement.transactions[0]
+    transaction.description = '中文 emoji 😀 line\n& < > " quote'
+
+    export_outputs(output_dir, [transaction.as_output_row()], [])
+
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(output_dir / "unified_transactions.xlsx", data_only=False)
+    try:
+        sheet = workbook["交易明细"]
+        headers = [cell.value for cell in sheet[1]]
+        description_col = headers.index("说明") + 1
+        assert sheet.cell(row=2, column=description_col).value == transaction.description
+    finally:
+        workbook.close()
+
+
+def test_export_sanitizes_illegal_xml_control_characters(tmp_path):
+    output_dir = tmp_path / "output"
+    statement = make_statement()
+    transaction = statement.transactions[0]
+    transaction.description = "bad\x01text"
+
+    export_outputs(output_dir, [transaction.as_output_row()], [])
+
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(output_dir / "unified_transactions.xlsx", data_only=False)
+    try:
+        sheet = workbook["交易明细"]
+        headers = [cell.value for cell in sheet[1]]
+        description_col = headers.index("说明") + 1
+        assert sheet.cell(row=2, column=description_col).value == "badtext"
+    finally:
+        workbook.close()
+
+
+def test_final_export_validation_failure_restores_existing_outputs(tmp_path, monkeypatch):
+    output_dir = tmp_path / "output"
+    statement = make_statement()
+    transaction = statement.transactions[0]
+    export_outputs(output_dir, [transaction.as_output_row()], [])
+    unified_path = output_dir / "unified_transactions.xlsx"
+    review_path = output_dir / "review.xlsx"
+    old_unified = unified_path.read_bytes()
+    old_review = review_path.read_bytes()
+
+    calls = []
+    real_validate = _validate_workbook
+
+    def fail_final_unified(path, expected_sheets, expected_rows=None):
+        calls.append(path.name)
+        if path == unified_path:
+            raise RuntimeError("forced final validation failure")
+        return real_validate(path, expected_sheets, expected_rows)
+
+    monkeypatch.setattr("ccparser.exporters._validate_workbook", fail_final_unified)
+
+    with pytest.raises(RuntimeError, match="forced final validation failure"):
+        export_outputs(output_dir, [transaction.as_output_row()], [])
+
+    assert calls.count("unified_transactions.xlsx") >= 2
+    assert unified_path.read_bytes() == old_unified
+    assert review_path.read_bytes() == old_review
 
 
 def test_low_confidence_transaction_goes_to_review_not_database(tmp_path, monkeypatch):
