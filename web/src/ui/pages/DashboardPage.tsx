@@ -3,6 +3,7 @@ import { useApp } from '../../app/AppStore'
 import { DEFAULT_FILTERS, applyFilters, groupBy, groupByBank, monthlyTrend, summarize, untrustedAmount, type Filters } from '../../core/analytics'
 import { bankName, type BankId } from '../../core/types'
 import { formatMinor } from '../../core/money'
+import { monthEnd } from '../../core/dates'
 import { BarChart, Badge, DemoBadge, EmptyState, HorizontalBars, Stat } from '../components/ui'
 
 const BANKS: BankId[] = ['boc', 'bocom', 'icbc', 'ccb', 'abc', 'citic']
@@ -54,7 +55,7 @@ export function DashboardPage() {
                 setFilters((prev) => ({
                   ...prev,
                   from: value ? `${value}-01` : null,
-                  to: value ? `${value}-28` : null,
+                  to: value ? monthEnd(Number(value.slice(0, 4)), Number(value.slice(5, 7))) : null,
                 }))
               }}
             >
