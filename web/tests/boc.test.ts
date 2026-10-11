@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bocParser } from '../src/parsers/boc'
+import { bocParser, cleanDescription } from '../src/parsers/boc'
 import { pdfToText } from '../src/parsers/extract'
 import type { SourceDocument } from '../src/parsers/types'
 import { buildSyntheticBocPdf, SYNTHETIC_BOC } from './fixtures/bocPdf'
@@ -106,5 +106,12 @@ describe('BOC PDF parser', () => {
     )
     const { summary } = bocParser.parse(doc)
     expect(summary.previousBalanceMinor).toBe(-500000)
+  })
+})
+
+describe('BOC description cleanup', () => {
+  it('strips only a trailing slash and keeps internal slashes', () => {
+    expect(cleanDescription('财付通 /')).toBe('财付通')
+    expect(cleanDescription('微信/支付宝')).toBe('微信/支付宝')
   })
 })
