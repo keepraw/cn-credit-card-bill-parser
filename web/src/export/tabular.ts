@@ -66,7 +66,7 @@ export function buildCsv(transactions: Transaction[]): string {
 
 /** UTF-8 BOM keeps Excel from mangling Chinese text on Windows. */
 export function downloadCsv(fileName: string, transactions: Transaction[]): void {
-  const blob = new Blob([`﻿${buildCsv(transactions)}`], { type: 'text/csv;charset=utf-8' })
+  const blob = new Blob([`\uFEFF${buildCsv(transactions)}`], { type: 'text/csv;charset=utf-8' })
   triggerDownload(blob, fileName)
 }
 
