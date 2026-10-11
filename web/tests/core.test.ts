@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { currencyExponent, formatMinor, minorToDecimalString, parseAmountToMinor, sumMinor } from '../src/core/money'
-import { addDays, addMonths, parseDateInput, resolveShortDate } from '../src/core/dates'
+import { addDays, addMonths, monthEnd, parseDateInput, resolveShortDate } from '../src/core/dates'
 import { inferCategory, inferTransactionType } from '../src/core/classify'
 
 describe('money: integer minor units only', () => {
@@ -18,6 +18,7 @@ describe('money: integer minor units only', () => {
     expect(parseAmountToMinor('(45.00)')!.minor).toBe(-4500)
     expect(parseAmountToMinor('45.00/C')!.minor).toBe(-4500)
     expect(parseAmountToMinor('45.00CR')!.minor).toBe(-4500)
+    expect(parseAmountToMinor('45.67CR')!.minor).toBe(-4567)
   })
 
   it('never accumulates floating point error', () => {
@@ -75,6 +76,12 @@ describe('dates', () => {
 
   it('falls back to the cycle end year outside the cycle', () => {
     expect(resolveShortDate('09/20', '2025-12-15', '2026-01-14')).toBe('2026-09-20')
+  })
+
+  it('finds real month ends, including leap years', () => {
+    expect(monthEnd(2026, 2)).toBe('2026-02-28')
+    expect(monthEnd(2028, 2)).toBe('2028-02-29')
+    expect(monthEnd(2026, 10)).toBe('2026-10-31')
   })
 
   it('adds months and days without timezone drift', () => {
