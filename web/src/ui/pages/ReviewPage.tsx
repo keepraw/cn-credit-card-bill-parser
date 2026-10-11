@@ -1,0 +1,328 @@
+import { useMemo, useState } from 'react'
+import { useApp } from '../../app/AppStore'
+import { formatMinor } from '../../core/money'
+import { reconcileStatement } from '../../core/reconcile'
+import { REVIEW_FLAG_LABELS, bankName, type Statement, type Transaction } from '../../core/types'
+import {
+  Badge,
+  DemoBadge,
+  EmptyState,
+  FlagList,
+  ReconciliationChecks,
+  ReviewStatusBadge,
+  StatementStatusBadge,
+  TypeBadge,
+} from '../components/ui'
+
+export function ReviewPage() {
+  const { visibleStatements, visibleTransactions, updateTransaction, saveNote, state, refresh } = useApp()
+  const [tab, setTab] = useState<'statements' | 'transactions'>('statements')
+  const [selectedStatement, setSelectedStatement] = useState<string | null>(null)
+  const [draftNote, setDraftNote] = useState('')
+
+  const flaggedStatements = useMemo(
+    () => visibleStatements.filter((statement) => statement.status !== 'reconciled'),
+    [visibleStatements],
+  )
+  const flaggedTransactions = useMemo(
+    () =>
+      visibleTransactions.filter(
+        (tx) => tx.reviewStatus === 'pending' || (tx.flags.length > 0 && tx.reviewStatus !== 'rejected'),
+      ),
+    [visibleTransactions],
+  )
+
+  const active = flaggedStatements.find((s) => s.id === selectedStatement) ?? flaggedStatements[0] ?? null
+  const statementTransactions = useMemo(
+    () => (active ? visibleTransactions.filter((tx) => tx.statementId === active.id) : []),
+    [active, visibleTransactions],
+  )
+
+  const confirmTransaction = async (tx: Transaction, decision: 'confirmed' | 'rejected'): Promise<void> => {
+    await updateTransaction({
+      id: tx.id,
+      reviewStatus: decision,
+      flags: decision === 'confirmed' ? [] : tx.flags,
+    })
+  }
+
+  const recomputeStatement = async (statement: Statement): Promise<void> => {
+    const rows = visibleTransactions.filter((tx) => tx.statementId === statement.id)
+    const result = reconcileStatement({ summary: statement.summary, transactions: rows })
+    // Reconciliation is derived from the transactions, so it is recomputed and stored
+    // whenever a human confirms or rejects a row.
+    await refresh()
+    void result
+  }
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>人工复核</h1>
+          <p>对账差额、疑似重复和未完成分类的交易都会集中在这里，复核状态会持久保存在本机。</p>
+        </div>
+        <div className="segmented">
+          <button type="button" aria-pressed={tab === 'statements'} onClick={() => setTab('statements')}>
+            账单对账 {flaggedStatements.length}
+          </button>
+          <button type="button" aria-pressed={tab === 'transactions'} onClick={() => setTab('transactions')}>
+            交易复核 {flaggedTransactions.length}
+          </button>
+        </div>
+      </div>
+
+      {tab === 'statements' ? (
+        flaggedStatements.length === 0 ? (
+          <div className="card">
+            <EmptyState title="所有账单都已通过对账" hint="导入新账单后，若账单汇总与交易明细不一致，会在这里列出差额。" />
+          </div>
+        ) : (
+          <>
+            <div className="card">
+              <div className="table-wrap">
+                <table className="data">
+                  <thead>
+                    <tr>
+                      <th>账单</th>
+                      <th>状态</th>
+                      <th className="num">本期应还</th>
+                      <th className="num">交易数</th>
+                      <th>来源</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {flaggedStatements.map((statement) => (
+                      <tr
+                        key={statement.id}
+                        onClick={() => setSelectedStatement(statement.id)}
+                        style={{ cursor: 'pointer', background: active?.id === statement.id ? 'var(--surface-muted)' : undefined }}
+                      >
+                        <td>
+                          {bankName(statement.bank)} 尾号{statement.cardLast4}
+                          <div className="subtle">
+                            {statement.cycleStart && statement.cycleEnd ? `${statement.cycleStart} ~ ${statement.cycleEnd}` : '账单周期未知'}
+                          </div>
+                        </td>
+                        <td>
+                          <StatementStatusBadge statement={statement} />
+                          {statement.isDemo ? <DemoBadge /> : null}
+                        </td>
+                        <td className="num">
+                          {statement.summary.currentBalanceMinor === null ? '—' : formatMinor(statement.summary.currentBalanceMinor)}
+                        </td>
+                        <td className="num">{statement.transactionCount}</td>
+                        <td className="subtle truncate">{statement.sourceFileName}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {active ? (
+              <div className="card">
+                <div className="card-head">
+                  <div>
+                    <h2>
+                      {bankName(active.bank)} 尾号{active.cardLast4} 对账明细
+                    </h2>
+                    <p>
+                      本期余额 = 上期余额 + 本期支出 + 费用 + 利息 − 本期还款及其他贷记
+                    </p>
+                  </div>
+                  <button className="btn btn-sm" type="button" onClick={() => void recomputeStatement(active)}>
+                    重新计算对账结果
+                  </button>
+                </div>
+                <div className="card-pad stack">
+                  <ReconciliationChecks statement={active} />
+
+                  <h3>账单汇总原始值</h3>
+                  <div className="table-wrap">
+                    <table className="data">
+                      <thead>
+                        <tr>
+                          <th>字段</th>
+                          <th className="num">金额</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <SummaryRow label="上期余额" minor={active.summary.previousBalanceMinor} />
+                        <SummaryRow label="本期新增支出" minor={active.summary.newDebitMinor} />
+                        <SummaryRow label="本期还款及其他贷记" minor={active.summary.newCreditMinor} />
+                        <SummaryRow label="费用" minor={active.summary.chargeMinor} />
+                        <SummaryRow label="利息" minor={active.summary.interestMinor} />
+                        <SummaryRow label="本期应还" minor={active.summary.currentBalanceMinor} strong />
+                        <SummaryRow label="最小还款额" minor={active.summary.minimumPaymentMinor} />
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <h3>该账单的交易（{statementTransactions.length} 笔）</h3>
+                  <div className="table-wrap">
+                    <table className="data">
+                      <thead>
+                        <tr>
+                          <th>交易日</th>
+                          <th>描述</th>
+                          <th className="num">金额</th>
+                          <th>类型</th>
+                          <th>复核</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {statementTransactions.map((tx) => (
+                          <tr key={tx.id}>
+                            <td className="nowrap">{tx.transactionDate}</td>
+                            <td className="truncate" title={tx.rawDescription}>
+                              {tx.description}
+                            </td>
+                            <td className={`num ${tx.settlementAmountMinor < 0 ? 'amount-neg' : ''}`}>
+                              {formatMinor(tx.settlementAmountMinor, tx.settlementCurrency)}
+                            </td>
+                            <td>
+                              <TypeBadge type={tx.type} />
+                            </td>
+                            <td>
+                              <ReviewStatusBadge status={tx.reviewStatus} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </>
+        )
+      ) : flaggedTransactions.length === 0 ? (
+        <div className="card">
+          <EmptyState title="没有需要复核的交易" hint="疑似重复、低置信度或未分类的交易会出现在这里。" />
+        </div>
+      ) : (
+        <div className="card">
+          <div className="table-wrap">
+            <table className="data" data-testid="review-table">
+              <thead>
+                <tr>
+                  <th>交易日</th>
+                  <th>描述</th>
+                  <th className="num">金额</th>
+                  <th>类型</th>
+                  <th>原因</th>
+                  <th>复核状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flaggedTransactions.map((tx) => (
+                  <tr key={tx.id}>
+                    <td className="nowrap">{tx.transactionDate}</td>
+                    <td className="truncate" title={tx.rawDescription}>
+                      {tx.description}
+                    </td>
+                    <td className={`num ${tx.settlementAmountMinor < 0 ? 'amount-neg' : ''}`}>
+                      {formatMinor(tx.settlementAmountMinor, tx.settlementCurrency)}
+                    </td>
+                    <td>
+                      <TypeBadge type={tx.type} />
+                    </td>
+                    <td>
+                      <FlagList flags={tx.flags} />
+                    </td>
+                    <td>
+                      <ReviewStatusBadge status={tx.reviewStatus} />
+                    </td>
+                    <td>
+                      <div className="row row-tight">
+                        <button className="btn btn-sm" type="button" onClick={() => void confirmTransaction(tx, 'confirmed')}>
+                          确认
+                        </button>
+                        <button className="btn btn-sm btn-danger" type="button" onClick={() => void confirmTransaction(tx, 'rejected')}>
+                          排除
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {state.demoMode ? (
+        <div className="notice notice-warn">
+          <DemoBadge />
+          <div>
+            <strong>复核操作只作用于演示数据</strong>
+            <p>演示模式下真实账单已被隐藏，复核结果同样保存在本机 IndexedDB 中。</p>
+          </div>
+        </div>
+      ) : null}
+
+      {flaggedTransactions.length > 0 ? (
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <h2>复核备注</h2>
+              <p>可以针对第一笔待复核交易记录备注，备注会持久保存在本机</p>
+            </div>
+          </div>
+          <div className="card-pad row">
+            <input
+              className="input"
+              style={{ flex: 1 }}
+              placeholder="例如：与银行 App 对账一致，确认为退款"
+              value={draftNote}
+              onChange={(event) => setDraftNote(event.target.value)}
+            />
+            <button
+              className="btn"
+              type="button"
+              onClick={() => {
+                const target = flaggedTransactions[0]
+                if (!target) return
+                void saveNote(target.id, draftNote)
+                setDraftNote('')
+              }}
+            >
+              保存备注
+            </button>
+          </div>
+          {Object.keys(state.notes).length > 0 ? (
+            <div className="card-pad stack">
+              {Object.entries(state.notes).map(([id, note]) => {
+                const tx = visibleTransactions.find((row) => row.id === id)
+                return (
+                  <div key={id} className="check">
+                    <Badge tone="muted">备注</Badge>
+                    <div>
+                      <div>{note}</div>
+                      <div className="check-detail">{tx ? `${tx.transactionDate} ${tx.description}` : '该交易已不存在'}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  )
+}
+
+function SummaryRow({ label, minor, strong }: { label: string; minor: number | null; strong?: boolean }) {
+  return (
+    <tr>
+      <td style={strong ? { fontWeight: 600 } : undefined}>{label}</td>
+      <td className="num" style={strong ? { fontWeight: 600 } : undefined}>
+        {minor === null ? '—' : formatMinor(minor)}
+      </td>
+    </tr>
+  )
+}
+
+export const REVIEW_FLAG_ORDER = Object.keys(REVIEW_FLAG_LABELS) as Array<keyof typeof REVIEW_FLAG_LABELS>

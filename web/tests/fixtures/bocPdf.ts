@@ -1,4 +1,4 @@
-import type { PdfDocument, PdfPage, PdfTextItem } from '../../src/parsers/types'
+import type { PdfDocument, PdfPage } from '../../src/parsers/types'
 
 /**
  * Synthetic Bank of China PDF layout.
@@ -33,7 +33,7 @@ function page(number: number, items: ItemSpec[]): PdfPage {
     pageNumber: number,
     width: 595,
     height: 842,
-    items: items.map<ItemSpec, PdfTextItem>((spec) => ({
+    items: items.map((spec) => ({
       text: spec.text,
       x: spec.x,
       y: spec.y,

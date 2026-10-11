@@ -114,7 +114,7 @@ export function parseAmountToMinor(raw: string | number | null | undefined, fall
   const negativeByFormat =
     /^\(.*\)$/.test(text) ||
     /\/\s*C\b/i.test(text) ||
-    /\bCR\b/i.test(text) ||
+    /\d\s*CR\b/i.test(text) ||
     /^-/.test(text) ||
     /-$/.test(text) ||
     /^[−–—]/.test(text) // unicode minus / en dash / em dash
@@ -122,7 +122,7 @@ export function parseAmountToMinor(raw: string | number | null | undefined, fall
   text = text
     .replace(/\/\s*[CD]\b/gi, '')
     .replace(/\bDR\b/gi, '')
-    .replace(/\bCR\b/gi, '')
+    .replace(/\d\s*CR\b/gi, '')
     .replace(/[^\d.,\-−–—]/g, '')
     .replace(/[−–—]/g, '-')
 
@@ -132,13 +132,14 @@ export function parseAmountToMinor(raw: string | number | null | undefined, fall
     text = text.slice(0, -1)
   }
   text = text.replace(/-/g, '')
-  // Thousands separators: `1,234.56` or (rare) `1.234,56`
-  if (/,\d{3}(\D|$)/.test(text)) {
-    text = text.replace(/,/g, '')
-  } else if (/\.\d{3}(\D|$)/.test(text) && !/,\d{3}/.test(text)) {
-    text = text.replace(/\./g, '').replace(',', '.')
-  } else {
-    text = text.replace(/,/g, '')
+
+  // Normalise the thousands/decimal separators without losing precision.
+  if (text.includes(',') && text.includes('.')) {
+    text = text.lastIndexOf(',') > text.lastIndexOf('.') ? text.replace(/\./g, '').replace(',', '.') : text.replace(/,/g, '')
+  } else if (text.includes(',')) {
+    text = /,\d{3}$/.test(text) ? text.replace(/,/g, '') : text.replace(',', '.')
+  } else if ((text.match(/\./g) ?? []).length > 1) {
+    text = text.replace(/\./g, '')
   }
 
   const match = /^(\d+)(?:\.(\d*))?$/.exec(text)

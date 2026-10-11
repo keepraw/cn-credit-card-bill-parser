@@ -1,4 +1,5 @@
 import { extractTables, extractText, sanitizeHtml } from './html'
+import type { PDFDocumentProxy } from 'pdfjs-dist'
 import type { PdfDocument, PdfPage, PdfTextItem, SourceDocument, SourceType } from './types'
 
 /** 25 MB. Real statements are far below this; anything larger is refused early. */
@@ -140,7 +141,7 @@ export async function extractPdf(bytes: Uint8Array): Promise<PdfDocument> {
     disableFontFace: true,
     verbosity: 0,
   })
-  let doc: Awaited<ReturnType<typeof task.promise>>
+  let doc: PDFDocumentProxy | null = null
   try {
     doc = await task.promise
   } catch (error) {
@@ -149,6 +150,7 @@ export async function extractPdf(bytes: Uint8Array): Promise<PdfDocument> {
       'pdf_open_failed',
     )
   }
+  if (!doc) throw new ExtractionError('PDF 无法打开', 'pdf_open_failed')
 
   if (doc.numPages > MAX_PDF_PAGES) {
     await doc.destroy()

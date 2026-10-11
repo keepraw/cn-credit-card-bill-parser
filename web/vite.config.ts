@@ -1,7 +1,6 @@
-/// <reference types="vitest" />
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { fileURLToPath, URL } from 'node:url'
 
 // GitHub Pages project site: https://<user>.github.io/cn-credit-card-bill-parser/
 // Set VITE_BASE_PATH=/cn-credit-card-bill-parser/ to publish under a project path.
@@ -22,12 +21,5 @@ export default defineConfig({
   },
   worker: {
     format: 'es',
-  },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./tests/setup.ts'],
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
-    css: false,
   },
 })

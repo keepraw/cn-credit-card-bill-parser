@@ -28,10 +28,10 @@ export function parseDateInput(raw: string, defaultYear?: number): IsoDate | nul
   if (m) return buildIso(m[1], m[2], m[3])
 
   m = /^(\d{4})[-/.年](\d{1,2})月?$/.exec(text)
-  if (m && defaultYear) return monthEnd(defaultYear, Number(m[1]), Number(m[2]))
+  if (m && defaultYear !== undefined) return monthEnd(defaultYear, Number(m[2]))
 
   m = /^(\d{1,2})[-/.](\d{1,2})$/.exec(text)
-  if (m && defaultYear) return buildIso(String(defaultYear), m[1], m[2])
+  if (m && defaultYear !== undefined) return buildIso(String(defaultYear), m[1], m[2])
 
   return null
 }

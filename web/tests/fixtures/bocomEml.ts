@@ -102,6 +102,7 @@ export const SYNTHETIC_BOCOM = {
   debitTransactionCount: 11,
   installmentOriginalMinor: 90000,
   installmentPaymentMinor: 30000,
-  totalDebitRowsMinor: 710000,
+  /** every debit row printed in the statement, original installment purchase included */
+  totalDebitRowsMinor: 740000,
   expectedSpendingMinor: 650000,
 }

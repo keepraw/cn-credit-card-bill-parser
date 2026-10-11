@@ -50,6 +50,8 @@ export interface DuplicateOutcome {
 
 interface FingerprintView {
   fingerprint: string
+  bank: string
+  cardLast4: string
   transactionDate: string | null
   settlementAmountMinor: number
   type: string
@@ -83,22 +85,37 @@ export function detectDuplicates(
     bucket.push(row)
     loose.set(key, bucket)
   }
+  const incomingLoose = new Map<string, FingerprintView[]>()
 
   for (const row of incoming) {
     const exactBucket = exact.get(row.fingerprint) ?? []
     if (exactBucket.some((candidate) => candidate.description === row.description)) {
       duplicateIds.add(row.id)
+      continue
     }
-    const looseBucket = loose.get(looseKey(row)) ?? []
+
+    // Compare against stored rows *and* against rows earlier in this same batch, so a
+    // statement that repeats a purchase twice is still flagged.
+    const looseBucket = [...(loose.get(looseKey(row)) ?? []), ...incomingLoose.get(looseKey(row)) ?? []]
     const others = looseBucket.filter((candidate) => candidate.description !== row.description)
-    if (others.length > 0) suspectedDuplicates.set(row.id, others.map((candidate) => candidate.description))
+    if (others.length > 0) {
+      suspectedDuplicates.set(row.id, [...others.map((candidate) => candidate.description), row.description])
+    }
+    const key = looseKey(row)
+    const bucket = incomingLoose.get(key) ?? []
+    bucket.push(row)
+    incomingLoose.set(key, bucket)
   }
 
   return { duplicateIds, suspectedDuplicates }
 }
 
+/**
+ * Loose key: bank + card + date + amount + type. Two rows that agree on all of these
+ * but describe different merchants are *flagged*, never merged.
+ */
 function looseKey(row: FingerprintView): string {
-  return [row.fingerprint.slice(0, 8), row.transactionDate ?? '', String(row.settlementAmountMinor), row.type].join('|')
+  return [row.bank, row.cardLast4, row.transactionDate ?? '', String(row.settlementAmountMinor), row.type].join('|')
 }
 
 /** Transactions of one statement that share bank/card/date/amount but differ in text. */

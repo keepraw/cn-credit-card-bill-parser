@@ -113,7 +113,27 @@ export function ingestParsedStatement(
 
   const priorForStatement = existing.transactions.filter((tx) => tx.statementId === key)
   const others = existing.transactions.filter((tx) => tx.statementId !== key)
-  const { duplicateIds, suspectedDuplicates } = detectDuplicates(candidates, [...others, ...priorForStatement])
+  const { duplicateIds, suspectedDuplicates } = detectDuplicates(
+    candidates.map((tx) => ({
+      id: tx.id,
+      fingerprint: tx.fingerprint,
+      bank: tx.bank,
+      cardLast4: tx.cardLast4,
+      transactionDate: tx.transactionDate,
+      settlementAmountMinor: tx.settlementAmountMinor,
+      type: tx.type,
+      description: tx.description,
+    })),
+    [...others, ...priorForStatement].map((tx) => ({
+      fingerprint: tx.fingerprint,
+      bank: tx.bank,
+      cardLast4: tx.cardLast4,
+      transactionDate: tx.transactionDate,
+      settlementAmountMinor: tx.settlementAmountMinor,
+      type: tx.type,
+      description: tx.description,
+    })),
+  )
 
   const skippedDuplicates = candidates.filter((tx) => duplicateIds.has(tx.id))
   const inserted = candidates

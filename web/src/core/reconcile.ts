@@ -276,7 +276,7 @@ export function summarizeTransactions(transactions: Transaction[]): SpendingBrea
 
     if (tx.type === 'installment_original') continue
     if (tx.direction === 'debit') result.billingDebitMinor += amount
-    else result.billingCreditMinor += amount
+    else result.billingCreditMinor += -amount
   }
 
   result.realSpendingMinor =

@@ -12,7 +12,7 @@ export function groupRows(items: PdfTextItem[], tolerance = 3): TextRow[] {
     .filter((item) => item.text.trim().length > 0)
     .sort((a, b) => b.y - a.y || a.x - b.x)
 
-  const rows: TextRow[] = []
+  const rows: Array<Omit<TextRow, 'text'>> = []
   for (const item of sorted) {
     const row = rows.find((candidate) => Math.abs(candidate.y - item.y) <= tolerance)
     if (row) {
@@ -21,11 +21,16 @@ export function groupRows(items: PdfTextItem[], tolerance = 3): TextRow[] {
       rows.push({ y: item.y, items: [item] })
     }
   }
-  for (const row of rows) {
+  const result: TextRow[] = rows.map((row) => ({ ...row, text: '' }))
+  for (const row of result) {
     row.items.sort((a, b) => a.x - b.x)
-    row.text = row.items.map((item) => item.text).join(' ').replace(/\s+/g, ' ').trim()
+    row.text = row.items
+      .map((item) => item.text)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
   }
-  return rows.sort((a, b) => b.y - a.y)
+  return result.sort((a, b) => b.y - a.y)
 }
 
 export function pageRows(page: PdfPage, tolerance = 3): TextRow[] {
