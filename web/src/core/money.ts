@@ -122,7 +122,7 @@ export function parseAmountToMinor(raw: string | number | null | undefined, fall
   text = text
     .replace(/\/\s*[CD]\b/gi, '')
     .replace(/\bDR\b/gi, '')
-    .replace(/\d\s*CR\b/gi, '')
+    .replace(/\s*CR\b/gi, '')
     .replace(/[^\d.,\-−–—]/g, '')
     .replace(/[−–—]/g, '-')
 
