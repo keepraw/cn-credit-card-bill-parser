@@ -50,4 +50,33 @@ logs/*
 # Keep dependency metadata trackable even though spreadsheets are ignored.
 !requirements.txt
 
+# --- Web app (local-first React front end) ---
+# The blanket *.html rule above would hide the Vite entry point, so re-allow it.
+!web/index.html
+
+node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+web/blob-report/
+web/.vite/
+
+# Real statements must never be committed, including anything placed under web/.
+web/**/*.eml
+web/**/*.msg
+web/**/*.pdf
+web/**/*.PDF
+web/**/*.html
+!web/index.html
+web/**/*.txt
+web/**/*.csv
+web/**/*.tsv
+web/**/*.xlsx
+web/**/*.db
+web/**/*.sqlite*
+
+# Playwright / test scratch space
+.playwright/
+*.local
+
 
