@@ -476,6 +476,6 @@ export function cleanDescription(text: string): string {
   value = value.replace(CN_MARKER, '')
   value = value.replace(/(?<![A-Za-z])C$/, '')
   value = value.replace(/^HN(?![A-Za-z])/, '')
-  value = value.replace(/\s{2,}/g, ' ').trim()
+  value = value.replace(/\s*\/\s*$/, '').replace(/\s{2,}/g, ' ').trim()
   return value
 }
