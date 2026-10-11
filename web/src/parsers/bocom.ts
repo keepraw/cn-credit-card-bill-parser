@@ -356,7 +356,7 @@ function parseSummary(doc: SourceDocument): StatementSummary {
       const minor = column.absolute ? Math.abs(parsed.minor) : parsed.minor
       const current = summary[column.key]
       if (current === null || current === undefined) {
-        ;(summary[column.key] as number) = minor
+        (summary[column.key] as number) = minor
       }
       components.push({ label: column.label, minor, currency: 'CNY' })
     }
