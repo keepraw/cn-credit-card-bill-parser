@@ -1,6 +1,6 @@
 import type { ExistingSnapshot, IngestResult } from '../core/ingest'
 import type { ImportRecord, Statement, Transaction } from '../core/types'
-import { db } from './db'
+import { type AttachmentRow, db } from './db'
 
 export interface Snapshot {
   statements: Statement[]
@@ -55,7 +55,7 @@ export async function setReviewNote(transactionId: string, note: string): Promis
 }
 
 export interface BackupPayload {
-  format: 'credit-bill-manager-backup'
+  format: 'credit-bill-manager-backup' | 'credit-card-data-backup'
   version: 1
   exportedAt: string
   statements: Statement[]
@@ -64,11 +64,16 @@ export interface BackupPayload {
   settings: unknown
 }
 
-/** Full local backup. The user stores it themselves; nothing is uploaded. */
+/** Lightweight data backup: transactions + statements + import metadata + settings. No raw files. */
 export async function exportBackup(): Promise<BackupPayload> {
+  return exportDataBackup()
+}
+
+/** Preferred name going forward. Writes `credit-card-data.json`. Keeps the payload identical. */
+export async function exportDataBackup(): Promise<BackupPayload> {
   const settings = await db.settings.get('app')
   return {
-    format: 'credit-bill-manager-backup',
+    format: 'credit-card-data-backup',
     version: 1,
     exportedAt: new Date().toISOString(),
     statements: await db.statements.toArray(),
@@ -82,7 +87,8 @@ export function validateBackup(value: unknown): value is BackupPayload {
   if (!value || typeof value !== 'object') return false
   const payload = value as Partial<BackupPayload>
   return (
-    payload.format === 'credit-bill-manager-backup' &&
+    (payload.format === 'credit-bill-manager-backup' || payload.format === 'credit-card-data-backup') &&
+    payload.version === 1 &&
     Array.isArray(payload.statements) &&
     Array.isArray(payload.transactions) &&
     Array.isArray(payload.imports)
@@ -112,11 +118,12 @@ export async function clearDemoData(): Promise<void> {
 
 export async function clearAllData(options: { includeDemo: boolean }): Promise<void> {
   if (options.includeDemo) {
-    await db.transaction('rw', db.statements, db.transactions, db.imports, db.reviewNotes, async () => {
+    await db.transaction('rw', [db.statements, db.transactions, db.imports, db.reviewNotes, db.attachments], async () => {
       await db.statements.clear()
       await db.transactions.clear()
       await db.imports.clear()
       await db.reviewNotes.clear()
+      await db.attachments.clear()
     })
     return
   }
@@ -131,4 +138,124 @@ export async function storageEstimate(): Promise<{ usage: number; quota: number 
   if (!navigator.storage?.estimate) return null
   const estimate = await navigator.storage.estimate()
   return { usage: estimate.usage ?? 0, quota: estimate.quota ?? 0 }
+}
+
+// ---------------------------------------------------------------------------
+// Original-file lifecycle: indexeddb | external (future) | missing
+// ---------------------------------------------------------------------------
+
+export type AttachmentStorage = 'indexeddb' | 'external' | 'missing'
+
+export interface ManifestFileEntry {
+  importId: string
+  filename: string
+  sha256: string
+  parserId: string
+  importedAt: string
+  storage: AttachmentStorage
+}
+
+export interface ArchiveManifest {
+  version: 1
+  createdAt: string
+  files: ManifestFileEntry[]
+}
+
+export interface ArchiveStatus {
+  transactionCount: number
+  importCount: number
+  archivedCount: number
+  missingCount: number
+}
+
+export function mimeTypeForFile(fileName: string): string {
+  const lower = fileName.toLowerCase()
+  if (lower.endsWith('.pdf')) return 'application/pdf'
+  if (lower.endsWith('.eml')) return 'message/rfc822'
+  if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'text/html'
+  if (lower.endsWith('.txt')) return 'text/plain'
+  return 'application/octet-stream'
+}
+
+/** Store the raw evidence bytes. Idempotent: same hash is never stored twice. */
+export async function saveOriginalFile(input: {
+  fileHash: string
+  fileName: string
+  mimeType?: string
+  data: ArrayBuffer
+  importId: string
+  parserId: string
+}): Promise<void> {
+  const existing = await db.attachments.get(input.fileHash)
+  if (existing) return
+  const row: AttachmentRow = {
+    fileHash: input.fileHash,
+    fileName: input.fileName,
+    mimeType: input.mimeType ?? mimeTypeForFile(input.fileName),
+    size: input.data.byteLength,
+    data: input.data.slice(0),
+    importId: input.importId,
+    parserId: input.parserId,
+    importedAt: new Date().toISOString(),
+  }
+  await db.attachments.put(row)
+}
+
+export async function getAttachment(fileHash: string): Promise<AttachmentRow | undefined> {
+  return db.attachments.get(fileHash)
+}
+
+export async function hasAttachment(fileHash: string): Promise<boolean> {
+  return (await db.attachments.get(fileHash)) !== undefined
+}
+
+/** Build the manifest without inventing files: no row in `attachments` means `missing`. */
+export async function buildManifest(): Promise<ArchiveManifest> {
+  const imports = await db.imports.toArray()
+  const files: ManifestFileEntry[] = []
+  for (const record of imports) {
+    const attachment = await db.attachments.get(record.fileHash)
+    files.push({
+      importId: record.id,
+      filename: record.fileName,
+      sha256: record.fileHash,
+      parserId: record.parserId,
+      importedAt: record.importedAt,
+      storage: attachment ? 'indexeddb' : 'missing',
+    })
+  }
+  files.sort((a, b) => a.importedAt.localeCompare(b.importedAt))
+  return { version: 1, createdAt: new Date().toISOString(), files }
+}
+
+export function validateManifest(value: unknown): value is ArchiveManifest {
+  if (!value || typeof value !== 'object') return false
+  const manifest = value as Partial<ArchiveManifest>
+  if (manifest.version !== 1 || typeof manifest.createdAt !== 'string' || !Array.isArray(manifest.files)) return false
+  return manifest.files.every(
+    (entry) =>
+      entry &&
+      typeof entry === 'object' &&
+      typeof entry.importId === 'string' &&
+      typeof entry.filename === 'string' &&
+      typeof entry.sha256 === 'string' &&
+      typeof entry.parserId === 'string' &&
+      typeof entry.importedAt === 'string' &&
+      (entry.storage === 'indexeddb' || entry.storage === 'external' || entry.storage === 'missing'),
+  )
+}
+
+/** Count how many imports still have evidence available vs. data-only rows. */
+export async function getArchiveStatus(): Promise<ArchiveStatus> {
+  const [transactions, imports] = await Promise.all([db.transactions.toArray(), db.imports.toArray()])
+  let archivedCount = 0
+  for (const record of imports) {
+    if (await db.attachments.get(record.fileHash)) archivedCount += 1
+  }
+  return {
+    transactionCount: transactions.length,
+    importCount: imports.length,
+    archivedCount,
+    missingCount: imports.length - archivedCount,
+  }
 }

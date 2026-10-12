@@ -4,17 +4,22 @@ import { DEFAULT_SETTINGS, db, loadSettings, saveSettings } from '../db/db'
 import {
   clearAllData,
   clearDemoData,
-  exportBackup,
+  exportDataBackup,
+  getArchiveStatus,
   getReviewNotes,
   importBackup,
+  mimeTypeForFile,
   persistImportResults,
   readSnapshot,
+  saveOriginalFile,
   setReviewNote,
   updateTransaction,
   updateTransactions,
   validateBackup,
+  type ArchiveStatus,
   type Snapshot,
 } from '../db/repository'
+import { buildFullBackupZip, previewFullBackupZip, restoreFullBackupZip } from '../backup/archive'
 import { ingestParsedStatement, failedImportRecord, unsupportedRecord, type IngestResult } from '../core/ingest'
 import { buildSourceDocument, sha256Hex } from '../parsers/extract'
 import { detectParser, parseDocument, UnsupportedFileError } from '../parsers/registry'
@@ -46,7 +51,10 @@ interface AppApi {
   updateTransaction: (patch: Partial<Transaction> & { id: string }) => Promise<void>
   saveNote: (transactionId: string, note: string) => Promise<void>
   backup: () => Promise<void>
+  backupData: () => Promise<void>
+  backupFull: () => Promise<{ warning: string | null }>
   restore: (file: File) => Promise<{ ok: boolean; message: string }>
+  archiveStatus: () => Promise<ArchiveStatus>
   clearData: (includeDemo: boolean) => Promise<void>
   visibleStatements: Statement[]
   visibleTransactions: Transaction[]
@@ -103,6 +111,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         throw new Error('演示模式下无法导入真实账单，请先在设置中关闭演示模式。')
       }
       const results: IngestResult[] = []
+      // Raw bytes kept alongside each result so evidence can be archived.
+      const evidence: Array<{ buffer: ArrayBuffer; fileName: string; mimeType: string }> = []
       let current = await readSnapshot()
 
       for (const [index, file] of files.entries()) {
@@ -116,16 +126,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const doc = await buildSourceDocument({ fileName: file.name, buffer, fileHash })
           const match = detectParser(doc)
           if (!match) {
+            const record = unsupportedRecord(
+              { ...meta, fileHash, sourceType: doc.sourceType },
+              `无法识别 ${file.name} 的银行与账单格式，未识别的文件不会被当作成功导入。`,
+            )
             results.push({
-              record: unsupportedRecord(
-                { ...meta, fileHash, sourceType: doc.sourceType },
-                `无法识别 ${file.name} 的银行与账单格式，未识别的文件不会被当作成功导入。`,
-              ),
+              record,
               statement: null,
               transactions: [],
               inserted: [],
               skippedDuplicates: [],
             })
+            evidence.push({ buffer: buffer.slice(0), fileName: file.name, mimeType: file.type || mimeTypeForFile(file.name) })
             continue
           }
           setProgress({ fileName: file.name, index, total: files.length, phase: '解析账单' })
@@ -136,6 +148,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             { statements: current.statements, transactions: current.transactions, imports: current.imports },
           )
           results.push(result)
+          evidence.push({ buffer: buffer.slice(0), fileName: file.name, mimeType: file.type || mimeTypeForFile(file.name) })
           current = {
             statements: current.statements.filter((s) => s.id !== result.statement?.id).concat(result.statement ?? []),
             transactions: current.transactions.filter((t) => t.statementId !== result.statement?.id).concat(result.transactions),
@@ -151,12 +164,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
             inserted: [],
             skippedDuplicates: [],
           })
+          try {
+            const retry = await file.arrayBuffer()
+            if (fileHash !== 'unavailable') {
+              evidence.push({ buffer: retry, fileName: file.name, mimeType: file.type || mimeTypeForFile(file.name) })
+            }
+          } catch {
+            // Evidence is best-effort: a file we cannot re-read stays `missing`.
+          }
         }
       }
 
       setProgress(null)
       await persistImportResults(results.filter((result) => result.statement !== null))
       await persistFailureRecords(results)
+      // Archive raw evidence keyed by hash. Best-effort: never fails the import.
+      for (const [i, result] of results.entries()) {
+        const raw = evidence[i]
+        if (!raw || result.record.fileHash === 'unavailable') continue
+        try {
+          await saveOriginalFile({
+            fileHash: result.record.fileHash,
+            fileName: result.record.fileName,
+            mimeType: raw.mimeType,
+            data: raw.buffer.slice(0),
+            importId: result.record.id,
+            parserId: result.record.parserId,
+          })
+        } catch {
+          // IndexedDB quota or private-mode limits must not break the import itself.
+        }
+      }
       await refresh()
       return results.map((result) => result.record)
     },
@@ -187,17 +225,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  const backup = useCallback(async () => {
-    const payload = await exportBackup()
+  const backupData = useCallback(async () => {
+    const payload = await exportDataBackup()
     triggerDownload(
       new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }),
-      `credit-bill-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      `credit-card-data-${new Date().toISOString().slice(0, 10)}.json`,
     )
   }, [])
+
+  const backup = useCallback(async () => {
+    await backupData()
+  }, [backupData])
+
+  const backupFull = useCallback(async (): Promise<{ warning: string | null }> => {
+    const { blob, warning } = await buildFullBackupZip()
+    triggerDownload(blob, `credit-card-full-backup-${new Date().toISOString().slice(0, 10)}.zip`)
+    return { warning }
+  }, [])
+
+  const archiveStatus = useCallback(async (): Promise<ArchiveStatus> => getArchiveStatus(), [])
 
   const restore = useCallback(
     async (file: File) => {
       try {
+        if (file.name.toLowerCase().endsWith('.zip')) {
+          const preview = await previewFullBackupZip(file)
+          const result = await restoreFullBackupZip(file)
+          await refresh()
+          const base = `已恢复 ${result.transactions} 笔交易、${result.statements} 份账单、${result.files} 个原始文件。`
+          return { ok: true, message: preview.warning ? `${base}${preview.warning}。` : base }
+        }
         const payload: unknown = JSON.parse(await file.text())
         if (!validateBackup(payload)) return { ok: false, message: '文件格式不正确，不是本应用导出的备份。' }
         await importBackup(payload)
@@ -241,7 +298,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateTransaction: patchTransaction,
       saveNote,
       backup,
+      backupData,
+      backupFull,
       restore,
+      archiveStatus,
       clearData,
       visibleStatements,
       visibleTransactions,
@@ -260,7 +320,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       patchTransaction,
       saveNote,
       backup,
+      backupData,
+      backupFull,
       restore,
+      archiveStatus,
       clearData,
       visibleStatements,
       visibleTransactions,
