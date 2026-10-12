@@ -112,6 +112,7 @@ const CHECK_LABEL: Record<ReconciliationCheck['status'], string> = {
 
 export function StatementStatusBadge({ statement }: { statement: Statement }) {
   if (statement.status === 'reconciled') return <Badge tone="ok">对账通过</Badge>
+  if (statement.status === 'imported') return <Badge tone="info">历史导入</Badge>
   if (statement.reconciliation.status === 'mismatch') return <Badge tone="danger">对账存在差额</Badge>
   return <Badge tone="warn">缺少汇总信息</Badge>
 }

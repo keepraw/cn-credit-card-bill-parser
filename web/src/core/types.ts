@@ -133,6 +133,17 @@ export interface Transaction {
   occurrence: number
   isDemo: boolean
   isSynthetic?: boolean
+  /**
+   * Provenance of this row. Absent means a bank-parser import.
+   * `legacy_import` = migrated from a historical system via a Legacy Adapter
+   * (see `src/importers/`). Never set by bank parsers.
+   */
+  origin?: 'parser' | 'legacy_import'
+  /**
+   * Adapter that produced this row, e.g. `legacy-python-export-v1`.
+   * Absent means a bank parser. Preserved so the source is never lost.
+   */
+  sourceId?: string
 }
 
 export interface NamedAmount {
@@ -178,7 +189,7 @@ export interface ReconciliationResult {
   computedBalanceMinor: number | null
 }
 
-export type StatementStatus = 'reconciled' | 'needs_review' | 'failed'
+export type StatementStatus = 'reconciled' | 'needs_review' | 'failed' | 'imported'
 
 export interface Statement {
   id: string
@@ -201,14 +212,14 @@ export interface Statement {
   isDemo: boolean
 }
 
-export type ImportStatus = 'parsed' | 'needs_review' | 'duplicate' | 'failed' | 'unsupported'
+export type ImportStatus = 'parsed' | 'needs_review' | 'duplicate' | 'failed' | 'unsupported' | 'imported'
 
 export interface ImportRecord {
   id: string
   fileName: string
   fileSize: number
   fileHash: string
-  sourceType: 'pdf' | 'eml' | 'html' | 'text' | 'unknown'
+  sourceType: 'pdf' | 'eml' | 'html' | 'text' | 'xlsx' | 'unknown'
   bank: BankId
   detectedBank: BankId
   cardLast4: string

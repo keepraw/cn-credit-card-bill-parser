@@ -36,7 +36,7 @@ export function AppShell() {
     return () => media.removeEventListener('change', apply)
   }, [state.settings.theme])
 
-  const pending = state.statements.filter((s) => !s.isDemo && s.status !== 'reconciled').length
+  const pending = state.statements.filter((s) => !s.isDemo && s.status !== 'reconciled' && s.status !== 'imported').length
 
   return (
     <div className="app">

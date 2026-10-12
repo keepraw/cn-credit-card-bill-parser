@@ -8,6 +8,7 @@ import {
   getReviewNotes,
   importBackup,
   persistImportResults,
+  persistLegacyImport,
   readSnapshot,
   setReviewNote,
   updateTransaction,
@@ -15,6 +16,13 @@ import {
   validateBackup,
   type Snapshot,
 } from '../db/repository'
+import {
+  hashLegacyFile,
+  planLegacyImport,
+  previewLegacyWorkbook,
+  type LegacyExisting,
+} from '../importers/legacyImport'
+import type { LegacyPreview } from '../importers/types'
 import { ingestParsedStatement, failedImportRecord, unsupportedRecord, type IngestResult } from '../core/ingest'
 import { buildSourceDocument, sha256Hex } from '../parsers/extract'
 import { detectParser, parseDocument, UnsupportedFileError } from '../parsers/registry'
@@ -42,6 +50,8 @@ interface AppApi {
   refresh: () => Promise<void>
   setSettings: (patch: Partial<AppSettings>) => Promise<void>
   importFiles: (files: File[]) => Promise<ImportRecord[]>
+  previewLegacyImport: (file: File) => Promise<LegacyPreview>
+  confirmLegacyImport: (preview: LegacyPreview) => Promise<ImportRecord>
   loadDemoData: () => Promise<void>
   updateTransaction: (patch: Partial<Transaction> & { id: string }) => Promise<void>
   saveNote: (transactionId: string, note: string) => Promise<void>
@@ -169,6 +179,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await refresh()
   }, [refresh])
 
+  /**
+   * Legacy history import, kept strictly separate from bank-statement imports.
+   * Preview is read-only; the confirm step writes one atomic transaction.
+   */
+  const previewLegacyImport = useCallback(
+    async (file: File): Promise<LegacyPreview> => {
+      if (settings.demoMode) {
+        throw new Error('演示模式下无法导入历史数据，请先在设置中关闭演示模式。')
+      }
+      setProgress({ fileName: file.name, index: 0, total: 1, phase: '读取历史数据' })
+      try {
+        const { buffer, fileHash } = await hashLegacyFile(file)
+        setProgress({ fileName: file.name, index: 0, total: 1, phase: '生成预览' })
+        const snapshot = await readSnapshot()
+        const existing: LegacyExisting = {
+          imports: snapshot.imports,
+          statements: snapshot.statements,
+          transactions: snapshot.transactions,
+        }
+        return await previewLegacyWorkbook(
+          buffer,
+          { fileName: file.name, fileSize: file.size, fileHash },
+          existing,
+        )
+      } finally {
+        setProgress(null)
+      }
+    },
+    [settings.demoMode],
+  )
+
+  const confirmLegacyImport = useCallback(
+    async (preview: LegacyPreview): Promise<ImportRecord> => {
+      if (settings.demoMode) {
+        throw new Error('演示模式下无法导入历史数据，请先在设置中关闭演示模式。')
+      }
+      setProgress({ fileName: preview.meta.fileName, index: 0, total: 1, phase: '写入历史数据' })
+      try {
+        const snapshot = await readSnapshot()
+        const plan = planLegacyImport(preview, {
+          imports: snapshot.imports,
+          statements: snapshot.statements,
+          transactions: snapshot.transactions,
+        })
+        await persistLegacyImport(plan)
+        await refresh()
+        return plan.record
+      } finally {
+        setProgress(null)
+      }
+    },
+    [refresh, settings.demoMode],
+  )
+
   const patchTransaction = useCallback(
     async (patch: Partial<Transaction> & { id: string }) => {
       const current = snapshot.transactions.find((tx) => tx.id === patch.id)
@@ -237,6 +301,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refresh,
       setSettings,
       importFiles,
+      previewLegacyImport,
+      confirmLegacyImport,
       loadDemoData,
       updateTransaction: patchTransaction,
       saveNote,
@@ -256,6 +322,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refresh,
       setSettings,
       importFiles,
+      previewLegacyImport,
+      confirmLegacyImport,
       loadDemoData,
       patchTransaction,
       saveNote,
