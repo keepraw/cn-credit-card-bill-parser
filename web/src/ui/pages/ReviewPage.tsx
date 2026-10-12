@@ -21,7 +21,8 @@ export function ReviewPage() {
   const [draftNote, setDraftNote] = useState('')
 
   const flaggedStatements = useMemo(
-    () => visibleStatements.filter((statement) => statement.status !== 'reconciled'),
+    // Imported history has no balance to reconcile, so it never enters the review queue.
+    () => visibleStatements.filter((statement) => statement.status !== 'reconciled' && statement.status !== 'imported'),
     [visibleStatements],
   )
   const flaggedTransactions = useMemo(

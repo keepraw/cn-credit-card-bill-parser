@@ -116,8 +116,11 @@ export interface StatementFilterResult {
 }
 
 /**
- * Only statements that reconciled may feed the statistics by default. Unreconciled
- * statements are surfaced separately instead of silently inflating the totals.
+ * Only statements that reconciled may feed the statistics by default, with one
+ * deliberate exception: `imported` history was reviewed in the previous system
+ * and carries no balance to check, so it counts without ever claiming
+ * `reconciled`. Unreconciled statements are surfaced separately instead of
+ * silently inflating the totals.
  */
 export function filterByStatementTrust(
   transactions: Transaction[],
@@ -127,7 +130,9 @@ export function filterByStatementTrust(
   if (includeUnreconciled || statements.length === 0) {
     return { transactions, excludedStatementIds: new Set() }
   }
-  const untrusted = new Set(statements.filter((s) => s.status !== 'reconciled').map((s) => s.id))
+  const untrusted = new Set(
+    statements.filter((s) => s.status !== 'reconciled' && s.status !== 'imported').map((s) => s.id),
+  )
   return {
     transactions: transactions.filter((tx) => !untrusted.has(tx.statementId)),
     excludedStatementIds: untrusted,
@@ -135,7 +140,9 @@ export function filterByStatementTrust(
 }
 
 export function untrustedAmount(transactions: Transaction[], statements: Statement[]): number {
-  const untrusted = new Set(statements.filter((s) => s.status !== 'reconciled').map((s) => s.id))
+  const untrusted = new Set(
+    statements.filter((s) => s.status !== 'reconciled' && s.status !== 'imported').map((s) => s.id),
+  )
   return transactions
     .filter((tx) => untrusted.has(tx.statementId) && tx.type !== 'installment_original')
     .reduce((sum, tx) => sum + Math.abs(tx.settlementAmountMinor), 0)

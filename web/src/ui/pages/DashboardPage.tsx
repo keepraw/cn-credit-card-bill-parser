@@ -13,7 +13,9 @@ export function DashboardPage() {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
 
   const trusted = useMemo(() => {
-    const untrusted = new Set(visibleStatements.filter((s) => s.status !== 'reconciled').map((s) => s.id))
+    const untrusted = new Set(
+      visibleStatements.filter((s) => s.status !== 'reconciled' && s.status !== 'imported').map((s) => s.id),
+    )
     const base = filters.includeUnreconciled ? visibleTransactions : visibleTransactions.filter((tx) => !untrusted.has(tx.statementId))
     return applyFilters(base, filters)
   }, [filters, visibleStatements, visibleTransactions])
@@ -36,7 +38,7 @@ export function DashboardPage() {
     filters.from && filters.to && filters.from.slice(0, 7) === filters.to.slice(0, 7) ? filters.from.slice(0, 7) : ''
 
   const hasData = visibleTransactions.length > 0
-  const pendingStatements = visibleStatements.filter((s) => s.status !== 'reconciled').length
+  const pendingStatements = visibleStatements.filter((s) => s.status !== 'reconciled' && s.status !== 'imported').length
 
   return (
     <>

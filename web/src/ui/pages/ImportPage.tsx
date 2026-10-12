@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useApp } from '../../app/AppStore'
 import { bankName, type ImportStatus } from '../../core/types'
+import type { LegacyPreview } from '../../importers/types'
 import { Badge, DemoBadge, EmptyState } from '../components/ui'
 
 const STATUS_META: Record<ImportStatus, { label: string; tone: 'ok' | 'warn' | 'danger' | 'info' | 'muted' }> = {
@@ -9,14 +10,19 @@ const STATUS_META: Record<ImportStatus, { label: string; tone: 'ok' | 'warn' | '
   duplicate: { label: '重复文件', tone: 'muted' },
   failed: { label: '解析失败', tone: 'danger' },
   unsupported: { label: '无法识别', tone: 'danger' },
+  imported: { label: '历史导入', tone: 'info' },
 }
 
 export function ImportPage() {
-  const { importFiles, state, visibleImports } = useApp()
+  const { importFiles, previewLegacyImport, confirmLegacyImport, state, visibleImports } = useApp()
   const [dragging, setDragging] = useState(false)
   const [results, setResults] = useState<ReturnType<typeof importFiles> extends Promise<infer T> ? T : never>([])
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [legacyPreview, setLegacyPreview] = useState<LegacyPreview | null>(null)
+  const [legacyError, setLegacyError] = useState<string | null>(null)
+  const [legacyBusy, setLegacyBusy] = useState(false)
+  const legacyInputRef = useRef<HTMLInputElement>(null)
 
   const handleFiles = useCallback(
     async (files: File[]) => {
@@ -33,6 +39,37 @@ export function ImportPage() {
   )
 
   const blocked = state.demoMode
+
+  const handleLegacyFile = useCallback(
+    async (file: File) => {
+      setLegacyError(null)
+      setLegacyPreview(null)
+      setLegacyBusy(true)
+      try {
+        setLegacyPreview(await previewLegacyImport(file))
+      } catch (caught) {
+        setLegacyError(caught instanceof Error ? caught.message : '历史数据预览失败')
+      } finally {
+        setLegacyBusy(false)
+      }
+    },
+    [previewLegacyImport],
+  )
+
+  const handleLegacyConfirm = useCallback(async () => {
+    if (!legacyPreview) return
+    setLegacyError(null)
+    setLegacyBusy(true)
+    try {
+      const record = await confirmLegacyImport(legacyPreview)
+      setResults([record])
+      setLegacyPreview(null)
+    } catch (caught) {
+      setLegacyError(caught instanceof Error ? caught.message : '历史数据导入失败')
+    } finally {
+      setLegacyBusy(false)
+    }
+  }, [confirmLegacyImport, legacyPreview])
 
   return (
     <>
@@ -113,6 +150,106 @@ export function ImportPage() {
         </div>
       </div>
 
+      <div className="card">
+        <div className="card-head">
+          <div>
+            <h2>历史 Excel 导入</h2>
+            <p>迁移旧系统的结构化历史数据，而非银行账单。仅支持已知历史格式。</p>
+          </div>
+          <Badge tone="info">Legacy Python Export</Badge>
+        </div>
+        <div className="card-pad stack">
+          <p className="subtle">
+            仅接受旧 Python 账单工具导出的 <span className="mono">unified_transactions.xlsx</span>（
+            <span className="mono">标准字段</span>表，格式 legacy-python-export-v1）。不符合该格式的文件会被拒绝，
+            不会尝试猜测列含义。预览阶段只读不写，确认后一次性写入。
+          </p>
+          <input
+            ref={legacyInputRef}
+            type="file"
+            accept=".xlsx"
+            hidden
+            data-testid="legacy-file-input"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (file) void handleLegacyFile(file)
+            }}
+          />
+          <div className="row">
+            <button
+              className="btn"
+              type="button"
+              disabled={blocked || legacyBusy}
+              data-testid="legacy-select"
+              onClick={() => legacyInputRef.current?.click()}
+            >
+              {legacyBusy ? '处理中…' : '选择历史 Excel 文件'}
+            </button>
+            {legacyPreview ? (
+              <button className="btn" type="button" data-testid="legacy-cancel" onClick={() => setLegacyPreview(null)}>
+                取消
+              </button>
+            ) : null}
+          </div>
+
+          {legacyError ? (
+            <div className="notice notice-danger" data-testid="legacy-error">
+              <Badge tone="danger">无法导入</Badge>
+              <div>{legacyError}</div>
+            </div>
+          ) : null}
+
+          {legacyPreview ? (
+            <div className="stack" data-testid="legacy-preview">
+              <div className="row">
+                <Badge tone="info">{legacyPreview.stats.formatName}</Badge>
+                <span className="mono subtle">{legacyPreview.stats.formatId}</span>
+              </div>
+              <p data-testid="legacy-preview-summary">
+                共 {legacyPreview.stats.totalRows} 行数据，可导入 {legacyPreview.stats.validRows} 笔，
+                异常 {legacyPreview.stats.anomalyRows} 行
+                {legacyPreview.stats.dateRange
+                  ? `，日期范围 ${legacyPreview.stats.dateRange.min} ~ ${legacyPreview.stats.dateRange.max}`
+                  : ''}
+                ，涉及银行：
+                {legacyPreview.stats.banks.map((bank) => (bank === 'unknown' ? '未知' : bankName(bank))).join('、') || '—'}。
+              </p>
+              {legacyPreview.stats.anomalyRows > 0 ? (
+                <p className="subtle" data-testid="legacy-preview-anomalies">
+                  异常明细：必填缺失 {legacyPreview.stats.anomaliesByKind.missing_field} 行，
+                  日期无法解析 {legacyPreview.stats.anomaliesByKind.date_unparseable} 行，
+                  金额无法解析 {legacyPreview.stats.anomaliesByKind.amount_unparseable} 行。
+                  异常行不会被导入。
+                </p>
+              ) : null}
+              {legacyPreview.stats.duplicateFile ? (
+                <div className="notice notice-warn">
+                  <Badge tone="warn">重复文件</Badge>
+                  <div>该文件此前已导入，确认后不会产生重复交易。</div>
+                </div>
+              ) : legacyPreview.stats.alreadyStored > 0 ? (
+                <div className="notice notice-warn">
+                  <Badge tone="warn">部分已存在</Badge>
+                  <div>其中 {legacyPreview.stats.alreadyStored} 笔交易已在账本中，确认后会自动跳过。</div>
+                </div>
+              ) : null}
+              <div className="row">
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={legacyBusy}
+                  data-testid="legacy-confirm"
+                  onClick={() => void handleLegacyConfirm()}
+                >
+                  确认导入 {legacyPreview.stats.validRows} 笔
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       {results.length > 0 ? (
         <div className="card">
           <div className="card-head">
@@ -120,8 +257,7 @@ export function ImportPage() {
               <h2>本次导入结果</h2>
               <p>不识别的银行或文件会明确标记为失败，不会伪装成成功。</p>
             </div>
-          </div>
-          <div className="table-wrap">
+          </div>          <div className="table-wrap">
             <table className="data">
               <thead>
                 <tr>

@@ -33,6 +33,21 @@ export async function persistImportResults(results: IngestResult[]): Promise<voi
   })
 }
 
+/** Persist a legacy-import plan in a single transaction: all rows or none. */
+export async function persistLegacyImport(plan: {
+  record: ImportRecord
+  statements: Statement[]
+  inserted: Transaction[]
+}): Promise<void> {
+  await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
+    await db.imports.put(plan.record)
+    await db.statements.bulkPut(plan.statements)
+    for (let offset = 0; offset < plan.inserted.length; offset += 2000) {
+      await db.transactions.bulkPut(plan.inserted.slice(offset, offset + 2000))
+    }
+  })
+}
+
 export async function updateTransaction(transaction: Transaction): Promise<void> {
   await db.transactions.put(transaction)
 }
