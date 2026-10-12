@@ -218,9 +218,30 @@ export function DataQualityView({ report }: { report: DataQualityReport }) {
                 <span data-testid={`dq-statement-${status}`}>{report.statements.byStatus[status]}</span>
               </div>
             ))}
+            {(
+              [
+                ['passed', '核验通过'],
+                ['mismatch', '核验不匹配'],
+                ['insufficient', '核验信息不足'],
+              ] as const
+            ).map(([status, label]) => (
+              <div className="row" key={status}>
+                {status === 'mismatch' ? (
+                  <a href="#/review" data-testid="dq-recon-mismatch-link" title="进入账单复核页">
+                    {label}
+                  </a>
+                ) : (
+                  <span className="subtle">{label}</span>
+                )}
+                <span data-testid={`dq-recon-${status}`}>{report.statements.byReconciliation[status]}</span>
+              </div>
+            ))}
             <div className="row">
               <a className="btn btn-sm" href="#/review" data-testid="dq-goto-review">
                 去人工复核
+              </a>
+              <a className="btn btn-sm" href="#/reconciliation" data-testid="dq-goto-reconciliation">
+                去账单核验
               </a>
             </div>
           </div>
