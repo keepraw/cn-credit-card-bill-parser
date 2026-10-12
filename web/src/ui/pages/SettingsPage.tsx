@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../../app/AppStore'
 import { storageEstimate, type ArchiveStatus } from '../../db/repository'
+import { getDemoSnapshot } from '../../demo/demoStore'
 import { parserCatalog } from '../../parsers/registry'
 import { Badge, DemoBadge } from '../components/ui'
 
@@ -17,15 +18,18 @@ export function SettingsPage() {
 
   useEffect(() => {
     void archiveStatus().then(setStatus).catch(() => setStatus(null))
-  }, [archiveStatus, state.statements.length, state.transactions.length, state.imports.length])
+  }, [archiveStatus, state.demoMode, state.statements.length, state.transactions.length, state.imports.length])
 
   const realCounts = {
     statements: state.statements.filter((s) => !s.isDemo).length,
     transactions: state.transactions.filter((t) => !t.isDemo).length,
   }
+  // Demo rows live in memory only (see getDemoSnapshot); the counts below
+  // describe that snapshot, never the production database.
+  const demoSnapshot = useMemo(() => getDemoSnapshot(), [])
   const demoCounts = {
-    statements: state.statements.filter((s) => s.isDemo).length,
-    transactions: state.transactions.filter((t) => t.isDemo).length,
+    statements: demoSnapshot.statements.length,
+    transactions: demoSnapshot.transactions.length,
   }
 
   return (

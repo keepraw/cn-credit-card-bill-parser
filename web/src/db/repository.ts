@@ -122,12 +122,28 @@ export async function importBackup(payload: BackupPayload): Promise<void> {
 
 /** Remove only the fictional demo rows so they can be regenerated cleanly. */
 export async function clearDemoData(): Promise<void> {
+  // NOTE: `isDemo` is a boolean index; `where('isDemo').equals(1)` never
+  // matches it (IndexedDB keys are strictly typed), so deletion uses an
+  // explicit boolean filter instead of a numeric comparison.
   await db.transaction('rw', db.statements, db.transactions, db.imports, db.reviewNotes, async () => {
-    await db.statements.where('isDemo').equals(1).delete()
-    await db.transactions.where('isDemo').equals(1).delete()
-    await db.imports.where('isDemo').equals(1).delete()
+    await db.statements.filter((row) => row.isDemo === true).delete()
+    await db.transactions.filter((row) => row.isDemo === true).delete()
+    await db.imports.filter((row) => row.isDemo === true).delete()
     const notes = await db.reviewNotes.toArray()
     await db.reviewNotes.bulkDelete(notes.map((row) => row.transactionId))
+  })
+}
+
+/**
+ * Migration cleanup for databases written by older versions that persisted
+ * demo rows into the production tables. Removes fictional rows only; real
+ * rows, review notes, attachments and backups are untouched.
+ */
+export async function purgeDemoRows(): Promise<void> {
+  await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
+    await db.statements.filter((row) => row.isDemo === true).delete()
+    await db.transactions.filter((row) => row.isDemo === true).delete()
+    await db.imports.filter((row) => row.isDemo === true).delete()
   })
 }
 
@@ -143,9 +159,9 @@ export async function clearAllData(options: { includeDemo: boolean }): Promise<v
     return
   }
   await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
-    await db.statements.where('isDemo').equals(0).delete()
-    await db.transactions.where('isDemo').equals(0).delete()
-    await db.imports.where('isDemo').equals(0).delete()
+    await db.statements.filter((row) => row.isDemo === false).delete()
+    await db.transactions.filter((row) => row.isDemo === false).delete()
+    await db.imports.filter((row) => row.isDemo === false).delete()
   })
 }
 
@@ -266,17 +282,19 @@ export function validateManifest(value: unknown): value is ArchiveManifest {
   )
 }
 
-/** Count how many imports still have evidence available vs. data-only rows. */
+/** Count how many imports still have evidence available vs. data-only rows. Real rows only. */
 export async function getArchiveStatus(): Promise<ArchiveStatus> {
   const [transactions, imports] = await Promise.all([db.transactions.toArray(), db.imports.toArray()])
+  const realTransactions = transactions.filter((row) => !row.isDemo)
+  const realImports = imports.filter((row) => !row.isDemo)
   let archivedCount = 0
-  for (const record of imports) {
+  for (const record of realImports) {
     if (await db.attachments.get(record.fileHash)) archivedCount += 1
   }
   return {
-    transactionCount: transactions.length,
-    importCount: imports.length,
+    transactionCount: realTransactions.length,
+    importCount: realImports.length,
     archivedCount,
-    missingCount: imports.length - archivedCount,
+    missingCount: realImports.length - archivedCount,
   }
 }
