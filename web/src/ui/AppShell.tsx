@@ -3,6 +3,7 @@ import { useApp } from '../app/AppStore'
 import { pageTitle, useHashPage, type Page } from './router'
 import { Badge, DemoBadge } from './components/ui'
 import { DashboardPage } from './pages/DashboardPage'
+import { DataQualityPage } from './pages/DataQualityPage'
 import { ImportPage } from './pages/ImportPage'
 import { ReviewPage } from './pages/ReviewPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -10,6 +11,7 @@ import { TransactionsPage } from './pages/TransactionsPage'
 
 const NAV: Array<{ page: Page; label: string }> = [
   { page: 'dashboard', label: '消费总览' },
+  { page: 'quality', label: '数据质量' },
   { page: 'import', label: '账单导入' },
   { page: 'transactions', label: '交易明细' },
   { page: 'review', label: '人工复核' },
@@ -108,6 +110,8 @@ function PageBody({ page }: { page: Page }) {
   switch (page) {
     case 'dashboard':
       return <DashboardPage />
+    case 'quality':
+      return <DataQualityPage />
     case 'import':
       return <ImportPage />
     case 'transactions':

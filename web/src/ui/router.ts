@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-const PAGES = ['dashboard', 'import', 'transactions', 'review', 'settings'] as const
+const PAGES = ['dashboard', 'quality', 'import', 'transactions', 'review', 'settings'] as const
 export type Page = (typeof PAGES)[number]
 
 function readHash(): Page {
@@ -29,6 +29,8 @@ export function pageTitle(page: Page): string {
   switch (page) {
     case 'dashboard':
       return '消费总览'
+    case 'quality':
+      return '数据质量'
     case 'import':
       return '账单导入'
     case 'transactions':

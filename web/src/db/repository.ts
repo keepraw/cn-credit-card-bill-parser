@@ -224,6 +224,12 @@ export async function hasAttachment(fileHash: string): Promise<boolean> {
   return (await db.attachments.get(fileHash)) !== undefined
 }
 
+/** Hashes of every stored evidence file. Read-only helper for the data-quality page. */
+export async function listAttachmentHashes(): Promise<Set<string>> {
+  const rows = await db.attachments.toCollection().primaryKeys()
+  return new Set(rows.map(String))
+}
+
 /** Build the manifest without inventing files: no row in `attachments` means `missing`. */
 export async function buildManifest(): Promise<ArchiveManifest> {
   const imports = await db.imports.toArray()
