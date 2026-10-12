@@ -12,6 +12,29 @@ export interface ReviewNoteRow {
   updatedAt: string
 }
 
+/**
+ * Original evidence file kept for one import.
+ *
+ * Keyed by SHA-256 of the raw bytes so identical re-imports deduplicate
+ * automatically. Only files the browser could actually read are stored;
+ * every historical import without a row here is `missing` in the manifest.
+ *
+ * Binary bytes are stored as ArrayBuffer (not Blob): it survives the
+ * structured clone in real IndexedDB and in fake-indexeddb/jsdom alike.
+ * A Blob is only materialised transiently when building the ZIP.
+ */
+export interface AttachmentRow {
+  /** SHA-256 hex of the raw file bytes. Primary key. */
+  fileHash: string
+  fileName: string
+  mimeType: string
+  size: number
+  data: ArrayBuffer
+  importId: string
+  parserId: string
+  importedAt: string
+}
+
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   demoMode: false,
@@ -28,6 +51,7 @@ export class BillDatabase extends Dexie {
   imports!: Table<ImportRecord, string>
   settings!: Table<SettingRow, string>
   reviewNotes!: Table<ReviewNoteRow, string>
+  attachments!: Table<AttachmentRow, string>
 
   constructor(name = 'credit-bill-manager') {
     super(name)
@@ -38,6 +62,16 @@ export class BillDatabase extends Dexie {
       imports: 'id, fileHash, importedAt, status, isDemo',
       settings: 'key',
       reviewNotes: 'transactionId',
+    })
+    // v2 adds evidence-file storage without touching existing stores.
+    this.version(2).stores({
+      statements: 'id, bank, cardLast4, cycleEnd, status, isDemo',
+      transactions:
+        'id, statementId, bank, transactionDate, postingDate, type, category, reviewStatus, isDemo, fingerprint, [bank+transactionDate]',
+      imports: 'id, fileHash, importedAt, status, isDemo',
+      settings: 'key',
+      reviewNotes: 'transactionId',
+      attachments: 'fileHash, importId, importedAt',
     })
   }
 }

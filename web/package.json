@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "dexie": "^4.0.11",
+    "jszip": "^3.10.1",
     "pdfjs-dist": "^4.10.38",
     "postal-mime": "^2.4.3",
     "react": "^18.3.1",
