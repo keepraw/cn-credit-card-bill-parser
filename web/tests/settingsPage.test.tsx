@@ -36,7 +36,7 @@ describe('Settings supported formats', () => {
     render(<SettingsPage />)
     const table = screen.getByTestId('supported-parsers')
     const catalog = parserCatalog()
-    expect(catalog).toHaveLength(5)
+    expect(catalog).toHaveLength(6)
 
     for (const entry of catalog) {
       const row = screen.getByTestId(`parser-row-${entry.id}`)
@@ -49,8 +49,8 @@ describe('Settings supported formats', () => {
       }
     }
 
-    // The five expected banks are all present.
-    for (const name of ['中国银行', '交通银行', '工商银行', '建设银行', '农业银行']) {
+    // The six expected banks are all present.
+    for (const name of ['中国银行', '交通银行', '工商银行', '建设银行', '农业银行', '中信银行']) {
       expect(within(table).getByText(name)).toBeInTheDocument()
     }
     // Row count tracks the registry instead of a fixed constant.
@@ -62,10 +62,10 @@ describe('Settings supported formats', () => {
     // The page must read from the registry.
     expect(source).toMatch(/parserCatalog|PARSER_DEFINITIONS|PARSERS/)
     // No static bank rows remain.
-    for (const name of ['中国银行', '交通银行', '工商银行', '建设银行', '农业银行']) {
+    for (const name of ['中国银行', '交通银行', '工商银行', '建设银行', '农业银行', '中信银行']) {
       expect(source).not.toContain(name)
     }
-    for (const id of ['boc_pdf', 'bocom_eml', 'icbc_eml', 'ccb_eml', 'abc_eml']) {
+    for (const id of ['boc_pdf', 'bocom_eml', 'icbc_eml', 'ccb_eml', 'abc_eml', 'citic_eml']) {
       expect(source).not.toContain(id)
     }
   })
