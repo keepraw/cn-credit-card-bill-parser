@@ -5,11 +5,14 @@ import type { ImportRecord, Statement, Transaction } from '../core/types'
 import { emptySummary } from '../parsers/types'
 import { sha256Hex } from '../parsers/extract'
 import { LEGACY_STANDARD_SHEET, detectLegacyShape, parseLegacyRows } from './legacyPythonExportV1'
+import { LEGACY_KEEPRAW_SHEET, detectKeeprawShape, parseKeeprawRows } from './legacyKeeprawExportV1'
 import {
+  LEGACY_KEEPRAW_EXPORT_V1,
   LEGACY_PYTHON_EXPORT_V1,
   LEGACY_FORMAT_NAME,
   type LegacyAnomaly,
   type LegacyFileMeta,
+  type LegacyFormatId,
   type LegacyPreview,
   type NormalizedLegacyRow,
 } from './types'
@@ -49,17 +52,19 @@ function fingerprintOf(row: NormalizedLegacyRow): string {
 /**
  * Read-only preview. Parses the workbook, detects the adapter, maps every
  * row and compares fingerprints against storage. Writes nothing.
+ *
+ * Supported adapters (explicit only, never generic):
+ * - `legacy-python-export-v1` (`标准字段` sheet, snake_case columns)
+ * - `legacy-keepraw-export-v1` (`交易明细` sheet, 银行/卡尾号/交易日/入账日/说明/交易币种/交易金额/结算币种/结算金额)
  */
 export async function previewLegacyWorkbook(
   buffer: ArrayBuffer,
   meta: LegacyFileMeta,
   existing: LegacyExisting,
 ): Promise<LegacyPreview> {
-  const { rows: sheetRows } = await readSheetData(buffer, LEGACY_STANDARD_SHEET)
-  if (sheetRows.length === 0) throw new LegacyFormatError()
-  const shape = detectLegacyShape(sheetRows[0] as unknown[])
-  if (!shape) throw new LegacyFormatError()
-  const parsed = parseLegacyRows(sheetRows.slice(1) as unknown[][], shape)
+  const detected = await detectLegacyAdapter(buffer)
+  if (!detected) throw new LegacyFormatError()
+  const { formatId, parsed } = detected
 
   const fingerprints = parsed.rows.map(fingerprintOf)
   const occurrences = assignOccurrences(fingerprints)
@@ -106,8 +111,8 @@ export async function previewLegacyWorkbook(
   return {
     meta,
     stats: {
-      formatId: LEGACY_PYTHON_EXPORT_V1,
-      formatName: LEGACY_FORMAT_NAME[LEGACY_PYTHON_EXPORT_V1],
+      formatId,
+      formatName: LEGACY_FORMAT_NAME[formatId],
       totalRows: parsed.totalRows,
       validRows: rows.length,
       anomalyRows: parsed.anomalies.length,
@@ -120,6 +125,39 @@ export async function previewLegacyWorkbook(
     rows,
     anomalies: parsed.anomalies,
   }
+}
+
+/**
+ * Try each known legacy adapter in order. Returns the first match, or null
+ * when the workbook matches nothing. Never guesses: a missing sheet or a
+ * missing column rejects the file.
+ */
+async function detectLegacyAdapter(
+  buffer: ArrayBuffer,
+): Promise<{ formatId: LegacyFormatId; parsed: { rows: NormalizedLegacyRow[]; anomalies: LegacyAnomaly[]; totalRows: number } } | null> {
+  const pythonSheet = await readSheetData(buffer, LEGACY_STANDARD_SHEET)
+  if (pythonSheet.rows.length > 0) {
+    const shape = detectLegacyShape(pythonSheet.rows[0] as unknown[])
+    if (shape) {
+      return {
+        formatId: LEGACY_PYTHON_EXPORT_V1,
+        parsed: parseLegacyRows(pythonSheet.rows.slice(1) as unknown[][], shape),
+      }
+    }
+  }
+
+  const keeprawSheet = await readSheetData(buffer, LEGACY_KEEPRAW_SHEET)
+  if (keeprawSheet.rows.length > 0) {
+    const shape = detectKeeprawShape(keeprawSheet.rows[0] as unknown[])
+    if (shape) {
+      return {
+        formatId: LEGACY_KEEPRAW_EXPORT_V1,
+        parsed: parseKeeprawRows(keeprawSheet.rows.slice(1) as unknown[][], shape),
+      }
+    }
+  }
+
+  return null
 }
 
 export interface LegacyConfirmPlan {
@@ -140,6 +178,8 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
   const storedIds = new Set(existing.transactions.map((tx) => tx.id))
   const fresh = preview.rows.filter((row) => !storedIds.has(row.id))
   const skipped = preview.rows.length - fresh.length
+  const formatId: LegacyFormatId = preview.stats.formatId
+  const formatName = LEGACY_FORMAT_NAME[formatId]
 
   const transactions: Transaction[] = fresh.map((row) => ({
     id: row.id,
@@ -170,7 +210,7 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
     occurrence: row.occurrence,
     isDemo: false,
     origin: 'legacy_import',
-    sourceId: LEGACY_PYTHON_EXPORT_V1,
+    sourceId: formatId,
   }))
 
   // Group the file's valid rows into per-period statements. Statements are
@@ -203,7 +243,7 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
       summary: emptySummary(),
       reconciliation,
       status: 'imported',
-      parserId: LEGACY_PYTHON_EXPORT_V1,
+      parserId: formatId,
       parserVersion: LEGACY_ADAPTER_VERSION,
       transactionCount: priorCount + bucket.filter((row) => insertedIds.has(row.id)).length,
       sourceFileName: preview.meta.fileName,
@@ -223,7 +263,7 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
   const status = duplicateImport ? 'duplicate' : 'imported'
 
   const record: ImportRecord = {
-    id: `${preview.meta.fileHash}:${LEGACY_PYTHON_EXPORT_V1}`,
+    id: `${preview.meta.fileHash}:${formatId}`,
     fileName: preview.meta.fileName,
     fileSize: preview.meta.fileSize,
     fileHash: preview.meta.fileHash,
@@ -237,13 +277,13 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
     message:
       status === 'duplicate' && duplicateImport
         ? `与已导入文件 ${duplicateImport.fileName} 内容完全相同（SHA-256 一致），已跳过`
-        : `历史数据迁移（Legacy Python Export）：解析到 ${preview.stats.totalRows} 笔，` +
+        : `历史数据迁移（${formatName}）：解析到 ${preview.stats.totalRows} 笔，` +
           `新增 ${transactions.length} 笔，跳过 ${skipped} 笔已存在` +
           (preview.anomalies.length > 0 ? `，${preview.anomalies.length} 行异常已排除` : ''),
     statementId: null,
     transactionCount: transactions.length,
     duplicateOf: duplicateImport?.id ?? null,
-    parserId: LEGACY_PYTHON_EXPORT_V1,
+    parserId: formatId,
     importedAt: now,
     isDemo: false,
   }

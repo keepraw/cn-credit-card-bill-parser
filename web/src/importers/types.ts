@@ -13,12 +13,14 @@ import type { BankId, Category, Direction, TransactionType } from '../core/types
  * statements into data; adapters turn old-system data into data.
  */
 
-/** The only historical format supported in this phase. */
+/** Historical formats supported. Each one has an explicit adapter; unknown sheets are rejected. */
 export const LEGACY_PYTHON_EXPORT_V1 = 'legacy-python-export-v1' as const
-export type LegacyFormatId = typeof LEGACY_PYTHON_EXPORT_V1
+export const LEGACY_KEEPRAW_EXPORT_V1 = 'legacy-keepraw-export-v1' as const
+export type LegacyFormatId = typeof LEGACY_PYTHON_EXPORT_V1 | typeof LEGACY_KEEPRAW_EXPORT_V1
 
 export const LEGACY_FORMAT_NAME: Record<LegacyFormatId, string> = {
   [LEGACY_PYTHON_EXPORT_V1]: 'Legacy Python Export',
+  [LEGACY_KEEPRAW_EXPORT_V1]: 'Keepraw History Export',
 }
 
 export interface LegacyFileMeta {
