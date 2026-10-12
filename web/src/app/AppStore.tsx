@@ -1,9 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { buildDemoDataset } from '../demo/demoData'
 import { DEFAULT_SETTINGS, db, loadSettings, saveSettings } from '../db/db'
 import {
   clearAllData,
-  clearDemoData,
   exportDataBackup,
   getArchiveStatus,
   getReviewNotes,
@@ -11,6 +9,7 @@ import {
   mimeTypeForFile,
   persistImportResults,
   persistLegacyImport,
+  purgeDemoRows,
   readSnapshot,
   saveOriginalFile,
   setReviewNote,
@@ -20,6 +19,7 @@ import {
   type ArchiveStatus,
   type Snapshot,
 } from '../db/repository'
+import { getDemoSnapshot } from '../demo/demoStore'
 import { buildFullBackupZip, previewFullBackupZip, restoreFullBackupZip } from '../backup/archive'
 import {
   hashLegacyFile,
@@ -94,11 +94,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (initialised.current) return
     initialised.current = true
     void (async () => {
+      // Migration: demo rows must never live in the production tables. Purge
+      // any fictional rows written by older versions; real rows are untouched.
+      await purgeDemoRows()
       await refresh()
       const existing = await db.imports.count()
       // A first visit lands in Demo Mode so every page has something to show.
+      // Demo data is served from memory (see getDemoSnapshot), never written
+      // to IndexedDB.
       if (existing === 0) {
-        await persistImportResults(buildDemoDataset())
         await saveSettings({ ...DEFAULT_SETTINGS, demoMode: true })
       }
       await refresh()
@@ -212,8 +216,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const loadDemoData = useCallback(async () => {
-    await clearDemoData()
-    await persistImportResults(buildDemoDataset())
+    // Demo data lives in memory only: drop any legacy fictional rows, warm
+    // the cache and reload the real snapshot. Nothing demo is ever written
+    // to the production tables.
+    await purgeDemoRows()
+    getDemoSnapshot()
     await refresh()
   }, [refresh])
 
@@ -339,17 +346,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [refresh],
   )
 
+  // Demo Mode is a view switch, not a second database: the fictional rows
+  // come from an in-memory snapshot while `snapshot` always holds the real
+  // IndexedDB content. Production pages keep filtering `!isDemo` so stray
+  // legacy rows can never leak in before the next purge.
+  const demoSnapshot = useMemo(() => (settings.demoMode ? getDemoSnapshot() : EMPTY), [settings.demoMode])
+
   const visibleStatements = useMemo(
-    () => (settings.demoMode ? snapshot.statements.filter((row) => row.isDemo) : snapshot.statements.filter((row) => !row.isDemo)),
-    [settings.demoMode, snapshot.statements],
+    () => (settings.demoMode ? demoSnapshot.statements : snapshot.statements.filter((row) => !row.isDemo)),
+    [settings.demoMode, snapshot.statements, demoSnapshot],
   )
   const visibleTransactions = useMemo(
-    () => (settings.demoMode ? snapshot.transactions.filter((row) => row.isDemo) : snapshot.transactions.filter((row) => !row.isDemo)),
-    [settings.demoMode, snapshot.transactions],
+    () => (settings.demoMode ? demoSnapshot.transactions : snapshot.transactions.filter((row) => !row.isDemo)),
+    [settings.demoMode, snapshot.transactions, demoSnapshot],
   )
   const visibleImports = useMemo(
-    () => (settings.demoMode ? snapshot.imports.filter((row) => row.isDemo) : snapshot.imports.filter((row) => !row.isDemo)),
-    [settings.demoMode, snapshot.imports],
+    () => (settings.demoMode ? demoSnapshot.imports : snapshot.imports.filter((row) => !row.isDemo)),
+    [settings.demoMode, snapshot.imports, demoSnapshot],
   )
 
   const api = useMemo<AppApi>(

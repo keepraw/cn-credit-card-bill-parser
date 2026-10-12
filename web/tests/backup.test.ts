@@ -168,12 +168,14 @@ describe('ZIP full-archive backup', () => {
 
 describe('missing attachments', () => {
   it('marks every import without evidence as missing and warns', async () => {
+    // Archive status reports the real database only: seed real (non-demo)
+    // rows so the missing-evidence path is exercised without demo data.
     const results = buildDemoDataset()
     await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
       for (const result of results) {
-        await db.imports.put(result.record)
-        if (result.statement) await db.statements.put(result.statement)
-        await db.transactions.bulkPut(result.transactions)
+        await db.imports.put({ ...result.record, isDemo: false })
+        if (result.statement) await db.statements.put({ ...result.statement, isDemo: false })
+        await db.transactions.bulkPut(result.transactions.map((tx) => ({ ...tx, isDemo: false })))
       }
     })
     const manifest = await buildManifest()
