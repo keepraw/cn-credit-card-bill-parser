@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../../app/AppStore'
 import { storageEstimate } from '../../db/repository'
+import { parserCatalog } from '../../parsers/registry'
 import { Badge, DemoBadge } from '../components/ui'
 
 export function SettingsPage() {
@@ -179,11 +180,11 @@ export function SettingsPage() {
         <div className="card-head">
           <div>
             <h2>支持的账单格式</h2>
-            <p>第一阶段范围</p>
+            <p>第一阶段范围（来自 parser registry，共 {parserCatalog().length} 个解析器）</p>
           </div>
         </div>
         <div className="table-wrap">
-          <table className="data">
+          <table className="data" data-testid="supported-parsers">
             <thead>
               <tr>
                 <th>银行</th>
@@ -193,18 +194,16 @@ export function SettingsPage() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>中国银行</td>
-                <td>文字型 PDF 账单</td>
-                <td className="mono">boc_pdf</td>
-                <td>PDF 中的「存入 / 支出」列位置</td>
-              </tr>
-              <tr>
-                <td>交通银行</td>
-                <td>HTML 邮件账单 .eml</td>
-                <td className="mono">bocom_eml</td>
-                <td>账单分区（还款退货区 / 消费取现区）</td>
-              </tr>
+              {parserCatalog().map((entry) => (
+                <tr key={entry.id} data-testid={`parser-row-${entry.id}`}>
+                  <td>{entry.bankName}</td>
+                  <td>
+                    {entry.fileTypeLabel} <span className="mono">({entry.sourceTypes.join(', ')})</span>
+                  </td>
+                  <td className="mono">{entry.id}</td>
+                  <td>{entry.directionBasis}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
