@@ -5,6 +5,12 @@
  * one statement get an occurrence index so real repeated purchases (same day, same
  * merchant, same amount) are never collapsed into one. Across files the same
  * fingerprint means the same transaction and is de-duplicated.
+ *
+ * Only business fields feed the hash (bank, card, dates, amount, currency,
+ * type, normalised description). Import metadata — origin, sourceId, file
+ * name/hash, import id, row number — must never participate, so the same real
+ * transaction arriving from a legacy export and from a bank parser produces
+ * the same fingerprint and de-duplicates.
  */
 
 /** FNV-1a 64-bit style hash (two 32-bit lanes) rendered as hex. Stable across runs. */

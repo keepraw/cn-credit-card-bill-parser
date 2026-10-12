@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../src/db/db'
 import { readSnapshot } from '../src/db/repository'
 import { transactionFingerprint } from '../src/core/identity'
-import { transactionId } from '../src/core/dedupe'
+import { detectDuplicates, transactionId } from '../src/core/dedupe'
 import {
   LEGACY_UNIFIED_COLUMNS,
   detectLegacyShape,
@@ -244,8 +244,70 @@ describe('legacy import mapping', () => {
   })
 })
 
-describe('duplicate legacy import', () => {
-  it('re-importing the same file adds nothing', async () => {
+describe('fingerprint ignores import metadata', () => {
+  const business = {
+    bank: 'boc',
+    cardLast4: '1234',
+    transactionDate: '2024-01-05',
+    postingDate: '2024-01-06',
+    settlementCurrency: 'CNY',
+    settlementAmountMinor: 12880,
+    type: 'purchase',
+    description: '消费 示例商户',
+  } as const
+
+  it('gives identical fingerprints for the same business transaction from different sources', async () => {
+    const buffer = workbookBuffer(HEADERS, [legacyRow()])
+    const preview = await previewOf(buffer, 'legacy-file-hash')
+    const plan = planLegacyImport(preview, EMPTY)
+    const legacyTx = plan.inserted[0]!
+    // Provenance differs per source …
+    expect(legacyTx.origin).toBe('legacy_import')
+    expect(legacyTx.sourceId).toBe(LEGACY_PYTHON_EXPORT_V1)
+    expect(legacyTx.sourceFileName).toBe('history.xlsx')
+    expect(legacyTx.sourceFileHash).toBe('legacy-file-hash')
+    expect(legacyTx.sourceRow).toBe(2)
+    // … but the fingerprint matches a boc PDF parser row byte-for-byte.
+    expect(legacyTx.fingerprint).toBe(transactionFingerprint({ ...business }))
+  })
+
+  it('dedupes a legacy row against a parser-imported row with identical business fields', () => {
+    const fingerprint = transactionFingerprint({ ...business })
+    const id = transactionId(fingerprint, 1)
+    const view = {
+      fingerprint,
+      bank: 'boc' as const,
+      cardLast4: '1234',
+      transactionDate: '2024-01-05',
+      settlementAmountMinor: 12880,
+      type: 'purchase',
+      description: '消费 示例商户',
+    }
+    // Views carry no origin/sourceId/file metadata at all.
+    const { duplicateIds } = detectDuplicates([{ id, ...view }], [{ ...view }])
+    expect(duplicateIds.has(id)).toBe(true)
+  })
+
+  it('gives different fingerprints when business fields differ', () => {
+    const base = transactionFingerprint({ ...business })
+    const variants = [
+      { ...business, bank: 'bocom' },
+      { ...business, cardLast4: '5678' },
+      { ...business, transactionDate: '2024-01-06' },
+      { ...business, postingDate: '2024-01-07' },
+      { ...business, settlementCurrency: 'USD' },
+      { ...business, settlementAmountMinor: 12881 },
+      { ...business, type: 'refund' },
+      { ...business, description: '消费 另一商户' },
+    ]
+    expect(variants.length).toBeGreaterThan(0)
+    for (const variant of variants) {
+      expect(transactionFingerprint(variant)).not.toBe(base)
+    }
+  })
+})
+
+describe('duplicate legacy import', () => {  it('re-importing the same file adds nothing', async () => {
     const buffer = workbookBuffer(HEADERS, [legacyRow(), legacyRow({ description: '消费 第二笔', settlement_amount: 50 })])
     const preview = await previewOf(buffer, 'same-file-hash')
     await persistLegacyImport(planLegacyImport(preview, EMPTY))
