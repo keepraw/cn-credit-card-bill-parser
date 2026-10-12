@@ -3,6 +3,7 @@ import { abcParser } from './abc'
 import { bocParser } from './boc'
 import { bocomParser } from './bocom'
 import { ccbParser } from './ccb'
+import { citicParser } from './citic'
 import { icbcParser } from './icbc'
 import { ParseError, type BankParser, type SourceDocument, type SourceType } from './types'
 
@@ -13,7 +14,7 @@ import { ParseError, type BankParser, type SourceDocument, type SourceType } fro
  * "generic regex" fallback that could silently turn an unknown file into a
  * successful-looking import: an unrecognised file fails loudly.
  */
-export const PARSERS: BankParser[] = [bocParser, bocomParser, icbcParser, ccbParser, abcParser]
+export const PARSERS: BankParser[] = [bocParser, bocomParser, icbcParser, ccbParser, abcParser, citicParser]
 
 /**
  * UI-facing metadata for one registered parser.
@@ -54,6 +55,10 @@ const PARSER_DISPLAY: Record<string, Pick<ParserDefinition, 'fileTypeLabel' | 'd
   abc_eml: {
     fileTypeLabel: 'HTML 邮件账单 .eml',
     directionBasis: '分区标记（● 还款 / 退货 / 消费 / 取现）与结算符号',
+  },
+  citic_eml: {
+    fileTypeLabel: 'HTML 邮件账单 .eml',
+    directionBasis: '金额正负号（- 为还款 / 退款）',
   },
 }
 

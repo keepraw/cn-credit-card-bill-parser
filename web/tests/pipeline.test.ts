@@ -8,6 +8,7 @@ import { sanitizeHtml, extractTables, extractText } from '../src/parsers/html'
 import { emptySummary, type SourceDocument } from '../src/parsers/types'
 import { buildSyntheticBocPdf, SYNTHETIC_BOC } from './fixtures/bocPdf'
 import { SYNTHETIC_BOCOM, SYNTHETIC_BOCOM_HTML } from './fixtures/bocomEml'
+import { SYNTHETIC_CITIC_HTML } from './fixtures/citicEml'
 import { ingestParsedStatement, type ExistingSnapshot } from '../src/core/ingest'
 import { reconcileStatement } from '../src/core/reconcile'
 import { buildDemoDataset } from '../src/demo/demoData'
@@ -47,6 +48,21 @@ function bocomDoc(): SourceDocument {
   }
 }
 
+function citicDoc(): SourceDocument {
+  const safe = sanitizeHtml(SYNTHETIC_CITIC_HTML)
+  return {
+    fileName: 'synthetic-citic.eml',
+    fileSize: 1,
+    fileHash: 'h4',
+    sourceType: 'eml',
+    pdf: null,
+    html: safe,
+    tables: extractTables(safe),
+    text: extractText(safe),
+    email: { subject: '中信银行信用卡电子账单', from: 'citiccard@bill.citiccard.com', date: '2026-08-15' },
+  }
+}
+
 const EMPTY: ExistingSnapshot = { statements: [], transactions: [], imports: [] }
 
 describe('file type detection', () => {
@@ -64,12 +80,13 @@ describe('file type detection', () => {
 
 describe('bank detection', () => {
   it('only advertises banks that actually have a parser', () => {
-    expect(supportedBanks().sort()).toEqual(['abc', 'boc', 'bocom', 'ccb', 'icbc'])
+    expect(supportedBanks().sort()).toEqual(['abc', 'boc', 'bocom', 'ccb', 'citic', 'icbc'])
   })
 
   it('picks the right parser', () => {
     expect(detectParser(bocDoc())!.parser.id).toBe('boc_pdf')
     expect(detectParser(bocomDoc())!.parser.id).toBe('bocom_eml')
+    expect(detectParser(citicDoc())!.parser.id).toBe('citic_eml')
   })
 
   it('returns nothing for an unrecognised document instead of guessing', () => {

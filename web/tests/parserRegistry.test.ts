@@ -10,11 +10,11 @@ import {
 } from '../src/parsers/registry'
 
 describe('parser registry', () => {
-  it('registers the current 5 parsers', () => {
-    expect(PARSERS).toHaveLength(5)
-    expect(PARSER_DEFINITIONS).toHaveLength(5)
+  it('registers the current 6 parsers', () => {
+    expect(PARSERS).toHaveLength(6)
+    expect(PARSER_DEFINITIONS).toHaveLength(6)
     expect(new Set(PARSERS.map((parser) => parser.id))).toEqual(
-      new Set(['boc_pdf', 'bocom_eml', 'icbc_eml', 'ccb_eml', 'abc_eml']),
+      new Set(['boc_pdf', 'bocom_eml', 'icbc_eml', 'ccb_eml', 'abc_eml', 'citic_eml']),
     )
   })
 
@@ -54,14 +54,14 @@ describe('parser registry', () => {
     }
   })
 
-  it('covers all 5 banks and advertises pdf + eml source types', () => {
-    expect(supportedBanks().sort()).toEqual(['abc', 'boc', 'bocom', 'ccb', 'icbc'])
+  it('covers all 6 banks and advertises pdf + eml source types', () => {
+    expect(supportedBanks().sort()).toEqual(['abc', 'boc', 'bocom', 'ccb', 'citic', 'icbc'])
     const sourceTypes = supportedSourceTypes()
     expect(sourceTypes).toContain('pdf')
     expect(sourceTypes).toContain('eml')
     // parserCatalog returns a copy so callers cannot mutate the registry.
     const catalog = parserCatalog()
-    expect(catalog).toHaveLength(5)
+    expect(catalog).toHaveLength(6)
     expect(catalog).not.toBe(PARSER_DEFINITIONS)
   })
 })

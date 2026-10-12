@@ -5,6 +5,7 @@ import { bocParser } from '../../src/parsers/boc'
 import { icbcParser } from '../../src/parsers/icbc'
 import { ccbParser } from '../../src/parsers/ccb'
 import { abcParser } from '../../src/parsers/abc'
+import { citicParser } from '../../src/parsers/citic'
 import { extractTables, extractText, sanitizeHtml } from '../../src/parsers/html'
 import { buildSourceDocument, sha256Hex } from '../../src/parsers/extract'
 import type { BankParser, SourceDocument } from '../../src/parsers/types'
@@ -25,6 +26,7 @@ import postalMime from 'postal-mime'
  *   $env:CCB_REAL_ICBC_EML = "D:\账单\工商银行....eml"
  *   $env:CCB_REAL_CCB_EML = "D:\账单\建设银行....eml"
  *   $env:CCB_REAL_ABC_EML = "D:\账单\农业银行....eml"
+ *   $env:CCB_REAL_CITIC_EML = "D:\账单\中信银行....eml"
  *   npm test -- tests/acceptance/realStatement.test.ts
  *
  * The assertions are deliberately about *invariants* (the balance equation and the
@@ -37,12 +39,14 @@ const bocomPath = process.env.CCB_REAL_BOCOM_EML ?? ''
 const icbcPath = process.env.CCB_REAL_ICBC_EML ?? ''
 const ccbPath = process.env.CCB_REAL_CCB_EML ?? ''
 const abcPath = process.env.CCB_REAL_ABC_EML ?? ''
+const citicPath = process.env.CCB_REAL_CITIC_EML ?? ''
 
 const bocAvailable = bocPath !== '' && existsSync(bocPath)
 const bocomAvailable = bocomPath !== '' && existsSync(bocomPath)
 const icbcAvailable = icbcPath !== '' && existsSync(icbcPath)
 const ccbAvailable = ccbPath !== '' && existsSync(ccbPath)
 const abcAvailable = abcPath !== '' && existsSync(abcPath)
+const citicAvailable = citicPath !== '' && existsSync(citicPath)
 
 async function loadPdfSource(path: string): Promise<SourceDocument> {
   const { readFile } = await import('node:fs/promises')
@@ -380,6 +384,57 @@ describe.skipIf(!abcAvailable)('Case E - real ABC EML', () => {
       // Non-zero adjustments have no detail rows; they correctly route to review.
       expect(result.status).toBe('mismatch')
     }
+  })
+})
+
+describe.skipIf(!citicAvailable)('Case F - real CITIC EML', () => {
+  it('parses cycle, card and the balance equation; logs reconciliation', async () => {
+    const doc = await loadEmlSource(citicPath)
+    expect(citicParser.match(doc)).toBeGreaterThan(0.5)
+
+    const parsed = citicParser.parse(doc)
+    expect(parsed.bank).toBe('citic')
+    const { summary } = parsed
+
+    expect(parsed.cardLast4).toMatch(/^\d{4}$/)
+    expect(parsed.cycleStart).not.toBeNull()
+    expect(parsed.cycleEnd).not.toBeNull()
+    expect(parsed.transactions.length).toBeGreaterThan(0)
+
+    for (const tx of parsed.transactions) {
+      if (!tx.transactionDate) continue
+      expect(tx.transactionDate >= parsed.cycleStart!).toBe(true)
+      expect(tx.transactionDate <= parsed.cycleEnd!).toBe(true)
+    }
+
+    expect(summary.previousBalanceMinor).not.toBeNull()
+    expect(summary.newDebitMinor).not.toBeNull()
+    expect(summary.newCreditMinor).not.toBeNull()
+    expect(summary.currentBalanceMinor).not.toBeNull()
+
+    // 上期应还款额 − 上期已还款额 + 本期新增金额 = 账户账单金额.
+    const computed =
+      summary.previousBalanceMinor! + summary.newDebitMinor! - summary.newCreditMinor!
+    expect(computed).toBe(summary.currentBalanceMinor)
+
+    const result = reconcileStatement({
+      summary,
+      transactions: parsed.transactions.map((tx) => toTransaction('citic', tx)),
+    })
+    // Only counts and statuses are logged; never transaction content.
+    // eslint-disable-next-line no-console
+    console.log('[CITIC]', parsed.transactions.length, 'tx', 'cycle', parsed.cycleStart, '->', parsed.cycleEnd)
+    // eslint-disable-next-line no-console
+    console.log(
+      '[CITIC] reconciliation',
+      result.status,
+      result.checks.map((check) => `${check.id}:${check.status}`).join(','),
+    )
+    // NOTE: 中信 nets refunds/cashbacks into 本期新增金额 instead of counting
+    // them toward 上期已还款额, so a real cycle containing refunds honestly
+    // routes to review here. No `passed` assertion: the invariant under test
+    // is the balance equation above, not the detail split.
+    expect(['passed', 'mismatch', 'insufficient']).toContain(result.status)
   })
 })
 
