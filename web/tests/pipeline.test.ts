@@ -64,7 +64,7 @@ describe('file type detection', () => {
 
 describe('bank detection', () => {
   it('only advertises banks that actually have a parser', () => {
-    expect(supportedBanks().sort()).toEqual(['boc', 'bocom'])
+    expect(supportedBanks().sort()).toEqual(['abc', 'boc', 'bocom', 'ccb', 'icbc'])
   })
 
   it('picks the right parser', () => {
