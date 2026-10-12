@@ -156,12 +156,15 @@ export function ImportPage() {
             <h2>历史 Excel 导入</h2>
             <p>迁移旧系统的结构化历史数据，而非银行账单。仅支持已知历史格式。</p>
           </div>
-          <Badge tone="info">Legacy Python Export</Badge>
+          <Badge tone="info">Legacy Import</Badge>
         </div>
         <div className="card-pad stack">
           <p className="subtle">
-            仅接受旧 Python 账单工具导出的 <span className="mono">unified_transactions.xlsx</span>（
-            <span className="mono">标准字段</span>表，格式 legacy-python-export-v1）。不符合该格式的文件会被拒绝，
+            仅接受两种明确格式：旧 Python 账单工具导出的 <span className="mono">unified_transactions.xlsx</span>（
+            <span className="mono">标准字段</span>表，格式 legacy-python-export-v1），或用户维护的{' '}
+            <span className="mono">2026信用卡账单.xlsx</span>（<span className="mono">交易明细</span>表，
+            银行 / 卡尾号 / 交易日 / 入账日 / 说明 / 交易币种 / 交易金额 / 结算币种 / 结算金额，
+            格式 legacy-keepraw-export-v1）。不符合任一格式的文件会被拒绝，
             不会尝试猜测列含义。预览阶段只读不写，确认后一次性写入。
           </p>
           <input
