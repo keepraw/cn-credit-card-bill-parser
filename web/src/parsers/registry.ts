@@ -1,6 +1,9 @@
 import type { BankId } from '../core/types'
+import { abcParser } from './abc'
 import { bocParser } from './boc'
 import { bocomParser } from './bocom'
+import { ccbParser } from './ccb'
+import { icbcParser } from './icbc'
 import { ParseError, type BankParser, type SourceDocument } from './types'
 
 /**
@@ -10,7 +13,7 @@ import { ParseError, type BankParser, type SourceDocument } from './types'
  * "generic regex" fallback that could silently turn an unknown file into a
  * successful-looking import: an unrecognised file fails loudly.
  */
-export const PARSERS: BankParser[] = [bocParser, bocomParser]
+export const PARSERS: BankParser[] = [bocParser, bocomParser, icbcParser, ccbParser, abcParser]
 
 export interface ParserMatch {
   parser: BankParser
