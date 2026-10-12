@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../../app/AppStore'
-import { storageEstimate } from '../../db/repository'
+import { storageEstimate, type ArchiveStatus } from '../../db/repository'
 import { parserCatalog } from '../../parsers/registry'
 import { Badge, DemoBadge } from '../components/ui'
 
 export function SettingsPage() {
-  const { state, setSettings, backup, restore, clearData, loadDemoData } = useApp()
+  const { state, setSettings, backup, backupData, backupFull, restore, archiveStatus, clearData, loadDemoData } = useApp()
   const [message, setMessage] = useState<{ tone: 'ok' | 'danger'; text: string } | null>(null)
   const [usage, setUsage] = useState<{ usage: number; quota: number } | null>(null)
+  const [status, setStatus] = useState<ArchiveStatus | null>(null)
   const restoreRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     void storageEstimate().then(setUsage)
   }, [state.statements.length, state.transactions.length])
+
+  useEffect(() => {
+    void archiveStatus().then(setStatus).catch(() => setStatus(null))
+  }, [archiveStatus, state.statements.length, state.transactions.length, state.imports.length])
 
   const realCounts = {
     statements: state.statements.filter((s) => !s.isDemo).length,
@@ -100,25 +105,89 @@ export function SettingsPage() {
         <div className="card">
           <div className="card-head">
             <div>
-              <h2>本地备份</h2>
-              <p>导出 / 恢复全部数据</p>
+              <h2>数据备份</h2>
+              <p>轻量 JSON：交易 / 账单 / 导入记录 / 设置</p>
             </div>
           </div>
           <div className="card-pad stack">
             <p className="subtle">
-              备份文件包含账单汇总、交易明细和复核状态，请自行妥善保管。恢复采用按主键合并的方式，重复恢复不会产生重复数据。
+              数据备份文件（credit-card-data.json）包含账单汇总、交易明细和复核状态，不含 PDF / EML / XLSX 原始文件，适合日常备份。恢复采用按主键合并的方式，重复恢复不会产生重复数据。
             </p>
             <div className="row">
-              <button className="btn btn-primary" type="button" data-testid="backup" onClick={() => void backup()}>
+              <button
+                className="btn btn-primary"
+                type="button"
+                data-testid="backup"
+                onClick={() => {
+                  void backupData().catch((error: unknown) =>
+                    setMessage({ tone: 'danger', text: error instanceof Error ? error.message : '导出失败' }),
+                  )
+                }}
+              >
+                导出数据备份
+              </button>
+              <button
+                className="btn"
+                type="button"
+                data-testid="backup-legacy"
+                onClick={() => {
+                  void backup().catch((error: unknown) =>
+                    setMessage({ tone: 'danger', text: error instanceof Error ? error.message : '导出失败' }),
+                  )
+                }}
+              >
                 导出备份 (JSON)
               </button>
-              <button className="btn" type="button" onClick={() => restoreRef.current?.click()}>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <h2>完整归档</h2>
+              <p>ZIP：database.json + manifest.json + 原始文件</p>
+            </div>
+          </div>
+          <div className="card-pad stack">
+            <p className="subtle">
+              完整归档仅包含当前浏览器实际可访问的原始文件。历史导入若缺少附件，manifest 会如实标记为 missing，不会伪造文件。
+            </p>
+            {status ? (
+              <p className="subtle" data-testid="archive-status">
+                原始账单状态：交易记录 {status.transactionCount} 条，原始文件已归档 {status.archivedCount} 个，缺失{' '}
+                {status.missingCount} 个。
+              </p>
+            ) : null}
+            {status && status.missingCount > 0 ? (
+              <div className="notice notice-warn" data-testid="archive-warning">
+                <Badge tone="warn">提醒</Badge>
+                <div>{status.missingCount} 个历史账单没有原始文件，仅导出交易数据。建议保留好原始 PDF / EML 备查。</div>
+              </div>
+            ) : null}
+            <div className="row">
+              <button
+                className="btn btn-primary"
+                type="button"
+                data-testid="backup-full"
+                onClick={() => {
+                  void backupFull().then(({ warning }) =>
+                    setMessage({
+                      tone: 'ok',
+                      text: warning ? `完整归档已导出。${warning}。` : '完整归档已导出，含全部可访问原始文件。',
+                    }),
+                  )
+                }}
+              >
+                导出完整备份
+              </button>
+              <button className="btn" type="button" data-testid="restore" onClick={() => restoreRef.current?.click()}>
                 从备份恢复
               </button>
               <input
                 ref={restoreRef}
                 type="file"
-                accept="application/json,.json"
+                accept="application/json,.json,.zip,application/zip"
                 hidden
                 onChange={async (event) => {
                   const file = event.target.files?.[0]
@@ -134,6 +203,7 @@ export function SettingsPage() {
                 本地存储占用约 {(usage.usage / 1024 / 1024).toFixed(2)} MB / 配额 {(usage.quota / 1024 / 1024).toFixed(0)} MB
               </p>
             ) : null}
+            <p className="subtle">浏览器存储容量有限且可能被清理；重要原始文件请另外在个人文件夹中归档保存。</p>
           </div>
         </div>
 
