@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="cn-credit-card-bill-parser: local Chinese credit card bill parser")
+    parser = argparse.ArgumentParser(description="Keepraw-Ledger: local Chinese credit card bill parser")
     parser.add_argument(
         "--profile",
         action="store_true",

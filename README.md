@@ -1,4 +1,4 @@
-﻿# cn-credit-card-bill-parser
+﻿# Keepraw-Ledger
 
 中文名：中国信用卡账单本地解析器。
 
@@ -11,7 +11,7 @@
 推荐仓库名和本地文件夹名使用：
 
 ```text
-cn-credit-card-bill-parser
+Keepraw-Ledger
 ```
 
 这个名字没有空格，适合 GitHub、Windows PowerShell、Debian/Ubuntu/macOS 终端和各种自动化脚本。Python 源码包名仍保留为 `ccparser`，这是程序内部模块名，不影响项目目录名。
@@ -54,7 +54,7 @@ cn-credit-card-bill-parser
 进入项目目录后执行：
 
 ```powershell
-cd cn-credit-card-bill-parser
+cd Keepraw-Ledger
 python --version
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -80,7 +80,7 @@ powershell -ExecutionPolicy Bypass -File .\run_parser.ps1
 进入项目目录后执行：
 
 ```bash
-cd cn-credit-card-bill-parser
+cd Keepraw-Ledger
 python3 --version
 python3 -m venv .venv
 source .venv/bin/activate

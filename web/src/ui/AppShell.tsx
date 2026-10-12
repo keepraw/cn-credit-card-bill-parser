@@ -25,7 +25,7 @@ export function AppShell() {
   const { state } = useApp()
 
   useEffect(() => {
-    document.title = `${pageTitle(page)} · 信用卡账单管理`
+    document.title = `${pageTitle(page)} · Keepraw-Ledger`
   }, [page])
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export function AppShell() {
               账
             </span>
             <span className="brand-text">
-              <strong>信用卡账单管理</strong>
+              <strong>Keepraw-Ledger</strong>
               <span>本地优先 · 不上传 · 不联网</span>
             </span>
           </div>

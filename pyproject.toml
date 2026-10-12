@@ -1,5 +1,5 @@
 [project]
-name = "cn-credit-card-bill-parser"
+name = "keepraw-ledger"
 version = "0.1.0"
 description = "Local parser for Chinese credit card bills"
 requires-python = ">=3.10"

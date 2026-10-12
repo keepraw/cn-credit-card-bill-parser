@@ -40,7 +40,7 @@ jobs:
         run: npm test -- --reporter=default
       - name: Build for GitHub Pages
         env:
-          VITE_BASE_PATH: /cn-credit-card-bill-parser/
+          VITE_BASE_PATH: /Keepraw-Ledger/
         run: npm run build
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3

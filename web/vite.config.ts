@@ -2,8 +2,8 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// GitHub Pages project site: https://<user>.github.io/cn-credit-card-bill-parser/
-// Set VITE_BASE_PATH=/cn-credit-card-bill-parser/ to publish under a project path.
+// GitHub Pages project site: https://<user>.github.io/Keepraw-Ledger/
+// Set VITE_BASE_PATH=/Keepraw-Ledger/ to publish under a project path.
 const base = process.env.VITE_BASE_PATH ?? '/'
 
 export default defineConfig({

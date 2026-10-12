@@ -1,9 +1,9 @@
 {
-  "name": "cn-credit-card-bill-web",
+  "name": "keepraw-ledger",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Browser-local Chinese credit card bill manager (local-first, no upload).",
+  "description": "Privacy-first local ledger for credit card statements.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
