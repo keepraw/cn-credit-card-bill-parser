@@ -12,6 +12,7 @@ import {
   type BackupPayload,
 } from '../db/repository'
 import { db } from '../db/db'
+import { MAX_EXPANDED_BYTES, MAX_ENTRY_BYTES, MAX_JSON_BYTES, readArchiveBytes, readZipEntry, validateZipDirectory } from './zipSafety'
 
 export const FULL_BACKUP_VERSION = 1 as const
 export const DATABASE_JSON = 'database.json'
@@ -69,89 +70,109 @@ function isSha256Hex(value: string): boolean {
   return /^[0-9a-f]{64}$/i.test(value)
 }
 
-async function verifyBytesHash(bytes: Uint8Array, expectedHex: string): Promise<void> {
-  // Demo and legacy rows use synthetic `demo-…` fingerprints instead of a real
-  // SHA-256. Only enforce the check when the manifest actually carries a hash.
-  if (!isSha256Hex(expectedHex)) return
-  const copy = new Uint8Array(bytes.byteLength)
-  copy.set(bytes)
-  const actual = await sha256Hex(copy.buffer as ArrayBuffer)
+async function verifyBytesHash(data: ArrayBuffer, expectedHex: string): Promise<void> {
+  const actual = await sha256Hex(data)
   if (actual.toLowerCase() !== expectedHex.toLowerCase()) {
     throw new Error(`原始文件校验失败（${expectedHex.slice(0, 12)}…）：SHA-256 不一致，拒绝恢复`)
   }
 }
 
-/**
- * Restore a full-archive ZIP. Never overwrites blindly:
- * transactions/statements/imports merge by primary key (idempotent),
- * attachments are skipped when the hash already exists.
- */
-export async function restoreFullBackupZip(file: Blob): Promise<{ transactions: number; statements: number; files: number }> {
-  const zip = await JSZip.loadAsync(file)
-  const databaseFile = zip.file(DATABASE_JSON)
-  const manifestFile = zip.file(MANIFEST_JSON)
-  if (!databaseFile || !manifestFile) throw new Error('压缩包缺少 database.json 或 manifest.json')
-
-  const database: unknown = JSON.parse(await databaseFile.async('string'))
-  const manifest: unknown = JSON.parse(await manifestFile.async('string'))
-  if (!validateBackup(database)) throw new Error('database.json 不是本应用导出的备份')
-  if (!validateManifest(manifest)) throw new Error('manifest.json 版本不受支持或格式错误')
-  if (manifest.version !== FULL_BACKUP_VERSION) throw new Error(`不支持的 manifest 版本：${manifest.version}`)
-
-  // Verify every archived file before touching the database.
-  const verified: Array<{ sha256: string; filename: string; data: ArrayBuffer; importId: string; parserId: string }> = []
-  const folderPrefix = `${ORIGINAL_FILES_DIR}/`
-  for (const entry of manifest.files) {
-    if (entry.storage === 'missing' || entry.storage === 'external') continue
-    const zipPath = `${folderPrefix}${archiveFileName(entry.sha256, entry.filename)}`
-    let zipEntry = zip.file(zipPath)
-    if (!zipEntry) {
-      // Fall back to hash-prefix match for archives written with different sanitising.
-      const candidates = Object.keys(zip.files).filter(
-        (path) => path.startsWith(folderPrefix) && parseArchiveFileName(path.slice(folderPrefix.length)) === entry.sha256.toLowerCase(),
-      )
-      if (candidates.length === 1) zipEntry = zip.file(candidates[0]!)
-    }
-    if (!zipEntry) throw new Error(`压缩包缺少原始文件：${entry.filename}`)
-    const bytes = await zipEntry.async('uint8array')
-    await verifyBytesHash(bytes, entry.sha256)
-    const data = new Uint8Array(bytes.byteLength) as Uint8Array
-    data.set(bytes)
-    verified.push({ sha256: entry.sha256, filename: entry.filename, data: data.buffer as ArrayBuffer, importId: entry.importId, parserId: entry.parserId })
-  }
-
-  await importBackup(database)
-
-  let restoredFiles = 0
-  await db.transaction('rw', db.attachments, async () => {
-    for (const item of verified) {
-      const existing = await db.attachments.get(item.sha256)
-      if (existing) continue
-      await saveOriginalFile({
-        fileHash: item.sha256,
-        fileName: item.filename,
-        data: item.data,
-        importId: item.importId,
-        parserId: item.parserId,
-      })
-      restoredFiles += 1
-    }
-  })
-
-  return { transactions: database.transactions.length, statements: database.statements.length, files: restoredFiles }
+interface VerifiedOriginal {
+  sha256: string
+  filename: string
+  data: ArrayBuffer
+  importId: string
+  parserId: string
 }
 
-/** Peek at a ZIP without restoring: used for the pre-restore confirmation message. */
-export async function previewFullBackupZip(file: Blob): Promise<FullBackupPreview> {
-  const zip = await JSZip.loadAsync(file)
+/** One validation path for preview and restore; no persistent operations. */
+async function prepareFullBackup(file: Blob): Promise<FullBackupPreview & { originals: VerifiedOriginal[] }> {
+  const archiveBytes = await readArchiveBytes(file)
+  validateZipDirectory(archiveBytes)
+  const zip = await JSZip.loadAsync(archiveBytes)
   const databaseFile = zip.file(DATABASE_JSON)
   const manifestFile = zip.file(MANIFEST_JSON)
   if (!databaseFile || !manifestFile) throw new Error('压缩包缺少 database.json 或 manifest.json')
-  const database: unknown = JSON.parse(await databaseFile.async('string'))
-  const manifest: unknown = JSON.parse(await manifestFile.async('string'))
-  if (!validateBackup(database)) throw new Error('database.json 不是本应用导出的备份')
+  const budget = { remaining: MAX_EXPANDED_BYTES }
+  const decode = (bytes: ArrayBuffer) => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as unknown
+  const database = decode(await readZipEntry(databaseFile, MAX_JSON_BYTES, budget))
+  const manifest = decode(await readZipEntry(manifestFile, MAX_JSON_BYTES, budget))
+  if (!validateBackup(database)) throw new Error('database.json 包含无效记录')
   if (!validateManifest(manifest)) throw new Error('manifest.json 版本不受支持或格式错误')
-  const archivedCount = manifest.files.filter((entry) => entry.storage === 'indexeddb').length
+  const imports = new Map(database.imports.map((row) => [row.id, row]))
+  if (manifest.files.length !== imports.size) throw new Error('原始文件清单与导入记录不一致')
+
+  const prefix = `${ORIGINAL_FILES_DIR}/`
+  const byHash = new Map<string, string[]>()
+  for (const [path, entry] of Object.entries(zip.files)) {
+    if (entry.unsafeOriginalName && entry.unsafeOriginalName !== path) throw new Error('ZIP 包含不安全路径')
+    if (entry.dir) continue
+    if (path === DATABASE_JSON || path === MANIFEST_JSON) continue
+    if (!path.startsWith(prefix) || path.slice(prefix.length).includes('/')) throw new Error('ZIP 包含清单外文件')
+    const hash = parseArchiveFileName(path.slice(prefix.length))
+    if (hash) {
+      const paths = byHash.get(hash) ?? []
+      paths.push(path)
+      byHash.set(hash, paths)
+    }
+  }
+  const consumed = new Set<string>([DATABASE_JSON, MANIFEST_JSON])
+  const cached = new Map<string, ArrayBuffer>()
+  const originals: VerifiedOriginal[] = []
+  for (const entry of manifest.files) {
+    const record = imports.get(entry.importId)
+    if (!record || record.fileHash !== entry.sha256 || record.fileName !== entry.filename ||
+      record.parserId !== entry.parserId || record.importedAt !== entry.importedAt) throw new Error('原始文件清单与导入记录不一致')
+    if (entry.storage !== 'indexeddb') continue
+    const realHash = isSha256Hex(entry.sha256)
+    // Version-1 demo archives used synthetic hashes. Preserve that explicit,
+    // fictional compatibility case; real evidence must always be verifiable.
+    if (!realHash && !(record.isDemo && entry.sha256.startsWith('demo-'))) throw new Error('原始文件缺少有效 SHA-256')
+    let path = `${prefix}${archiveFileName(entry.sha256, entry.filename)}`
+    let zipEntry = zip.file(path)
+    if (!zipEntry) {
+      const candidates = byHash.get(entry.sha256.toLowerCase()) ?? []
+      if (candidates.length === 1) { path = candidates[0]!; zipEntry = zip.file(path) }
+    }
+    if (!zipEntry) throw new Error(`压缩包缺少原始文件：${entry.filename}`)
+    consumed.add(path)
+    let data = cached.get(path)
+    if (!data) {
+      data = await readZipEntry(zipEntry, MAX_ENTRY_BYTES, budget)
+      if (realHash) await verifyBytesHash(data, entry.sha256)
+      cached.set(path, data)
+    }
+    originals.push({ sha256: entry.sha256, filename: entry.filename, data, importId: entry.importId, parserId: entry.parserId })
+  }
+  if (Object.entries(zip.files).some(([path, entry]) => !entry.dir && !consumed.has(path))) throw new Error('ZIP 包含清单外原始文件')
+  const archivedCount = originals.length
   const missingCount = manifest.files.length - archivedCount
-  return { manifest, database, archivedCount, missingCount, warning: describeArchiveGap(missingCount) }
+  return { manifest, database, originals, archivedCount, missingCount, warning: describeArchiveGap(missingCount) }
+}
+
+/** Records, settings and evidence commit together or roll back together. */
+export async function restoreFullBackupZip(file: Blob): Promise<{ transactions: number; statements: number; files: number; warning: string | null }> {
+  const { database, originals, warning } = await prepareFullBackup(file)
+  let files = 0
+  await db.transaction('rw', [db.statements, db.transactions, db.imports, db.settings, db.attachments], async () => {
+    await importBackup(database)
+    for (const item of originals) {
+      const existing = await db.attachments.get(item.sha256)
+      if (existing) {
+        const current = new Uint8Array(existing.data)
+        const incoming = new Uint8Array(item.data)
+        if (current.length !== incoming.length || current.some((byte, index) => byte !== incoming[index])) throw new Error('已有原始文件内容冲突，拒绝恢复')
+        continue
+      }
+      await saveOriginalFile({ fileHash: item.sha256, fileName: item.filename, data: item.data, importId: item.importId, parserId: item.parserId })
+      files += 1
+    }
+  })
+  return { transactions: database.transactions.length, statements: database.statements.length, files, warning }
+}
+
+/** Preview verifies the same records, manifest and evidence as an actual restore. */
+export async function previewFullBackupZip(file: Blob): Promise<FullBackupPreview> {
+  const { originals: _originals, ...preview } = await prepareFullBackup(file)
+  return preview
 }

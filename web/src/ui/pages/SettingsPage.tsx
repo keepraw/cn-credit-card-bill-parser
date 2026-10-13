@@ -115,7 +115,7 @@ export function SettingsPage() {
           </div>
           <div className="card-pad stack">
             <p className="subtle">
-              数据备份文件（credit-card-data.json）包含账单汇总、交易明细和复核状态，不含 PDF / EML / XLSX 原始文件，适合日常备份。恢复采用按主键合并的方式，重复恢复不会产生重复数据。
+              数据备份文件（credit-card-data.json）包含账单汇总、交易明细和复核状态，不含 PDF / EML / XLSX 原始文件或单独填写的复核备注，适合日常备份。恢复按主键合并，同标识的已有记录与用户编辑会保留；金融字段冲突时拒绝恢复。重复恢复不会产生重复数据。
             </p>
             <div className="row">
               <button
