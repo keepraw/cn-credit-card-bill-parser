@@ -18,8 +18,11 @@ New rows are added rather than upserted: a concurrent primary-key collision
 aborts the import transaction instead of overwriting financial data. The user
 can retry the import against the updated snapshot.
 
-No migration is needed. This change cannot reconstruct transactions lost by
-earlier imports; re-importing the original evidence can recover occurrences.
+Known successfully imported files are skipped even after description edits.
+Failed or unsupported records do not block a later successful retry. No migration
+is needed. This change cannot reconstruct transactions lost by earlier imports;
+recovery requires a separately reviewed overlapping source with a different hash,
+or an explicit recovery workflow for the already recorded file.
 Different descriptions or conflicting business fields remain distinct and are
 flagged for review. Historical legacy/parser differences in posting dates or
 transaction types remain subject to the existing migration audit; they are not

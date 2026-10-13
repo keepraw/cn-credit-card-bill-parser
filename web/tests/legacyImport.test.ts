@@ -18,6 +18,7 @@ import {
 } from '../src/importers/legacyImport'
 import { LEGACY_PYTHON_EXPORT_V1 } from '../src/importers/types'
 import { persistLegacyImport } from '../src/db/repository'
+import { failedImportRecord } from '../src/core/ingest'
 
 const HEADERS = [...LEGACY_UNIFIED_COLUMNS]
 
@@ -347,6 +348,21 @@ describe('duplicate legacy import', () => {  it('re-importing the same file adds
     expect(plan.inserted).toHaveLength(1)
     await persistLegacyImport(plan)
     expect(await db.transactions.count()).toBe(2)
+  })
+
+  it('skips a known file after description edits and permits a failed-file retry', async () => {
+    const buffer = workbookBuffer(HEADERS, [legacyRow()])
+    const preview = await previewOf(buffer, 'same')
+    await persistLegacyImport(planLegacyImport(preview, EMPTY))
+    const stored = (await db.transactions.toArray())[0]!
+    await db.transactions.put({ ...stored, description: '消费 用户修正商户' })
+    const repeated = planLegacyImport(preview, await readSnapshot())
+    expect(repeated.inserted).toHaveLength(0)
+    const failed = failedImportRecord({ fileName: 'history.xlsx', fileHash: 'retry', fileSize: 1, sourceType: 'unknown' }, 'failed')
+    const existing = { ...EMPTY, imports: [failed] }
+    const retry = await previewLegacyWorkbook(buffer, { fileName: 'history.xlsx', fileSize: buffer.byteLength, fileHash: 'retry' }, existing)
+    expect(retry.stats.duplicateFile).toBe(false)
+    expect(planLegacyImport(retry, existing).record.status).toBe('imported')
   })
 })
 

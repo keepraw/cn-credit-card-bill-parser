@@ -85,6 +85,8 @@ export async function previewLegacyWorkbook(
     .filter((date): date is string => date !== null)
     .sort()
   const banks = [...new Set(rows.map((row) => row.bank))].sort()
+  const duplicateFile = existing.imports.some((record) => record.fileHash === meta.fileHash && !record.isDemo &&
+    record.status !== 'failed' && record.status !== 'unsupported')
   const anomaliesByKind: Record<LegacyAnomaly['kind'], number> = {
     missing_field: 0,
     date_unparseable: 0,
@@ -103,8 +105,8 @@ export async function previewLegacyWorkbook(
       anomaliesByKind,
       dateRange: dates.length > 0 ? { min: dates[0]!, max: dates[dates.length - 1]! } : null,
       banks,
-      alreadyStored: rows.filter((row) => duplicateIds.has(row.id)).length,
-      duplicateFile: existing.imports.some((record) => record.fileHash === meta.fileHash),
+      alreadyStored: duplicateFile ? rows.length : rows.filter((row) => duplicateIds.has(row.id)).length,
+      duplicateFile,
     },
     rows,
     anomalies: parsed.anomalies,
@@ -159,10 +161,12 @@ export interface LegacyConfirmPlan {
  * Pure: performs no database access itself.
  */
 export function planLegacyImport(preview: LegacyPreview, existing: LegacyExisting): LegacyConfirmPlan {
+  const duplicateImport = existing.imports.find((record) => record.fileHash === preview.meta.fileHash && !record.isDemo &&
+    record.status !== 'failed' && record.status !== 'unsupported')
   const stored = existing.transactions.filter((tx) => !tx.isDemo)
   const rows = assignStoredOccurrences(preview.rows, stored)
   const { duplicateIds, suspectedDuplicates } = detectDuplicates(rows, stored)
-  const fresh = rows.filter((row) => !duplicateIds.has(row.id))
+  const fresh = duplicateImport ? [] : rows.filter((row) => !duplicateIds.has(row.id))
   const skipped = preview.rows.length - fresh.length
   const formatId: LegacyFormatId = preview.stats.formatId
   const formatName = LEGACY_FORMAT_NAME[formatId]
@@ -215,7 +219,7 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
   const counts = new Map<string, number>()
   for (const tx of stored) counts.set(tx.statementId, (counts.get(tx.statementId) ?? 0) + 1)
   const priorStatements = new Map(existing.statements.filter((row) => !row.isDemo).map((row) => [row.id, row]))
-  const statements: Statement[] = [...groups.entries()].map(([key, bucket]) => {
+  const statements: Statement[] = duplicateImport ? [] : [...groups.entries()].map(([key, bucket]) => {
     const first = bucket[0]!
     const transactionCount = (counts.get(key) ?? 0) + bucket.filter((row) => insertedIds.has(row.id)).length
     const prior = priorStatements.get(key)
@@ -250,7 +254,6 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
     .map((row) => row.transactionDate)
     .filter((date): date is string => date !== null)
     .sort()
-  const duplicateImport = existing.imports.find((record) => record.fileHash === preview.meta.fileHash)
   const status = duplicateImport ? 'duplicate' : 'imported'
 
   const record: ImportRecord = {

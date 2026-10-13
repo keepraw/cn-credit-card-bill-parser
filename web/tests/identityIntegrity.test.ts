@@ -5,6 +5,7 @@ import { detectDuplicates } from '../src/core/dedupe'
 import { normalizeDescription } from '../src/core/identity'
 import { ingestSynthetic, syntheticStatement, EMPTY_SNAPSHOT } from './fixtures/identity'
 import { ingestParsedStatement } from '../src/core/ingest'
+import { failedImportRecord } from '../src/core/ingest'
 
 beforeEach(async () => {
   await db.delete()
@@ -65,6 +66,24 @@ describe('occurrence and identity integrity', () => {
     expect(result.inserted).toHaveLength(0)
     await persistImportResults([result])
     expect(await db.transactions.count()).toBe(2)
+  })
+
+  it('skips a known file even after the stored description was edited', async () => {
+    await persistImportResults([ingestSynthetic(['消费 示例商户'], 'same')])
+    const stored = (await db.transactions.toArray())[0]!
+    await db.transactions.put({ ...stored, description: '消费 用户修正商户' })
+    const result = ingestSynthetic(['消费 示例商户'], 'same', await readSnapshot())
+    expect(result.inserted).toHaveLength(0)
+    await persistImportResults([result])
+    expect(await db.transactions.count()).toBe(1)
+    expect((await db.transactions.get(stored.id))!.description).toBe('消费 用户修正商户')
+  })
+
+  it('does not treat a previously failed file as a successful duplicate', () => {
+    const failure = failedImportRecord({ fileName: 'synthetic.txt', fileHash: 'retry', fileSize: 1, sourceType: 'text' }, 'parser failed')
+    const result = ingestSynthetic(['消费 示例商户'], 'retry', { ...EMPTY_SNAPSHOT, imports: [failure] })
+    expect(result.record.status).not.toBe('duplicate')
+    expect(result.inserted).toHaveLength(1)
   })
 
   it('does not merge different original-currency amounts with the same settlement amount', async () => {

@@ -52,7 +52,8 @@ export function ingestParsedStatement(
   const key = statementKey(parsed.bank, cardLast4, parsed.cycleStart, parsed.cycleEnd)
 
   const duplicateImport = existing.imports.find(
-    (record) => record.fileHash === meta.fileHash && !record.isDemo === !isDemo,
+    (record) => record.fileHash === meta.fileHash && !record.isDemo === !isDemo &&
+      record.status !== 'failed' && record.status !== 'unsupported',
   )
 
   const fingerprints = parsed.transactions.map((tx) =>
@@ -112,6 +113,19 @@ export function ingestParsedStatement(
     }
   }), stored)
 
+  if (duplicateImport) {
+    const statement = existing.statements.find((row) => row.id === duplicateImport.statementId && !row.isDemo === !isDemo) ?? null
+    return {
+      record: { ...duplicateImport, fileName: meta.fileName, status: 'duplicate', duplicateOf: duplicateImport.id,
+        transactionCount: 0, importedAt: new Date().toISOString(),
+        message: `与已导入文件 ${duplicateImport.fileName} 内容完全相同（SHA-256 一致），已跳过` },
+      statement,
+      transactions: statement ? stored.filter((row) => row.statementId === statement.id) : [],
+      inserted: [],
+      skippedDuplicates: candidates,
+    }
+  }
+
   const priorForStatement = stored.filter((tx) => tx.statementId === key)
   const { duplicateIds, suspectedDuplicates } = detectDuplicates(
     candidates,
@@ -162,17 +176,13 @@ export function ingestParsedStatement(
     isDemo,
   }
 
-  const importStatus: ImportStatus = duplicateImport
-    ? 'duplicate'
-    : status === 'reconciled'
+  const importStatus: ImportStatus = status === 'reconciled'
       ? 'parsed'
       : status === 'needs_review'
         ? 'needs_review'
         : 'failed'
 
-  const message = duplicateImport
-    ? `与已导入文件 ${duplicateImport.fileName} 内容完全相同（SHA-256 一致），已跳过`
-    : describeOutcome(parsed, status, inserted.length, skippedDuplicates.length)
+  const message = describeOutcome(parsed, status, inserted.length, skippedDuplicates.length)
 
   const record: ImportRecord = {
     id: `${meta.fileHash}:${statement.parserId}`,
@@ -189,7 +199,7 @@ export function ingestParsedStatement(
     message,
     statementId: key,
     transactionCount: inserted.length,
-    duplicateOf: duplicateImport?.id ?? null,
+    duplicateOf: null,
     parserId: parsed.parserId,
     importedAt: new Date().toISOString(),
     isDemo,
