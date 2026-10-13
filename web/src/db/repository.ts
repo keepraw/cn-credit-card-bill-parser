@@ -125,12 +125,15 @@ export async function clearDemoData(): Promise<void> {
   // NOTE: `isDemo` is a boolean index; `where('isDemo').equals(1)` never
   // matches it (IndexedDB keys are strictly typed), so deletion uses an
   // explicit boolean filter instead of a numeric comparison.
-  await db.transaction('rw', db.statements, db.transactions, db.imports, db.reviewNotes, async () => {
+  await db.transaction('rw', [db.statements, db.transactions, db.imports, db.reviewNotes, db.attachments], async () => {
+    const demoTransactions = await db.transactions.filter((row) => row.isDemo === true).primaryKeys()
+    const demoImports = await db.imports.filter((row) => row.isDemo === true).toArray()
+    const realHashes = new Set((await db.imports.filter((row) => row.isDemo !== true).toArray()).map((row) => row.fileHash))
     await db.statements.filter((row) => row.isDemo === true).delete()
     await db.transactions.filter((row) => row.isDemo === true).delete()
     await db.imports.filter((row) => row.isDemo === true).delete()
-    const notes = await db.reviewNotes.toArray()
-    await db.reviewNotes.bulkDelete(notes.map((row) => row.transactionId))
+    await db.reviewNotes.bulkDelete(demoTransactions)
+    await db.attachments.bulkDelete(demoImports.map((row) => row.fileHash).filter((hash) => !realHashes.has(hash)))
   })
 }
 
@@ -158,10 +161,17 @@ export async function clearAllData(options: { includeDemo: boolean }): Promise<v
     })
     return
   }
-  await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
-    await db.statements.filter((row) => row.isDemo === false).delete()
-    await db.transactions.filter((row) => row.isDemo === false).delete()
-    await db.imports.filter((row) => row.isDemo === false).delete()
+  await db.transaction('rw', [db.statements, db.transactions, db.imports, db.reviewNotes, db.attachments], async () => {
+    // Orphaned sensitive records have no reliable demo provenance. Clearing
+    // real data removes them, retaining only evidence and notes demonstrably
+    // referenced by surviving fictional rows (including shared file hashes).
+    const demoIds = new Set(await db.transactions.filter((row) => row.isDemo === true).primaryKeys())
+    const demoHashes = new Set((await db.imports.filter((row) => row.isDemo === true).toArray()).map((row) => row.fileHash))
+    await db.statements.filter((row) => row.isDemo !== true).delete()
+    await db.transactions.filter((row) => row.isDemo !== true).delete()
+    await db.imports.filter((row) => row.isDemo !== true).delete()
+    await db.reviewNotes.bulkDelete(await db.reviewNotes.filter((row) => !demoIds.has(row.transactionId)).primaryKeys())
+    await db.attachments.bulkDelete(await db.attachments.filter((row) => !demoHashes.has(row.fileHash)).primaryKeys())
   })
 }
 

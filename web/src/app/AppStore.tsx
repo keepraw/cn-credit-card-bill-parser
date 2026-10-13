@@ -75,6 +75,10 @@ const AppContext = createContext<AppApi | null>(null)
 
 const EMPTY: Snapshot = { statements: [], transactions: [], imports: [] }
 
+interface ImportBatchResult extends IngestResult {
+  evidence?: { buffer: ArrayBuffer; fileHash: string; fileName: string; mimeType: string }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY)
   const [settings, setSettingsState] = useState<AppSettings>(DEFAULT_SETTINGS)
@@ -124,18 +128,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (settings.demoMode) {
         throw new Error('演示模式下无法导入真实账单，请先在设置中关闭演示模式。')
       }
-      const results: IngestResult[] = []
-      // Raw bytes kept alongside each result so evidence can be archived.
-      const evidence: Array<{ buffer: ArrayBuffer; fileName: string; mimeType: string }> = []
+      const results: ImportBatchResult[] = []
       let current = await readSnapshot()
 
       for (const [index, file] of files.entries()) {
         setProgress({ fileName: file.name, index, total: files.length, phase: '读取文件' })
         const meta = { fileName: file.name, fileSize: file.size, sourceType: 'unknown' as const }
+        let evidence: ImportBatchResult['evidence']
         try {
-          const buffer = await file.arrayBuffer()
+          const buffer = await readFileWithRetry(file)
           setProgress({ fileName: file.name, index, total: files.length, phase: '计算 SHA-256' })
           const fileHash = await sha256Hex(buffer)
+          // Bind evidence before parsing: extraction failures must retain the
+          // same bytes that were hashed, without a second, potentially different read.
+          evidence = { buffer: buffer.slice(0), fileHash, fileName: file.name, mimeType: file.type || mimeTypeForFile(file.name) }
           setProgress({ fileName: file.name, index, total: files.length, phase: '解析内容' })
           const doc = await buildSourceDocument({ fileName: file.name, buffer, fileHash })
           const match = detectParser(doc)
@@ -150,8 +156,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
               transactions: [],
               inserted: [],
               skippedDuplicates: [],
+              evidence,
             })
-            evidence.push({ buffer: buffer.slice(0), fileName: file.name, mimeType: file.type || mimeTypeForFile(file.name) })
             continue
           }
           setProgress({ fileName: file.name, index, total: files.length, phase: '解析账单' })
@@ -161,8 +167,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             { ...meta, fileHash, sourceType: doc.sourceType },
             { statements: current.statements, transactions: current.transactions, imports: current.imports },
           )
-          results.push(result)
-          evidence.push({ buffer: buffer.slice(0), fileName: file.name, mimeType: file.type || mimeTypeForFile(file.name) })
+          results.push({ ...result, evidence })
           current = {
             statements: current.statements.filter((s) => s.id !== result.statement?.id).concat(result.statement ?? []),
             transactions: current.transactions.filter((t) => t.statementId !== result.statement?.id).concat(result.transactions),
@@ -170,43 +175,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         } catch (error) {
           const message = describeError(error)
-          const fileHash = await safeHash(file)
+          const fileHash = evidence?.fileHash ?? `unavailable-${crypto.randomUUID()}`
           results.push({
             record: failedImportRecord({ ...meta, fileHash }, message),
             statement: null,
             transactions: [],
             inserted: [],
             skippedDuplicates: [],
+            evidence,
           })
-          try {
-            const retry = await file.arrayBuffer()
-            if (fileHash !== 'unavailable') {
-              evidence.push({ buffer: retry, fileName: file.name, mimeType: file.type || mimeTypeForFile(file.name) })
-            }
-          } catch {
-            // Evidence is best-effort: a file we cannot re-read stays `missing`.
-          }
         }
       }
 
       setProgress(null)
-      await persistImportResults(results.filter((result) => result.statement !== null))
-      await persistFailureRecords(results)
+      await persistImportResults(results)
       // Archive raw evidence keyed by hash. Best-effort: never fails the import.
-      for (const [i, result] of results.entries()) {
-        const raw = evidence[i]
-        if (!raw || result.record.fileHash === 'unavailable') continue
-        try {
+      for (const result of results) {
+        const raw = result.evidence
+        let retained = false
+        if (raw) try {
           await saveOriginalFile({
-            fileHash: result.record.fileHash,
-            fileName: result.record.fileName,
+            fileHash: raw.fileHash,
+            fileName: raw.fileName,
             mimeType: raw.mimeType,
             data: raw.buffer.slice(0),
             importId: result.record.id,
             parserId: result.record.parserId,
           })
+          retained = true
         } catch {
           // IndexedDB quota or private-mode limits must not break the import itself.
+        }
+        if (!retained) {
+          result.record = { ...result.record, message: `${result.record.message}，原始文件未保留，可稍后重新导入。` }
+          // The manifest also derives missing evidence from the attachment table,
+          // even if quota prevents this optional warning from being persisted.
+          try { await db.imports.put(result.record) } catch { /* Evidence remains missing. */ }
         }
       }
       await refresh()
@@ -415,18 +419,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return <AppContext.Provider value={api}>{children}</AppContext.Provider>
 }
 
-async function safeHash(file: File): Promise<string> {
+async function readFileWithRetry(file: File): Promise<ArrayBuffer> {
   try {
-    return await sha256Hex(await file.arrayBuffer())
+    return await file.arrayBuffer()
   } catch {
-    return 'unavailable'
+    return file.arrayBuffer()
   }
-}
-
-async function persistFailureRecords(results: IngestResult[]): Promise<void> {
-  const failures = results.filter((result) => result.statement === null)
-  if (failures.length === 0) return
-  await db.imports.bulkPut(failures.map((result) => result.record))
 }
 
 function describeError(error: unknown): string {

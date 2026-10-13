@@ -224,7 +224,7 @@ export function SettingsPage() {
               type="button"
               data-testid="clear-real"
               onClick={() => {
-                if (!window.confirm('确定要清空全部真实账单与交易数据吗？此操作不可撤销。')) return
+                if (!window.confirm('确定要清空全部真实账单、交易、导入记录、原始文件与复核备注吗？此操作不可撤销。')) return
                 void clearData(false).then(() => setMessage({ tone: 'ok', text: '真实数据已清空。' }))
               }}
             >
