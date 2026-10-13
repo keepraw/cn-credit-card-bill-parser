@@ -1,4 +1,4 @@
-import { assignOccurrences, detectDuplicates, transactionId } from '../core/dedupe'
+import { assignOccurrences, assignStoredOccurrences, detectDuplicates, transactionId } from '../core/dedupe'
 import { statementKey, transactionFingerprint } from '../core/identity'
 import { reconcileStatement } from '../core/reconcile'
 import type { ImportRecord, Statement, Transaction } from '../core/types'
@@ -68,32 +68,16 @@ export async function previewLegacyWorkbook(
 
   const fingerprints = parsed.rows.map(fingerprintOf)
   const occurrences = assignOccurrences(fingerprints)
-  const rows: PreviewRow[] = parsed.rows.map((row, index) => {
+  const stored = existing.transactions.filter((tx) => !tx.isDemo)
+  const rows = assignStoredOccurrences(parsed.rows.map((row, index): PreviewRow => {
     const fingerprint = fingerprints[index]!
     const occurrence = occurrences[index]!.occurrence
     return { ...row, id: transactionId(fingerprint, occurrence), fingerprint, occurrence }
-  })
+  }), stored)
 
   const { duplicateIds } = detectDuplicates(
-    rows.map((row) => ({
-      id: row.id,
-      fingerprint: row.fingerprint,
-      bank: row.bank,
-      cardLast4: row.cardLast4,
-      transactionDate: row.transactionDate,
-      settlementAmountMinor: row.settlementAmountMinor,
-      type: row.type,
-      description: row.description,
-    })),
-    existing.transactions.map((tx) => ({
-      fingerprint: tx.fingerprint,
-      bank: tx.bank,
-      cardLast4: tx.cardLast4,
-      transactionDate: tx.transactionDate,
-      settlementAmountMinor: tx.settlementAmountMinor,
-      type: tx.type,
-      description: tx.description,
-    })),
+    rows,
+    stored,
   )
 
   const dates = rows
@@ -175,8 +159,10 @@ export interface LegacyConfirmPlan {
  * Pure: performs no database access itself.
  */
 export function planLegacyImport(preview: LegacyPreview, existing: LegacyExisting): LegacyConfirmPlan {
-  const storedIds = new Set(existing.transactions.map((tx) => tx.id))
-  const fresh = preview.rows.filter((row) => !storedIds.has(row.id))
+  const stored = existing.transactions.filter((tx) => !tx.isDemo)
+  const rows = assignStoredOccurrences(preview.rows, stored)
+  const { duplicateIds, suspectedDuplicates } = detectDuplicates(rows, stored)
+  const fresh = rows.filter((row) => !duplicateIds.has(row.id))
   const skipped = preview.rows.length - fresh.length
   const formatId: LegacyFormatId = preview.stats.formatId
   const formatName = LEGACY_FORMAT_NAME[formatId]
@@ -199,8 +185,8 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
     direction: row.direction,
     category: row.category,
     confidence: row.confidence,
-    flags: [...row.flags],
-    reviewStatus: row.flags.length > 0 ? 'pending' : 'ok',
+    flags: suspectedDuplicates.has(row.id) ? [...row.flags, 'suspected_duplicate'] : [...row.flags],
+    reviewStatus: row.flags.length > 0 || suspectedDuplicates.has(row.id) ? 'pending' : 'ok',
     sourceFileName: preview.meta.fileName,
     sourceFileHash: preview.meta.fileHash,
     sourcePage: null,
@@ -217,7 +203,7 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
   // rebuilt deterministically, so a repeat import reproduces identical rows
   // and the merge stays idempotent.
   const groups = new Map<string, PreviewRow[]>()
-  for (const row of preview.rows) {
+  for (const row of rows) {
     const key = statementKey(row.bank, row.cardLast4, row.cycleStart, row.cycleEnd)
     const bucket = groups.get(key) ?? []
     bucket.push(row)
@@ -226,9 +212,14 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
 
   const now = new Date().toISOString()
   const insertedIds = new Set(transactions.map((tx) => tx.id))
+  const counts = new Map<string, number>()
+  for (const tx of stored) counts.set(tx.statementId, (counts.get(tx.statementId) ?? 0) + 1)
+  const priorStatements = new Map(existing.statements.filter((row) => !row.isDemo).map((row) => [row.id, row]))
   const statements: Statement[] = [...groups.entries()].map(([key, bucket]) => {
     const first = bucket[0]!
-    const priorCount = existing.transactions.filter((tx) => tx.statementId === key && !tx.isDemo).length
+    const transactionCount = (counts.get(key) ?? 0) + bucket.filter((row) => insertedIds.has(row.id)).length
+    const prior = priorStatements.get(key)
+    if (prior) return { ...prior, transactionCount }
     // Legacy data carries no balance summary, so reconciliation is honestly
     // `insufficient` — never passed, never faked.
     const reconciliation = reconcileStatement({ summary: emptySummary(), transactions: [] })
@@ -245,7 +236,7 @@ export function planLegacyImport(preview: LegacyPreview, existing: LegacyExistin
       status: 'imported',
       parserId: formatId,
       parserVersion: LEGACY_ADAPTER_VERSION,
-      transactionCount: priorCount + bucket.filter((row) => insertedIds.has(row.id)).length,
+      transactionCount,
       sourceFileName: preview.meta.fileName,
       sourceFileHash: preview.meta.fileHash,
       importedAt: now,

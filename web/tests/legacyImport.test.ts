@@ -323,6 +323,31 @@ describe('duplicate legacy import', () => {  it('re-importing the same file adds
     expect(await db.transactions.count()).toBe(2)
     expect(await db.imports.count()).toBe(1)
   })
+
+  it('counts occurrences consistently in preview and confirmation against bank imports', async () => {
+    const buffer = workbookBuffer(HEADERS, [legacyRow(), legacyRow()])
+    const first = planLegacyImport(await previewOf(workbookBuffer(HEADERS, [legacyRow()]), 'bank'), EMPTY)
+    first.inserted[0]!.origin = 'parser'
+    await persistLegacyImport(first)
+    const snapshot = await readSnapshot()
+    const preview = await previewLegacyWorkbook(buffer, { fileName: 'history.xlsx', fileSize: buffer.byteLength, fileHash: 'overlap' }, snapshot)
+    expect(preview.stats.alreadyStored).toBe(1)
+    const plan = planLegacyImport(preview, snapshot)
+    expect(plan.skipped).toBe(1)
+    expect(plan.inserted).toHaveLength(1)
+    await persistLegacyImport(plan)
+    expect(await db.transactions.count()).toBe(2)
+  })
+
+  it('rechecks colliding descriptions against the fresh snapshot before confirmation', async () => {
+    const buffer = workbookBuffer(HEADERS, [legacyRow({ description: '消费 商户(二)' })])
+    const preview = await previewOf(buffer, 'second')
+    await persistLegacyImport(planLegacyImport(await previewOf(workbookBuffer(HEADERS, [legacyRow({ description: '消费 商户(一)' })]), 'first'), EMPTY))
+    const plan = planLegacyImport(preview, await readSnapshot())
+    expect(plan.inserted).toHaveLength(1)
+    await persistLegacyImport(plan)
+    expect(await db.transactions.count()).toBe(2)
+  })
 })
 
 describe('legacy import performance', () => {

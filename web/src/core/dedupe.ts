@@ -56,6 +56,56 @@ interface FingerprintView {
   settlementAmountMinor: number
   type: string
   description: string
+  postingDate?: string | null
+  settlementCurrency?: string
+  transactionCurrency?: string
+  transactionAmountMinor?: number
+  direction?: string
+}
+
+function exactKey(row: FingerprintView): string {
+  // Normalization is deliberately lossy. Raw cleaned descriptions must also
+  // agree before a stored occurrence can consume an incoming occurrence.
+  return JSON.stringify([
+    row.fingerprint, row.description, row.bank, row.cardLast4,
+    row.transactionDate, row.postingDate, row.settlementCurrency,
+    row.settlementAmountMinor, row.type, row.transactionCurrency,
+    row.transactionAmountMinor, row.direction,
+  ])
+}
+
+/** Reuse matched stored IDs; allocate free occurrence slots for unmatched rows. */
+export function assignStoredOccurrences<T extends FingerprintView & { id: string; occurrence: number }>(
+  incoming: T[],
+  existing: Array<FingerprintView & { id: string; occurrence: number }>,
+): T[] {
+  const matches = new Map<string, Array<{ id: string; occurrence: number }>>()
+  const cursors = new Map<string, number>()
+  const used = new Set(existing.map((row) => row.id))
+  const maxima = new Map<string, number>()
+  for (const row of existing) {
+    const key = exactKey(row)
+    const bucket = matches.get(key) ?? []
+    bucket.push(row)
+    matches.set(key, bucket)
+    maxima.set(row.fingerprint, Math.max(maxima.get(row.fingerprint) ?? 0, row.occurrence))
+  }
+  return incoming.map((row) => {
+    const key = exactKey(row)
+    const cursor = cursors.get(key) ?? 0
+    cursors.set(key, cursor + 1)
+    const match = matches.get(key)?.[cursor]
+    if (match) return { ...row, id: match.id, occurrence: match.occurrence }
+    let occurrence = row.occurrence
+    if (used.has(transactionId(row.fingerprint, occurrence))) {
+      occurrence = (maxima.get(row.fingerprint) ?? 0) + 1
+      while (used.has(transactionId(row.fingerprint, occurrence))) occurrence += 1
+    }
+    const id = transactionId(row.fingerprint, occurrence)
+    used.add(id)
+    maxima.set(row.fingerprint, Math.max(maxima.get(row.fingerprint) ?? 0, occurrence))
+    return { ...row, id, occurrence }
+  })
 }
 
 /**
@@ -71,40 +121,42 @@ export function detectDuplicates(
   const duplicateIds = new Set<string>()
   const suspectedDuplicates = new Map<string, string[]>()
 
-  const exact = new Map<string, FingerprintView[]>()
+  const exact = new Map<string, number>()
   for (const row of existing) {
-    const bucket = exact.get(row.fingerprint) ?? []
-    bucket.push(row)
-    exact.set(row.fingerprint, bucket)
+    const key = exactKey(row)
+    exact.set(key, (exact.get(key) ?? 0) + 1)
   }
 
-  const loose = new Map<string, FingerprintView[]>()
+  const loose = new Map<string, Set<string>>()
   for (const row of existing) {
     const key = looseKey(row)
-    const bucket = loose.get(key) ?? []
-    bucket.push(row)
+    const bucket = loose.get(key) ?? new Set<string>()
+    bucket.add(row.description)
     loose.set(key, bucket)
   }
-  const incomingLoose = new Map<string, FingerprintView[]>()
 
   for (const row of incoming) {
-    const exactBucket = exact.get(row.fingerprint) ?? []
-    if (exactBucket.some((candidate) => candidate.description === row.description)) {
+    const key = exactKey(row)
+    const remaining = exact.get(key) ?? 0
+    if (remaining > 0) {
+      exact.set(key, remaining - 1)
       duplicateIds.add(row.id)
       continue
     }
 
-    // Compare against stored rows *and* against rows earlier in this same batch, so a
-    // statement that repeats a purchase twice is still flagged.
-    const looseBucket = [...(loose.get(looseKey(row)) ?? []), ...incomingLoose.get(looseKey(row)) ?? []]
-    const others = looseBucket.filter((candidate) => candidate.description !== row.description)
-    if (others.length > 0) {
-      suspectedDuplicates.set(row.id, [...others.map((candidate) => candidate.description), row.description])
+    const bucket = loose.get(looseKey(row)) ?? new Set<string>()
+    // Bounded examples keep review detection linear even for a huge same-day
+    // bucket. Every non-identical row is still flagged; nothing is merged.
+    const others: string[] = []
+    for (const description of bucket) {
+      if (description !== row.description) others.push(description)
+      if (others.length === 3) break
     }
-    const key = looseKey(row)
-    const bucket = incomingLoose.get(key) ?? []
-    bucket.push(row)
-    incomingLoose.set(key, bucket)
+    if (others.length > 0) {
+      suspectedDuplicates.set(row.id, [...others, row.description])
+    }
+    bucket.add(row.description)
+    loose.set(looseKey(row), bucket)
   }
 
   return { duplicateIds, suspectedDuplicates }

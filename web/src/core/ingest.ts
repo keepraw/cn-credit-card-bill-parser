@@ -1,5 +1,5 @@
 import { inferCategory } from './classify'
-import { assignOccurrences, detectDuplicates, transactionId } from './dedupe'
+import { assignOccurrences, assignStoredOccurrences, detectDuplicates, transactionId } from './dedupe'
 import { transactionFingerprint, statementKey } from './identity'
 import { reconcileStatement } from './reconcile'
 import type {
@@ -69,7 +69,8 @@ export function ingestParsedStatement(
   )
   const occurrences = assignOccurrences(fingerprints)
 
-  const candidates: Transaction[] = parsed.transactions.map((tx, index) => {
+  const stored = existing.transactions.filter((tx) => !tx.isDemo === !isDemo)
+  const candidates = assignStoredOccurrences(parsed.transactions.map((tx, index): Transaction => {
     const rowCardLast4 = tx.cardLast4 || cardLast4
     const fingerprint = fingerprints[index]!
     const occurrence = occurrences[index]!.occurrence
@@ -109,30 +110,12 @@ export function ingestParsedStatement(
       occurrence,
       isDemo,
     }
-  })
+  }), stored)
 
-  const priorForStatement = existing.transactions.filter((tx) => tx.statementId === key)
-  const others = existing.transactions.filter((tx) => tx.statementId !== key)
+  const priorForStatement = stored.filter((tx) => tx.statementId === key)
   const { duplicateIds, suspectedDuplicates } = detectDuplicates(
-    candidates.map((tx) => ({
-      id: tx.id,
-      fingerprint: tx.fingerprint,
-      bank: tx.bank,
-      cardLast4: tx.cardLast4,
-      transactionDate: tx.transactionDate,
-      settlementAmountMinor: tx.settlementAmountMinor,
-      type: tx.type,
-      description: tx.description,
-    })),
-    [...others, ...priorForStatement].map((tx) => ({
-      fingerprint: tx.fingerprint,
-      bank: tx.bank,
-      cardLast4: tx.cardLast4,
-      transactionDate: tx.transactionDate,
-      settlementAmountMinor: tx.settlementAmountMinor,
-      type: tx.type,
-      description: tx.description,
-    })),
+    candidates,
+    stored,
   )
 
   const skippedDuplicates = candidates.filter((tx) => duplicateIds.has(tx.id))
@@ -151,7 +134,9 @@ export function ingestParsedStatement(
     reconciliation.status === 'passed' ? 'reconciled' : reconciliation.status === 'mismatch' ? 'needs_review' : 'needs_review'
 
   const flaggedStatement = status !== 'reconciled'
+  const insertedIds = new Set(inserted.map((tx) => tx.id))
   const finalTransactions = statementTransactions.map((tx) => {
+    if (!insertedIds.has(tx.id)) return tx
     if (!flaggedStatement) return tx
     if (tx.flags.includes('statement_mismatch')) return tx
     return { ...tx, flags: [...tx.flags, 'statement_mismatch' as ReviewFlag] }

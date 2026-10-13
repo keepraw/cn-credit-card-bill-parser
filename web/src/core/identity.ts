@@ -4,7 +4,8 @@
  * A fingerprint describes "what the statement says happened". Identical rows inside
  * one statement get an occurrence index so real repeated purchases (same day, same
  * merchant, same amount) are never collapsed into one. Across files the same
- * fingerprint means the same transaction and is de-duplicated.
+ * fingerprint is a candidate match; exact business fields and occurrence counts
+ * decide whether it can be de-duplicated. Lossy normalization alone is insufficient.
  *
  * Only business fields feed the hash (bank, card, dates, amount, currency,
  * type, normalised description). Import metadata — origin, sourceId, file
