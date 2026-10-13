@@ -2,7 +2,7 @@ name: Web CI and GitHub Pages
 
 on:
   push:
-    branches: [experimental]
+    branches: [main]
     paths:
       - 'web/**'
       - '.github/workflows/web-pages.yml'
@@ -14,7 +14,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages-experimental
+  group: pages
   cancel-in-progress: true
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
         run: npm test -- --reporter=default
       - name: Build for GitHub Pages
         env:
-          VITE_BASE_PATH: /Keepraw-Ledger/
+          VITE_BASE_PATH: /keepraw-ledger/
         run: npm run build
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
