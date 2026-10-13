@@ -22,13 +22,32 @@ Node 22 runtime. The post-update `npm audit --json` reports zero vulnerabilities
 no advisories are suppressed. CDN availability is now needed for fresh installs,
 and future releases require reviewing the maintainer's distribution and advisories.
 
-The Validation workflow runs on pull requests and main, with read-only repository
-permissions. It checks types, ESLint, Vitest (including golden fixtures), a
-production build, the dependency audit, Chromium Playwright and Python pytest.
-Node and Python dependency downloads are cached, and jobs have execution limits.
-Pages deployment remains a separate workflow, restricted to main on a push or
-explicit workflow dispatch. Deployment permissions are granted only to its
-deployment job. No pull-request workflow can deploy the site.
+The single Validation workflow (`.github/workflows/ci.yml`) runs on pull requests,
+main pushes and explicit workflow dispatch. Its Web and Python jobs run in
+parallel with read-only repository permissions. They retain types, ESLint, Vitest
+(including golden fixtures), one production build, the dependency audit,
+Chromium Playwright and Python pytest. Dependency caching and time limits remain.
+
+The Deploy job requires both validation jobs to succeed, and only runs for a
+push or dispatch on `main`. After every Web check succeeds, that same run uploads
+its `web/dist` as `github-pages`; Deploy consumes the artifact from the current
+workflow run, without reinstalling dependencies or rebuilding. PRs and dispatches
+on other branches neither upload Pages artifacts nor deploy. Only Deploy receives
+Pages and OIDC write permissions, and the existing `github-pages` environment and
+Pages configuration action are retained.
+
+PR updates cancel older checks. Main runs are queued without cancellation so
+an active deployment can finish safely. The deployment slot also uses the
+existing `pages` concurrency group without cancellation. Since GitHub does not
+guarantee queue order, Deploy checks the current main SHA after acquiring that
+slot and skips superseded revisions. Failure to read the current SHA prevents
+deployment. A newer commit arriving after the check waits for the active main
+run; its deployment cannot be overtaken by that older run.
+
+There is no `workflow_run` handoff or cross-run artifact lookup. The former
+`web-pages.yml` workflow and its duplicate install, checks and build are removed.
+Main production deployment is not exercised by local checks or PR CI; it occurs
+only after an authorized main push or an explicit main dispatch passes validation.
 
 Two existing browser tests attempted to persist edits to regenerated in-memory
 demo rows. They now import synthetic data and test persistence across reloads.

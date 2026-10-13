@@ -84,7 +84,7 @@ npx playwright install chromium
 npm run test:e2e             # Playwright browser tests
 ```
 
-The Pages workflow (`.github/workflows/web-pages.yml`) runs TypeScript checks, lint, Vitest, and the build before deployment. **Playwright E2E tests and Python pytest are not currently executed by that workflow.** For a GitHub Pages project subpath instead of the configured custom-domain root, set `VITE_BASE_PATH` for the build.
+The single Validation workflow (`.github/workflows/ci.yml`) runs Web checks (TypeScript, ESLint, Vitest including goldens, build, npm audit, and Chromium Playwright) and Python pytest including goldens in parallel. Deployment requires both jobs to succeed and a push or explicit dispatch on `main`. It reuses that run's validated `web/dist` artifact; PRs neither upload Pages artifacts nor deploy. Deployments are serialized, and superseded main revisions are skipped. For a GitHub Pages project subpath instead of the configured custom-domain root, set `VITE_BASE_PATH` for the build.
 
 ## Storage, privacy, and backup
 
@@ -191,7 +191,7 @@ tests/                   Python pytest suite
 scripts/                 Migration and golden-fixture tooling
 golden/                  Desensitized cross-pipeline regression baselines
 docs/                    Parser and format research
-.github/workflows/       Web CI and GitHub Pages deployment
+.github/workflows/       Unified Web/Python validation and GitHub Pages deployment
 ```
 
 ## Development and correctness guidelines
@@ -206,7 +206,7 @@ The repository includes golden fixtures for the six registered banks (`golden/RE
 - **Stored attachment lifecycle:** Clearing real data currently leaves some associated raw attachments and review notes behind.
 - **Import error paths:** The association between import results and retained raw files needs stronger handling when a file cannot be read.
 - **Backup integrity:** Restore validation should check individual records and cross-record consistency, not just top-level JSON structure.
-- **Testing and dependencies:** Extend CI to include Python and browser end-to-end tests, review the XLSX dependency for security advisories, and add realistic large-dataset benchmarks.
+- **Testing and dependencies:** Keep Python and browser checks mandatory, monitor dependency advisories, and extend large-dataset coverage as needed.
 
 This is a personal finance data tool. **Always compare imported results with official bank statements** before using the output for financial decisions.
 
