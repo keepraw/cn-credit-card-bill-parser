@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { SYNTHETIC_CCB_HTML } from '../tests/fixtures/ccbEml'
 
 /**
  * Key user flows.
@@ -10,8 +11,18 @@ import { expect, test, type Page } from '@playwright/test'
 
 async function goto(page: Page, hash: string): Promise<void> {
   await page.goto(`/#/${hash}`)
-  await expect(page.getByTestId('demo-toggle')).toBeVisible({ timeout: 20_000 }).catch(() => undefined)
   await expect(page.locator('h1')).toBeVisible()
+}
+
+/** Exercise edits on imported synthetic data: the in-memory demo is regenerated. */
+async function importSynthetic(page: Page, mismatch = false): Promise<void> {
+  await goto(page, 'settings')
+  await page.getByTestId('demo-toggle').uncheck()
+  await goto(page, 'import')
+  await expect(page.getByTestId('dropzone')).toBeEnabled()
+  const html = mismatch ? SYNTHETIC_CCB_HTML.replace('2300.00', '2301.00') : SYNTHETIC_CCB_HTML
+  await page.setInputFiles('[data-testid="file-input"]', { name: 'synthetic.html', mimeType: 'text/html', buffer: Buffer.from(html) })
+  await expect(page.getByTestId('import-row').first()).toContainText(mismatch ? '待复核' : '解析成功')
 }
 
 test.describe('Demo Mode', () => {
@@ -83,6 +94,7 @@ test.describe('Transactions', () => {
   })
 
   test('changes a category and persists it', async ({ page }) => {
+    await importSynthetic(page)
     await goto(page, 'transactions')
     const select = page.locator('tbody select').first()
     await select.selectOption('餐饮')
@@ -95,6 +107,7 @@ test.describe('Transactions', () => {
 
 test.describe('Review', () => {
   test('shows reconciliation differences and lets a human resolve a row', async ({ page }) => {
+    await importSynthetic(page, true)
     await goto(page, 'review')
 
     await expect(page.getByRole('heading', { name: /对账明细/ })).toBeVisible()
@@ -128,12 +141,20 @@ test.describe('Settings', () => {
   })
 
   test('exports and restores a backup', async ({ page }) => {
+    await importSynthetic(page)
     await goto(page, 'settings')
     const download = page.waitForEvent('download')
     await page.getByTestId('backup').click()
     const file = await download
     const path = await file.path()
     expect(path).toBeTruthy()
+    page.once('dialog', (dialog) => void dialog.accept())
+    await page.getByTestId('clear-real').click()
+    await expect(page.getByText(/真实数据 0 份账单、0 笔交易/)).toBeVisible()
+    await page.setInputFiles('input[type="file"][accept*=".json"]', path!)
+    await expect(page.getByText(/已恢复 14 笔交易/)).toBeVisible()
+    await goto(page, 'transactions')
+    await expect(page.locator('tbody tr')).toHaveCount(14)
   })
 })
 
