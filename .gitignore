@@ -79,4 +79,8 @@ web/**/*.sqlite*
 .playwright/
 *.local
 
+# Migration dry-run reports are regenerable via
+# `python scripts/migration_audit.py bridge`; do not commit them.
+reports/*.json
+
 
