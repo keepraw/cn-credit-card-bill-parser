@@ -1,0 +1,87 @@
+{
+  "schema": "golden/v1",
+  "origin": "python",
+  "generator": "ccparser-golden-py/1.0.0",
+  "bank": "boc",
+  "bankNative": "中国银行",
+  "cardLast4": "6505",
+  "cycleStart": "2026-06-05",
+  "cycleEnd": "2026-07-04",
+  "parserName": "boc_pdf",
+  "desensitized": true,
+  "nativeIds": {
+    "transactionAlgo": "sha256-pipe",
+    "occurrence": "sha256(base,occurrence)"
+  },
+  "transactionCount": 4,
+  "transactions": [
+    {
+      "bank": "boc",
+      "cardLast4": "6505",
+      "transactionDate": "2026-06-09",
+      "postingDate": "2026-06-09",
+      "amountMinor": -200920,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "商户_1c9646e0",
+      "normalizedDescription": "商户-1c9646e0",
+      "rawText": "2026-06-09 2026-06-09 6505 银联转账（██） 2009.20",
+      "sourcePosition": {
+        "row": 0
+      },
+      "nativeId": "d5b4b3cd9f9207ed659c041bed8728410f9eaf2bd33b76e32b06cf51cb652197",
+      "statementKey": "402701c44a742885da87c7378883b1f587b3406928f8b44042de870632001d43"
+    },
+    {
+      "bank": "boc",
+      "cardLast4": "6505",
+      "transactionDate": "2026-06-17",
+      "postingDate": "2026-06-18",
+      "amountMinor": 1310,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "商户_6d296c74",
+      "normalizedDescription": "商户-6d296c74",
+      "rawText": "2026-06-17 2026-06-18 6505 ██-██CHN 13.10",
+      "sourcePosition": {
+        "row": 1
+      },
+      "nativeId": "bd2e9775172be21b1ecf0abda47deb72c2f5f17898e2d7d2f239939f07a21b6c",
+      "statementKey": "402701c44a742885da87c7378883b1f587b3406928f8b44042de870632001d43"
+    },
+    {
+      "bank": "boc",
+      "cardLast4": "6505",
+      "transactionDate": "2026-06-30",
+      "postingDate": "2026-07-01",
+      "amountMinor": 229231,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网银在线 商户_e5c736a8",
+      "normalizedDescription": "网银在线商户-e5c736a8",
+      "rawText": "2026-06-30 2026-07-01 6505 HN 2292.31",
+      "sourcePosition": {
+        "row": 2
+      },
+      "nativeId": "745d463676fa746ff8d02df6036612e1a9c3087c5b9b9b836bfe18098f39c7fa",
+      "statementKey": "402701c44a742885da87c7378883b1f587b3406928f8b44042de870632001d43"
+    },
+    {
+      "bank": "boc",
+      "cardLast4": "6505",
+      "transactionDate": "2026-06-30",
+      "postingDate": "2026-07-01",
+      "amountMinor": 209231,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网银在线 商户_e5c736a8",
+      "normalizedDescription": "网银在线商户-e5c736a8",
+      "rawText": "2026-06-30 2026-07-01 6505 HN 2092.31",
+      "sourcePosition": {
+        "row": 3
+      },
+      "nativeId": "3ba0bbe64864c20b99b9bdc5711368afe496390767206583e9f3e05f14bdf27e",
+      "statementKey": "402701c44a742885da87c7378883b1f587b3406928f8b44042de870632001d43"
+    }
+  ]
+}

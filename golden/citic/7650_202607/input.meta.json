@@ -1,0 +1,17 @@
+{
+  "schema": "golden/v1",
+  "fileName": "中信银行_7650_202607.eml",
+  "fileSize": 86614,
+  "sha256": "7c0529a2cd94515b66a5154110cfb48b23a7aceb70d8d2de7eb3f6db84813429",
+  "sourceType": "email_html",
+  "bank": "citic",
+  "bankNative": "中信银行",
+  "cardLast4": "7650",
+  "cycleStart": "2026-06-15",
+  "cycleEnd": "2026-07-14",
+  "transactionCount": 12,
+  "parserName": "citic_email",
+  "desensitized": true,
+  "generator": "ccparser-golden-py/1.0.0",
+  "note": "Raw bill content is never committed. Re-run scripts/generate_golden.py with the original file (matching sha256) to reproduce."
+}

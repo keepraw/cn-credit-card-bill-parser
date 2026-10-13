@@ -1,0 +1,17 @@
+{
+  "schema": "golden/v1",
+  "fileName": "中国银行_6505_202607.pdf",
+  "fileSize": 629775,
+  "sha256": "0c53650cb81e9ddb5b8963ecae853c5a610c77ee5c2928e5e78cc10bfdc9cd3b",
+  "sourceType": "pdf_text",
+  "bank": "boc",
+  "bankNative": "中国银行",
+  "cardLast4": "6505",
+  "cycleStart": "2026-06-05",
+  "cycleEnd": "2026-07-04",
+  "transactionCount": 4,
+  "parserName": "boc_pdf",
+  "desensitized": true,
+  "generator": "ccparser-golden-py/1.0.0",
+  "note": "Raw bill content is never committed. Re-run scripts/generate_golden.py with the original file (matching sha256) to reproduce."
+}

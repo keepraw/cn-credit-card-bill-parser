@@ -1,0 +1,223 @@
+{
+  "schema": "golden/v1",
+  "origin": "python",
+  "generator": "ccparser-golden-py/1.0.0",
+  "bank": "citic",
+  "bankNative": "中信银行",
+  "cardLast4": "7650",
+  "cycleStart": "2026-06-15",
+  "cycleEnd": "2026-07-14",
+  "parserName": "citic_email",
+  "desensitized": true,
+  "nativeIds": {
+    "transactionAlgo": "sha256-pipe",
+    "occurrence": "sha256(base,occurrence)"
+  },
+  "transactionCount": 12,
+  "transactions": [
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-06-17",
+      "postingDate": "2026-06-17",
+      "amountMinor": 970139,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "商户_3e86d623",
+      "normalizedDescription": "商户-3e86d623",
+      "rawText": "20260617 | 20260617 | 7650 | | ██ ██ ██ ██ | AUD 2024.89 | CNY 9701.39",
+      "sourcePosition": {
+        "row": 0
+      },
+      "nativeId": "4ab929e4c96eb66f84c12c481480bc6548469f0ff7a58cc80b647ca3f697cc89",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-06-18",
+      "postingDate": "2026-06-18",
+      "amountMinor": -1,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "商户_a7070c82",
+      "normalizedDescription": "商户-a7070c82",
+      "rawText": "20260618 | 20260618 | 7650 | | ██-0.01██ | CNY -0.01 | CNY -0.01",
+      "sourcePosition": {
+        "row": 1
+      },
+      "nativeId": "c949b602162cf30e254db160839fc147521c10ecfb6a9d0404b94f3871081714",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-06-18",
+      "postingDate": "2026-06-18",
+      "amountMinor": 201985,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "商户_9db4b263",
+      "normalizedDescription": "商户-9db4b263",
+      "rawText": "20260618 | 20260618 | 7650 | | ██－██ | CNY 2019.85 | CNY 2019.85",
+      "sourcePosition": {
+        "row": 2
+      },
+      "nativeId": "c56da493785fd4c482429a40bb6e2e2a539083f86c5eddc88fdf72f2c695b5d5",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-06-22",
+      "postingDate": "2026-06-22",
+      "amountMinor": -171073,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "商户_70cb53aa",
+      "normalizedDescription": "商户-70cb53aa",
+      "rawText": "20260622 | 20260622 | 7650 | | 本行自助还款 | CNY -1710.73 | CNY -1710.73",
+      "sourcePosition": {
+        "row": 3
+      },
+      "nativeId": "eb63fcc48c8c660deb0c6f6c1f25fbc206382d1618875bc25635aad83e00ba6c",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-06-30",
+      "postingDate": "2026-06-30",
+      "amountMinor": 222000,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "商户_9db4b263",
+      "normalizedDescription": "商户-9db4b263",
+      "rawText": "20260630 | 20260630 | 7650 | | ██－██ | CNY 2220.00 | CNY 2220.00",
+      "sourcePosition": {
+        "row": 4
+      },
+      "nativeId": "0ff029e2970419097b9a38bfd5fe1103cf86092dbdcaa9040d4958d51771be19",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-07-01",
+      "postingDate": "2026-07-01",
+      "amountMinor": 569,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "商户_214c9fa1",
+      "normalizedDescription": "商户-214c9fa1",
+      "rawText": "20260701 | 20260701 | 7650 | | ██－██U██ | CNY 5.69 | CNY 5.69",
+      "sourcePosition": {
+        "row": 5
+      },
+      "nativeId": "041f2d356e81df541f2fb3693c04b157c04b6df45b2a319ee2033b601fe8e630",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-07-05",
+      "postingDate": "2026-07-05",
+      "amountMinor": -20000,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "商户_a52ba4ec",
+      "normalizedDescription": "商户-a52ba4ec",
+      "rawText": "20260705 | 20260705 | 7650 | | 财付通还款 | CNY -200.00 | CNY -200.00",
+      "sourcePosition": {
+        "row": 6
+      },
+      "nativeId": "6f57850e77ac0c8d2b4536458933515a56c4765ec33600ec203b3acd5498cb5a",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-07-05",
+      "postingDate": "2026-07-05",
+      "amountMinor": -50000,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "商户_a52ba4ec",
+      "normalizedDescription": "商户-a52ba4ec",
+      "rawText": "20260705 | 20260705 | 7650 | | 财付通还款 | CNY -500.00 | CNY -500.00",
+      "sourcePosition": {
+        "row": 7
+      },
+      "nativeId": "21c8f208373c1816acc94ec8d5e9beef187104b67218834a19f022530f2b466c",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-07-05",
+      "postingDate": "2026-07-05",
+      "amountMinor": -40000,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "商户_a52ba4ec",
+      "normalizedDescription": "商户-a52ba4ec",
+      "rawText": "20260705 | 20260705 | 7650 | | 财付通还款 | CNY -400.00 | CNY -400.00",
+      "sourcePosition": {
+        "row": 8
+      },
+      "nativeId": "fe39f5c2c4302c557992b36acd9b2e196e1cc60fe017731b96d348a2378edc5f",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-07-08",
+      "postingDate": "2026-07-13",
+      "amountMinor": -15000,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "商户_07faba8a",
+      "normalizedDescription": "商户-07faba8a",
+      "rawText": "20260708 | 20260713 | 7650 | | ██-██ | CNY -150.00 | CNY -150.00",
+      "sourcePosition": {
+        "row": 9
+      },
+      "nativeId": "88b0e14d8224ea62eedcc22e1a20bd17858a51becda6b2d8e499a043dfba8c0f",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-07-08",
+      "postingDate": "2026-07-08",
+      "amountMinor": 15000,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "商户_30a7836b",
+      "normalizedDescription": "商户-30a7836b",
+      "rawText": "20260708 | 20260708 | 7650 | | ██－██ | CNY 150.00 | CNY 150.00",
+      "sourcePosition": {
+        "row": 10
+      },
+      "nativeId": "69eba364bf5f6e18341bd7b73d86a7b327fec4f1d778746013f6723301501dd3",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    },
+    {
+      "bank": "citic",
+      "cardLast4": "7650",
+      "transactionDate": "2026-07-09",
+      "postingDate": "2026-07-09",
+      "amountMinor": 9000,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "商户_a9d3b968",
+      "normalizedDescription": "商户-a9d3b968",
+      "rawText": "20260709 | 20260709 | 7650 | | ██-██ | CNY 90.00 | CNY 90.00",
+      "sourcePosition": {
+        "row": 11
+      },
+      "nativeId": "c2a0490f557dbec225d81edddc93f812ecc74f86cf5ec99e301a737cb0d9917e",
+      "statementKey": "78caa4760cc77c49f50741b5b556a0d11550dc2f12c16ba45c4d6b36d218bd20"
+    }
+  ]
+}

@@ -1,0 +1,456 @@
+{
+  "schema": "golden/v1",
+  "origin": "web",
+  "generator": "keepraw-golden-ts/1.0.0",
+  "bank": "bocom",
+  "bankNative": "bocom",
+  "cardLast4": "5155",
+  "cycleStart": "2026-06-15",
+  "cycleEnd": "2026-07-14",
+  "parserName": "bocom_eml",
+  "desensitized": true,
+  "nativeIds": {
+    "transactionAlgo": "fnv1a-dual-lane",
+    "occurrence": "fingerprint#N"
+  },
+  "transactionCount": 23,
+  "transactions": [
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-15",
+      "postingDate": "2026-06-15",
+      "amountMinor": -67871,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "退货 商户_c9eebedf",
+      "normalizedDescription": "退货商户-c9eebedf",
+      "rawText": " | 06/15 | 06/15 | 5155 | 退货 网银在线-██- | CNY678.71 | CNY678.71",
+      "sourcePosition": {
+        "row": 0,
+        "page": null,
+        "sourceRow": 0
+      },
+      "nativeId": "eacfa56232816762",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-17",
+      "postingDate": "2026-06-17",
+      "amountMinor": -499292,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "退货 商户_9ac9d180",
+      "normalizedDescription": "退货商户-9ac9d180",
+      "rawText": " | 06/17 | 06/17 | 5155 | 退货 ██-██（██）██ | CNY4992.92 | CNY4992.92",
+      "sourcePosition": {
+        "row": 1,
+        "page": null,
+        "sourceRow": 1
+      },
+      "nativeId": "89854e231c77558b",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-17",
+      "postingDate": "2026-06-18",
+      "amountMinor": -9108,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "退货 商户_d0e32700",
+      "normalizedDescription": "退货商户-d0e32700",
+      "rawText": " | 06/17 | 06/18 | 5155 | 退货 ██-██ | CNY91.08 | CNY91.08",
+      "sourcePosition": {
+        "row": 2,
+        "page": null,
+        "sourceRow": 2
+      },
+      "nativeId": "a8f07035b926d7de",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-22",
+      "postingDate": "2026-06-22",
+      "amountMinor": -400000,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "信用卡还款 商户_dca2fc69",
+      "normalizedDescription": "信用卡还款商户-dca2fc69",
+      "rawText": " | 06/22 | 06/22 | 5155 | 信用卡还款 转账还款-██-██ 0156 ██ ██ | CNY4000.00 | CNY4000.00",
+      "sourcePosition": {
+        "row": 3,
+        "page": null,
+        "sourceRow": 3
+      },
+      "nativeId": "a60f13d191ae3a9f",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-26",
+      "postingDate": "2026-06-26",
+      "amountMinor": -10000,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "信用卡还款 商户_6c742fa2",
+      "normalizedDescription": "信用卡还款商户-6c742fa2",
+      "rawText": " | 06/26 | 06/26 | 5155 | 信用卡还款 转账还款-██-██ 9982 ██ ██ 财付通信用卡还款 | CNY100.00 | CNY100.00",
+      "sourcePosition": {
+        "row": 4,
+        "page": null,
+        "sourceRow": 4
+      },
+      "nativeId": "35575c200c8d078d",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-15",
+      "postingDate": "2026-06-15",
+      "amountMinor": 1800,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_97de72b2",
+      "normalizedDescription": "消费商户-97de72b2",
+      "rawText": " | 06/15 | 06/15 | 5155 | 消费 ██-██U██ | CNY18.00 | CNY18.00",
+      "sourcePosition": {
+        "row": 5,
+        "page": null,
+        "sourceRow": 5
+      },
+      "nativeId": "de49280c52f26f0a",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-15",
+      "postingDate": "2026-06-15",
+      "amountMinor": 918992,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_c735e03a",
+      "normalizedDescription": "消费商户-c735e03a",
+      "rawText": " | 06/15 | 06/15 | 5155 | 消费 ██-██（██）██ | CNY9189.92 | CNY9189.92",
+      "sourcePosition": {
+        "row": 6,
+        "page": null,
+        "sourceRow": 6
+      },
+      "nativeId": "52fca7e92fde5b21",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-15",
+      "postingDate": "2026-06-15",
+      "amountMinor": 167290,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_3d928429",
+      "normalizedDescription": "消费商户-3d928429",
+      "rawText": " | 06/15 | 06/15 | 5155 | 消费 网银在线-████-████ | CNY1672.90 | CNY1672.90",
+      "sourcePosition": {
+        "row": 7,
+        "page": null,
+        "sourceRow": 7
+      },
+      "nativeId": "f7f8e13e54557c80",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-17",
+      "postingDate": "2026-06-17",
+      "amountMinor": 499292,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_9ac9d180",
+      "normalizedDescription": "消费商户-9ac9d180",
+      "rawText": " | 06/17 | 06/17 | 5155 | 消费 ██-██（██）██ | CNY4992.92 | CNY4992.92",
+      "sourcePosition": {
+        "row": 8,
+        "page": null,
+        "sourceRow": 8
+      },
+      "nativeId": "357e7dcf0c2b765f",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-17",
+      "postingDate": "2026-06-18",
+      "amountMinor": 13065,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_d0e32700",
+      "normalizedDescription": "消费商户-d0e32700",
+      "rawText": " | 06/17 | 06/18 | 5155 | 消费 ██-██ | CNY130.65 | CNY130.65",
+      "sourcePosition": {
+        "row": 9,
+        "page": null,
+        "sourceRow": 9
+      },
+      "nativeId": "6719d4e8be1740d4",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-18",
+      "postingDate": "2026-06-18",
+      "amountMinor": 1020,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_4faa5969",
+      "normalizedDescription": "消费商户-4faa5969",
+      "rawText": " | 06/18 | 06/18 | 5155 | 消费 ██-██ | CNY10.20 | CNY10.20",
+      "sourcePosition": {
+        "row": 10,
+        "page": null,
+        "sourceRow": 10
+      },
+      "nativeId": "17902f56546bdb64",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-20",
+      "postingDate": "2026-06-20",
+      "amountMinor": 67392,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_d74bb3d9",
+      "normalizedDescription": "消费商户-d74bb3d9",
+      "rawText": " | 06/20 | 06/20 | 5155 | 消费 ██-██（██）██ | CNY673.92 | CNY673.92",
+      "sourcePosition": {
+        "row": 11,
+        "page": null,
+        "sourceRow": 11
+      },
+      "nativeId": "514240ea9ecd847e",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-22",
+      "postingDate": "2026-06-23",
+      "amountMinor": 4200,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_c9c35372",
+      "normalizedDescription": "消费商户-c9c35372",
+      "rawText": " | 06/22 | 06/23 | 5155 | 消费 ██-██ | CNY42.00 | CNY42.00",
+      "sourcePosition": {
+        "row": 12,
+        "page": null,
+        "sourceRow": 12
+      },
+      "nativeId": "e75279aad3b48c12",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-24",
+      "postingDate": "2026-06-24",
+      "amountMinor": 390,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_5dd5cb8f",
+      "normalizedDescription": "消费商户-5dd5cb8f",
+      "rawText": " | 06/24 | 06/24 | 5155 | 消费 ██-██ | CNY3.90 | CNY3.90",
+      "sourcePosition": {
+        "row": 13,
+        "page": null,
+        "sourceRow": 13
+      },
+      "nativeId": "6b41d3cdf9302cee",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-29",
+      "postingDate": "2026-06-29",
+      "amountMinor": 1890,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_58b995ea",
+      "normalizedDescription": "消费商户-58b995ea",
+      "rawText": " | 06/29 | 06/29 | 5155 | 消费 ██-██ | CNY18.90 | CNY18.90",
+      "sourcePosition": {
+        "row": 14,
+        "page": null,
+        "sourceRow": 14
+      },
+      "nativeId": "656bf91ae59728fa",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-06-30",
+      "postingDate": "2026-06-30",
+      "amountMinor": 210000,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_9fa3b4e7",
+      "normalizedDescription": "消费商户-9fa3b4e7",
+      "rawText": " | 06/30 | 06/30 | 5155 | 消费 网银在线-██-██ | CNY2100.00 | CNY2100.00",
+      "sourcePosition": {
+        "row": 15,
+        "page": null,
+        "sourceRow": 15
+      },
+      "nativeId": "ac505beea87d8d50",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-07-03",
+      "postingDate": "2026-07-03",
+      "amountMinor": 17266,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "分期扣款 商户_71efe6f3",
+      "normalizedDescription": "分期扣款商户-71efe6f3",
+      "rawText": " | 07/03 | 07/03 | 5155 | 分期扣款 2/3期-商户分期-网银在线-██-██-分3期 | CNY172.66 | CNY172.66",
+      "sourcePosition": {
+        "row": 16,
+        "page": null,
+        "sourceRow": 16
+      },
+      "nativeId": "11a6fff7f259c582",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-07-05",
+      "postingDate": "2026-07-05",
+      "amountMinor": 39540,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_02517ed4",
+      "normalizedDescription": "消费商户-02517ed4",
+      "rawText": " | 07/05 | 07/05 | 5155 | 消费 ██-██（██）██ | CNY395.40 | CNY395.40",
+      "sourcePosition": {
+        "row": 17,
+        "page": null,
+        "sourceRow": 17
+      },
+      "nativeId": "283869f9db53c411",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-07-08",
+      "postingDate": "2026-07-08",
+      "amountMinor": 790,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_52757bb7",
+      "normalizedDescription": "消费商户-52757bb7",
+      "rawText": " | 07/08 | 07/08 | 5155 | 消费 ██-██ | CNY7.90 | CNY7.90",
+      "sourcePosition": {
+        "row": 18,
+        "page": null,
+        "sourceRow": 18
+      },
+      "nativeId": "25122a3c8b7c3cb7",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-07-08",
+      "postingDate": "2026-07-08",
+      "amountMinor": 1110,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_44b0f745",
+      "normalizedDescription": "消费商户-44b0f745",
+      "rawText": " | 07/08 | 07/08 | 5155 | 消费 ██-██ | CNY11.10 | CNY11.10",
+      "sourcePosition": {
+        "row": 19,
+        "page": null,
+        "sourceRow": 19
+      },
+      "nativeId": "e14a35b78cf993b9",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-07-14",
+      "postingDate": "2026-07-14",
+      "amountMinor": 1,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_3e19e361",
+      "normalizedDescription": "消费商户-3e19e361",
+      "rawText": " | 07/14 | 07/14 | 5155 | 消费 ██-██ | CNY0.01 | CNY0.01",
+      "sourcePosition": {
+        "row": 20,
+        "page": null,
+        "sourceRow": 20
+      },
+      "nativeId": "7332539de9cd058c",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-07-14",
+      "postingDate": "2026-07-14",
+      "amountMinor": 480,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_36a90e77",
+      "normalizedDescription": "消费商户-36a90e77",
+      "rawText": " | 07/14 | 07/14 | 5155 | 消费 ██-██（██）██ | CNY4.80 | CNY4.80",
+      "sourcePosition": {
+        "row": 21,
+        "page": null,
+        "sourceRow": 21
+      },
+      "nativeId": "0feb73d358fb6afc",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    },
+    {
+      "bank": "bocom",
+      "cardLast4": "5155",
+      "transactionDate": "2026-07-14",
+      "postingDate": "2026-07-14",
+      "amountMinor": 1,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_3e19e361",
+      "normalizedDescription": "消费商户-3e19e361",
+      "rawText": " | 07/14 | 07/14 | 5155 | 消费 ██-██ | CNY0.01 | CNY0.01",
+      "sourcePosition": {
+        "row": 22,
+        "page": null,
+        "sourceRow": 22
+      },
+      "nativeId": "7332539de9cd058c#2",
+      "statementKey": "bocom:5155:2026-06-15:2026-07-14"
+    }
+  ]
+}

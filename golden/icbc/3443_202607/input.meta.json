@@ -1,0 +1,17 @@
+{
+  "schema": "golden/v1",
+  "fileName": "工商银行_3443_202607.eml",
+  "fileSize": 95425,
+  "sha256": "39728ccc6169dbb51d98038e8d1f0fa4e0f109a21e2bf4e106cdbf668d6fadba",
+  "sourceType": "email_html",
+  "bank": "icbc",
+  "bankNative": "工商银行",
+  "cardLast4": "3443",
+  "cycleStart": "2026-06-23",
+  "cycleEnd": "2026-07-22",
+  "transactionCount": 7,
+  "parserName": "icbc_email",
+  "desensitized": true,
+  "generator": "ccparser-golden-py/1.0.0",
+  "note": "Raw bill content is never committed. Re-run scripts/generate_golden.py with the original file (matching sha256) to reproduce."
+}

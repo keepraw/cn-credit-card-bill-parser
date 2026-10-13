@@ -1,0 +1,304 @@
+{
+  "schema": "golden/v1",
+  "origin": "web",
+  "generator": "keepraw-golden-ts/1.0.0",
+  "bank": "abc",
+  "bankNative": "abc",
+  "cardLast4": "3982",
+  "cycleStart": "2026-06-17",
+  "cycleEnd": "2026-07-16",
+  "parserName": "abc_eml",
+  "desensitized": true,
+  "nativeIds": {
+    "transactionAlgo": "fnv1a-dual-lane",
+    "occurrence": "fingerprint#N"
+  },
+  "transactionCount": 15,
+  "transactions": [
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-17",
+      "postingDate": "2026-06-17",
+      "amountMinor": -43617,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "卡卡转账 商户_e384598d",
+      "normalizedDescription": "卡卡转账商户-e384598d",
+      "rawText": "260617 | 260617 | 3982 | 卡卡转账 ██ | 436.17/CNY | 436.17/CNY",
+      "sourcePosition": {
+        "row": 0,
+        "page": null,
+        "sourceRow": 0
+      },
+      "nativeId": "453972b7589243a8",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-30",
+      "postingDate": "2026-06-30",
+      "amountMinor": -3100,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "信用卡还款 商户_881a692d",
+      "normalizedDescription": "信用卡还款商户-881a692d",
+      "rawText": "260630 | 260630 | 3982 | 信用卡还款;信用卡还款 | 31.00/CNY | 31.00/CNY",
+      "sourcePosition": {
+        "row": 1,
+        "page": null,
+        "sourceRow": 1
+      },
+      "nativeId": "d1ea4a8f459d2338",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-18",
+      "postingDate": "2026-06-18",
+      "amountMinor": 219000,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_44139b1d",
+      "normalizedDescription": "网上消费商户-44139b1d",
+      "rawText": "260618 | 260618 | 3982 | 网上消费 网银在线，██-██ | 2190.00/CNY | -2190.00/CNY",
+      "sourcePosition": {
+        "row": 2,
+        "page": null,
+        "sourceRow": 2
+      },
+      "nativeId": "cbe17edd3ba68dbe",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-18",
+      "postingDate": "2026-06-18",
+      "amountMinor": 14172,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_72dfa469",
+      "normalizedDescription": "网上消费商户-72dfa469",
+      "rawText": "260618 | 260618 | 3982 | 网上消费 ██，██/██-██ | 141.72/CNY | -141.72/CNY",
+      "sourcePosition": {
+        "row": 3,
+        "page": null,
+        "sourceRow": 3
+      },
+      "nativeId": "e615cabed9ae0add",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-18",
+      "postingDate": "2026-06-18",
+      "amountMinor": 1972,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_13401e0e",
+      "normalizedDescription": "网上消费商户-13401e0e",
+      "rawText": "260618 | 260618 | 3982 | 网上消费 ██，██████ | 19.72/CNY | -19.72/CNY",
+      "sourcePosition": {
+        "row": 4,
+        "page": null,
+        "sourceRow": 4
+      },
+      "nativeId": "a4b2b31bd15adac6",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-18",
+      "postingDate": "2026-06-18",
+      "amountMinor": 219000,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_44139b1d",
+      "normalizedDescription": "网上消费商户-44139b1d",
+      "rawText": "260618 | 260618 | 3982 | 网上消费 网银在线，██-██ | 2190.00/CNY | -2190.00/CNY",
+      "sourcePosition": {
+        "row": 5,
+        "page": null,
+        "sourceRow": 5
+      },
+      "nativeId": "cbe17edd3ba68dbe#2",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-22",
+      "postingDate": "2026-06-22",
+      "amountMinor": 18500,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "跨行二维码支付 商户_e4996c47",
+      "normalizedDescription": "跨行二维码支付商户-e4996c47",
+      "rawText": "260622 | 260622 | 3982 | 跨行二维码支付 ██ | 185.00/CNY | -185.00/CNY",
+      "sourcePosition": {
+        "row": 6,
+        "page": null,
+        "sourceRow": 6
+      },
+      "nativeId": "d730a280e237d658",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-23",
+      "postingDate": "2026-06-23",
+      "amountMinor": 2340,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_db1e8252",
+      "normalizedDescription": "网上消费商户-db1e8252",
+      "rawText": "260623 | 260623 | 3982 | 网上消费 ██，██ | 23.40/CNY | -23.40/CNY",
+      "sourcePosition": {
+        "row": 7,
+        "page": null,
+        "sourceRow": 7
+      },
+      "nativeId": "7a89b4db9c2a9390",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-24",
+      "postingDate": "2026-06-24",
+      "amountMinor": 1190,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_7c858bb9",
+      "normalizedDescription": "网上消费商户-7c858bb9",
+      "rawText": "260624 | 260624 | 3982 | 网上消费 ██，██ | 11.90/CNY | -11.90/CNY",
+      "sourcePosition": {
+        "row": 8,
+        "page": null,
+        "sourceRow": 8
+      },
+      "nativeId": "c07152539c268596",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-29",
+      "postingDate": "2026-06-29",
+      "amountMinor": 209984,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_44139b1d",
+      "normalizedDescription": "网上消费商户-44139b1d",
+      "rawText": "260629 | 260629 | 3982 | 网上消费 网银在线，██-██ | 2099.84/CNY | -2099.84/CNY",
+      "sourcePosition": {
+        "row": 9,
+        "page": null,
+        "sourceRow": 9
+      },
+      "nativeId": "7fd124117f147068",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-30",
+      "postingDate": "2026-06-30",
+      "amountMinor": 220000,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_44139b1d",
+      "normalizedDescription": "网上消费商户-44139b1d",
+      "rawText": "260630 | 260630 | 3982 | 网上消费 网银在线，██-██ | 2200.00/CNY | -2200.00/CNY",
+      "sourcePosition": {
+        "row": 10,
+        "page": null,
+        "sourceRow": 10
+      },
+      "nativeId": "17d603e9b67b9219",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-06-30",
+      "postingDate": "2026-06-30",
+      "amountMinor": 2390,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_11cdbbf9",
+      "normalizedDescription": "网上消费商户-11cdbbf9",
+      "rawText": "260630 | 260630 | 3982 | 网上消费 中国农业银行股份有限公司信用卡中心 | 23.90/CNY | -23.90/CNY",
+      "sourcePosition": {
+        "row": 11,
+        "page": null,
+        "sourceRow": 11
+      },
+      "nativeId": "f8d2a2593be95df2",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-07-01",
+      "postingDate": "2026-07-01",
+      "amountMinor": 1,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_11cdbbf9",
+      "normalizedDescription": "网上消费商户-11cdbbf9",
+      "rawText": "260701 | 260701 | 3982 | 网上消费 中国农业银行股份有限公司信用卡中心 | 0.01/CNY | -0.01/CNY",
+      "sourcePosition": {
+        "row": 12,
+        "page": null,
+        "sourceRow": 12
+      },
+      "nativeId": "672daccabb74e235",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-07-02",
+      "postingDate": "2026-07-02",
+      "amountMinor": 18500,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "跨行二维码支付 商户_e4996c47",
+      "normalizedDescription": "跨行二维码支付商户-e4996c47",
+      "rawText": "260702 | 260702 | 3982 | 跨行二维码支付 ██ | 185.00/CNY | -185.00/CNY",
+      "sourcePosition": {
+        "row": 13,
+        "page": null,
+        "sourceRow": 13
+      },
+      "nativeId": "e811239ef325c762",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    },
+    {
+      "bank": "abc",
+      "cardLast4": "3982",
+      "transactionDate": "2026-07-14",
+      "postingDate": "2026-07-14",
+      "amountMinor": 1923,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "网上消费 商户_024282d2",
+      "normalizedDescription": "网上消费商户-024282d2",
+      "rawText": "260714 | 260714 | 3982 | 网上消费 ██，██ | 19.23/CNY | -19.23/CNY",
+      "sourcePosition": {
+        "row": 14,
+        "page": null,
+        "sourceRow": 14
+      },
+      "nativeId": "b2b531b116a39133",
+      "statementKey": "abc:3982:2026-06-17:2026-07-16"
+    }
+  ]
+}

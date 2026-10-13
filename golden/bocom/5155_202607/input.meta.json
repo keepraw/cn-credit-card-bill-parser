@@ -1,0 +1,17 @@
+{
+  "schema": "golden/v1",
+  "fileName": "交通银行_5155_202607.eml",
+  "fileSize": 77386,
+  "sha256": "c451aa919ae57eb533d08f04450c1eb34b45d73123e67da80e0d8b252431c8bf",
+  "sourceType": "email_html",
+  "bank": "bocom",
+  "bankNative": "交通银行",
+  "cardLast4": "5155",
+  "cycleStart": "2026-06-15",
+  "cycleEnd": "2026-07-14",
+  "transactionCount": 23,
+  "parserName": "bocom_email",
+  "desensitized": true,
+  "generator": "ccparser-golden-py/1.0.0",
+  "note": "Raw bill content is never committed. Re-run scripts/generate_golden.py with the original file (matching sha256) to reproduce."
+}

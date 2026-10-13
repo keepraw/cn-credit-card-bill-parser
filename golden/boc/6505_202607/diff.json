@@ -1,0 +1,64 @@
+{
+  "schema": "golden/v1",
+  "generator": "ccparser-golden-py/1.0.0",
+  "python": {
+    "transactionCount": 4
+  },
+  "web": {
+    "transactionCount": 4
+  },
+  "pairedRows": 4,
+  "verdict": "WARNING",
+  "severityCounts": {
+    "BLOCKING": 0,
+    "WARNING": 1,
+    "INFO": 0
+  },
+  "findings": [
+    {
+      "severity": "WARNING",
+      "rule": "description",
+      "pythonIndex": 0,
+      "webIndex": 3,
+      "python": "商户_1c9646e0",
+      "web": "银联转账 商户_d7875854"
+    }
+  ],
+  "identity": {
+    "pythonAlgo": "sha256-pipe",
+    "webAlgo": "fnv1a-dual-lane",
+    "compatible": false,
+    "note": "Identity schemes are incompatible by design (A-3.2 section 5). This table only observes which business keys pair; nothing is merged.",
+    "merged": false,
+    "entries": [
+      {
+        "businessKey": "2026-06-09|2026-06-09|-200920|CNY",
+        "pythonNativeId": "d5b4b3cd9f9207ed659c041bed8728410f9eaf2bd33b76e32b06cf51cb652197",
+        "webNativeId": "2888a021eca5b9db",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-17|2026-06-18|1310|CNY",
+        "pythonNativeId": "bd2e9775172be21b1ecf0abda47deb72c2f5f17898e2d7d2f239939f07a21b6c",
+        "webNativeId": "b66485961d4fa38b",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-30|2026-07-01|229231|CNY",
+        "pythonNativeId": "745d463676fa746ff8d02df6036612e1a9c3087c5b9b9b836bfe18098f39c7fa",
+        "webNativeId": "5efd7d4ccc7b7a0d",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-30|2026-07-01|209231|CNY",
+        "pythonNativeId": "3ba0bbe64864c20b99b9bdc5711368afe496390767206583e9f3e05f14bdf27e",
+        "webNativeId": "a08bfd069172e9b3",
+        "match": "full",
+        "merged": false
+      }
+    ]
+  }
+}

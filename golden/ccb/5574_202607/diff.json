@@ -1,0 +1,62 @@
+{
+  "schema": "golden/v1",
+  "generator": "ccparser-golden-py/1.0.0",
+  "python": {
+    "transactionCount": 5
+  },
+  "web": {
+    "transactionCount": 5
+  },
+  "pairedRows": 5,
+  "verdict": "PASS",
+  "severityCounts": {
+    "BLOCKING": 0,
+    "WARNING": 0,
+    "INFO": 0
+  },
+  "findings": [],
+  "identity": {
+    "pythonAlgo": "sha256-pipe",
+    "webAlgo": "fnv1a-dual-lane",
+    "compatible": false,
+    "note": "Identity schemes are incompatible by design (A-3.2 section 5). This table only observes which business keys pair; nothing is merged.",
+    "merged": false,
+    "entries": [
+      {
+        "businessKey": "2026-06-23|2026-06-23|-970139|CNY",
+        "pythonNativeId": "25db0c4a96993f1a47c7dce1ee2e9abb07c9a55528833e0424f262b18e64df90",
+        "webNativeId": "dc6631179d7d8fd4",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-25|2026-06-25|1|CNY",
+        "pythonNativeId": "feca120bacefd805853ee51f201e34360db043b78b53b7f29abea83515a78c7b",
+        "webNativeId": "4bbe743a8aabd09c",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-29|2026-06-29|1183|CNY",
+        "pythonNativeId": "30db2aee0558ea28877625948212b0243691d904bd0de30bdaef2fa65da80300",
+        "webNativeId": "2601f081625ca4c0",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-07-12|2026-07-12|750|CNY",
+        "pythonNativeId": "9013e86e956f355c3274fd60c2eb8a06d3c85332ec89c2d5ddc07dae11f2fbfb",
+        "webNativeId": "83ba46093ce8ea79",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-07-22|2026-07-22|1|CNY",
+        "pythonNativeId": "9fc166a0d24f4a873aa5f81c97b84b22c3ed9d0734b55b575a98fdcd129f3478",
+        "webNativeId": "c04f91fa6262c1b1",
+        "match": "full",
+        "merged": false
+      }
+    ]
+  }
+}

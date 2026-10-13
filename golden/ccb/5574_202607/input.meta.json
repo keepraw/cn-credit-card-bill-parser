@@ -1,0 +1,17 @@
+{
+  "schema": "golden/v1",
+  "fileName": "建设银行_5574_202607.eml",
+  "fileSize": 51391,
+  "sha256": "13d6c06e752f33bbcfa33df6466f33c000908accd52011ef95f80e057dca894a",
+  "sourceType": "email_html",
+  "bank": "ccb",
+  "bankNative": "建设银行",
+  "cardLast4": "5574",
+  "cycleStart": "2026-06-23",
+  "cycleEnd": "2026-07-22",
+  "transactionCount": 5,
+  "parserName": "ccb_email",
+  "desensitized": true,
+  "generator": "ccparser-golden-py/1.0.0",
+  "note": "Raw bill content is never committed. Re-run scripts/generate_golden.py with the original file (matching sha256) to reproduce."
+}

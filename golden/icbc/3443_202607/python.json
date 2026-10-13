@@ -1,0 +1,138 @@
+{
+  "schema": "golden/v1",
+  "origin": "python",
+  "generator": "ccparser-golden-py/1.0.0",
+  "bank": "icbc",
+  "bankNative": "工商银行",
+  "cardLast4": "3443",
+  "cycleStart": "2026-06-23",
+  "cycleEnd": "2026-07-22",
+  "parserName": "icbc_email",
+  "desensitized": true,
+  "nativeIds": {
+    "transactionAlgo": "sha256-pipe",
+    "occurrence": "sha256(base,occurrence)"
+  },
+  "transactionCount": 7,
+  "transactions": [
+    {
+      "bank": "icbc",
+      "cardLast4": "3443",
+      "transactionDate": "2026-06-26",
+      "postingDate": "2026-06-26",
+      "amountMinor": -527769,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "银联入账 商户_f8ea8806",
+      "normalizedDescription": "银联入账商户-f8ea8806",
+      "rawText": "3443 | 2026-06-26 | 2026-06-26 | 银联入账 | 银联转账（██） | 5,277.69/RMB | 5,277.69/RMB(存入)",
+      "sourcePosition": {
+        "row": 0
+      },
+      "nativeId": "ff0a6739173b32c0013e53e59bd03b220108c7857ca18a8cc7e1593170f356c0",
+      "statementKey": "80ed3373dd45dc34af361f8bd6725a32588896887d68f5ec9d78640d3b1309c1"
+    },
+    {
+      "bank": "icbc",
+      "cardLast4": "3443",
+      "transactionDate": "2026-07-04",
+      "postingDate": "2026-07-04",
+      "amountMinor": 1,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "商户_29e16a5d",
+      "normalizedDescription": "商户-29e16a5d",
+      "rawText": "3443 | 2026-07-04 | 2026-07-04 | 跨行消费 | ██ | 0.01/RMB | 0.01/RMB(支出)",
+      "sourcePosition": {
+        "row": 1
+      },
+      "nativeId": "a49c171dce8d53cecdbc8be0484da1ebcc0bcaae96f958f373352b407572333a",
+      "statementKey": "80ed3373dd45dc34af361f8bd6725a32588896887d68f5ec9d78640d3b1309c1"
+    },
+    {
+      "bank": "icbc",
+      "cardLast4": "3443",
+      "transactionDate": "2026-07-08",
+      "postingDate": "2026-07-08",
+      "amountMinor": 1248,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_a2f8ccaf",
+      "normalizedDescription": "消费商户-a2f8ccaf",
+      "rawText": "3443 | 2026-07-08 | 2026-07-08 | 消费 | ██-██ | 12.48/RMB | 12.48/RMB(支出)",
+      "sourcePosition": {
+        "row": 2
+      },
+      "nativeId": "03b3f9727609e5264c867d295e4b2ec098036f1ffcaf92ad35983252121980d6",
+      "statementKey": "80ed3373dd45dc34af361f8bd6725a32588896887d68f5ec9d78640d3b1309c1"
+    },
+    {
+      "bank": "icbc",
+      "cardLast4": "3443",
+      "transactionDate": "2026-07-13",
+      "postingDate": "2026-07-13",
+      "amountMinor": 1030,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_b830e57c",
+      "normalizedDescription": "消费商户-b830e57c",
+      "rawText": "3443 | 2026-07-13 | 2026-07-13 | 消费 | ██-██U██ | 10.30/RMB | 10.30/RMB(支出)",
+      "sourcePosition": {
+        "row": 3
+      },
+      "nativeId": "c0e4483689465ff35667fad4d46b343dc599be27b2d794ae3f8083ee67b51df9",
+      "statementKey": "80ed3373dd45dc34af361f8bd6725a32588896887d68f5ec9d78640d3b1309c1"
+    },
+    {
+      "bank": "icbc",
+      "cardLast4": "3443",
+      "transactionDate": "2026-07-21",
+      "postingDate": "2026-07-21",
+      "amountMinor": 2040,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_87226e90",
+      "normalizedDescription": "消费商户-87226e90",
+      "rawText": "3443 | 2026-07-21 | 2026-07-21 | 消费 | ██-██ | 20.40/RMB | 20.40/RMB(支出)",
+      "sourcePosition": {
+        "row": 4
+      },
+      "nativeId": "be93bcca5cf27d6e53d5f108fea8eab9035fd27678c1fc0537357cf24d201f68",
+      "statementKey": "80ed3373dd45dc34af361f8bd6725a32588896887d68f5ec9d78640d3b1309c1"
+    },
+    {
+      "bank": "icbc",
+      "cardLast4": "3443",
+      "transactionDate": "2026-07-21",
+      "postingDate": "2026-07-21",
+      "amountMinor": 4900,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_a7b2bb04",
+      "normalizedDescription": "消费商户-a7b2bb04",
+      "rawText": "3443 | 2026-07-21 | 2026-07-21 | 消费 | ██-██（██） | 49.00/RMB | 49.00/RMB(支出)",
+      "sourcePosition": {
+        "row": 5
+      },
+      "nativeId": "8912e1a5a7b22d67412a47a7eff476a608f7b2aea7d5bb474f54e327c37a9ae3",
+      "statementKey": "80ed3373dd45dc34af361f8bd6725a32588896887d68f5ec9d78640d3b1309c1"
+    },
+    {
+      "bank": "icbc",
+      "cardLast4": "3443",
+      "transactionDate": "2026-07-21",
+      "postingDate": "2026-07-21",
+      "amountMinor": 2060,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "消费 商户_8f9dee70",
+      "normalizedDescription": "消费商户-8f9dee70",
+      "rawText": "3443 | 2026-07-21 | 2026-07-21 | 消费 | ██-██████ | 20.60/RMB | 20.60/RMB(支出)",
+      "sourcePosition": {
+        "row": 6
+      },
+      "nativeId": "2524418b3f05f103f32fdda0512fd6581cee19a9a692a443c9963df61d5f2add",
+      "statementKey": "80ed3373dd45dc34af361f8bd6725a32588896887d68f5ec9d78640d3b1309c1"
+    }
+  ]
+}

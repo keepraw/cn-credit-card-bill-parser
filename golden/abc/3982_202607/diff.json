@@ -1,0 +1,132 @@
+{
+  "schema": "golden/v1",
+  "generator": "ccparser-golden-py/1.0.0",
+  "python": {
+    "transactionCount": 15
+  },
+  "web": {
+    "transactionCount": 15
+  },
+  "pairedRows": 15,
+  "verdict": "PASS",
+  "severityCounts": {
+    "BLOCKING": 0,
+    "WARNING": 0,
+    "INFO": 0
+  },
+  "findings": [],
+  "identity": {
+    "pythonAlgo": "sha256-pipe",
+    "webAlgo": "fnv1a-dual-lane",
+    "compatible": false,
+    "note": "Identity schemes are incompatible by design (A-3.2 section 5). This table only observes which business keys pair; nothing is merged.",
+    "merged": false,
+    "entries": [
+      {
+        "businessKey": "2026-06-17|2026-06-17|-43617|CNY",
+        "pythonNativeId": "fc4a1f7dacf7c147dad53a2bd940c918df1fa6f4bd8c322ce8ca15c2c32c5f85",
+        "webNativeId": "453972b7589243a8",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-30|2026-06-30|-3100|CNY",
+        "pythonNativeId": "5d798caedb096d8433623abcc4de7b94cde45959798c7f8c6caa81007b02a53d",
+        "webNativeId": "d1ea4a8f459d2338",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-18|2026-06-18|219000|CNY",
+        "pythonNativeId": "2972143a2009a875602fb350206ab73f3ab41a7c2ac9e0e981154945476b1f03",
+        "webNativeId": "cbe17edd3ba68dbe",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-18|2026-06-18|14172|CNY",
+        "pythonNativeId": "bbb0e12fb5156d241b0a77d3c1d797a343529b41fb1b30b70a6c609e4082d3b1",
+        "webNativeId": "e615cabed9ae0add",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-18|2026-06-18|1972|CNY",
+        "pythonNativeId": "c85681e425857de59643706d595ea415bb92b30c37b6b6fd740e5da63f1c1c1e",
+        "webNativeId": "a4b2b31bd15adac6",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-18|2026-06-18|219000|CNY",
+        "pythonNativeId": "76772a6def8cc2f99a41bea5ccf6d9a360c857700953c06bc8fc09f18e84fd45",
+        "webNativeId": "cbe17edd3ba68dbe#2",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-22|2026-06-22|18500|CNY",
+        "pythonNativeId": "a658ff36e45c8bc101f38166575dadb9fc46feea56d533e6304fdfe15fd8f315",
+        "webNativeId": "d730a280e237d658",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-23|2026-06-23|2340|CNY",
+        "pythonNativeId": "6ba607aadc6f51a892bdcd720af855f2588c41cd1cf4155abda5e942108a20f4",
+        "webNativeId": "7a89b4db9c2a9390",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-24|2026-06-24|1190|CNY",
+        "pythonNativeId": "c008a05b93dad6db2687a7bccc3ec804f4331f68e23303e27965464b7b3b25a8",
+        "webNativeId": "c07152539c268596",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-29|2026-06-29|209984|CNY",
+        "pythonNativeId": "ec4b2c54686071108b43afa126cceabb35012875fa6df0caeed409be7ca12fad",
+        "webNativeId": "7fd124117f147068",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-30|2026-06-30|220000|CNY",
+        "pythonNativeId": "76c1a07cd3ef0803e6101035da7800a1c347fe7a9525130b2a2a039f907b9207",
+        "webNativeId": "17d603e9b67b9219",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-06-30|2026-06-30|2390|CNY",
+        "pythonNativeId": "7deb9746a38eeb0c812aa6c84c96d2c65d5fe0aa961615efff5cf39428456729",
+        "webNativeId": "f8d2a2593be95df2",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-07-01|2026-07-01|1|CNY",
+        "pythonNativeId": "877adec5d2eb662a61df7fc7e9fa3f6771e367ce5b984e7b70b7cf32ab0d8721",
+        "webNativeId": "672daccabb74e235",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-07-02|2026-07-02|18500|CNY",
+        "pythonNativeId": "f67c30043b3d3ce6ae9808ac009fe2e1e70738e28a02cae53689436448fb86fc",
+        "webNativeId": "e811239ef325c762",
+        "match": "full",
+        "merged": false
+      },
+      {
+        "businessKey": "2026-07-14|2026-07-14|1923|CNY",
+        "pythonNativeId": "781b1fbe462ed4c55fa1b3628f887ea94fa5efc09bc8585d8bd3283d8321d8f8",
+        "webNativeId": "b2b531b116a39133",
+        "match": "full",
+        "merged": false
+      }
+    ]
+  }
+}

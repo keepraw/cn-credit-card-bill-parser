@@ -1,0 +1,104 @@
+{
+  "schema": "golden/v1",
+  "origin": "python",
+  "generator": "ccparser-golden-py/1.0.0",
+  "bank": "ccb",
+  "bankNative": "建设银行",
+  "cardLast4": "5574",
+  "cycleStart": "2026-06-23",
+  "cycleEnd": "2026-07-22",
+  "parserName": "ccb_email",
+  "desensitized": true,
+  "nativeIds": {
+    "transactionAlgo": "sha256-pipe",
+    "occurrence": "sha256(base,occurrence)"
+  },
+  "transactionCount": 5,
+  "transactions": [
+    {
+      "bank": "ccb",
+      "cardLast4": "5574",
+      "transactionDate": "2026-06-23",
+      "postingDate": "2026-06-23",
+      "amountMinor": -970139,
+      "currency": "CNY",
+      "direction": "credit",
+      "description": "手机银行 商户_b788fdd2",
+      "normalizedDescription": "手机银行商户-b788fdd2",
+      "rawText": "2026-06-23 | 2026-06-23 | 5574 | 手机银行 一键转账还款 ██ | CNY | -9,701.39 | CNY | -9,701.39",
+      "sourcePosition": {
+        "row": 0
+      },
+      "nativeId": "25db0c4a96993f1a47c7dce1ee2e9abb07c9a55528833e0424f262b18e64df90",
+      "statementKey": "88e18f71fcfa36e95daaafcb7918eeed83780e1647920d6bd872506a1d2a4678"
+    },
+    {
+      "bank": "ccb",
+      "cardLast4": "5574",
+      "transactionDate": "2026-06-25",
+      "postingDate": "2026-06-25",
+      "amountMinor": 1,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "手机银行 商户_c3c0c3c2",
+      "normalizedDescription": "手机银行商户-c3c0c3c2",
+      "rawText": "2026-06-25 | 2026-06-25 | 5574 | 手机银行██-██ | CNY | 0.01 | CNY | 0.01",
+      "sourcePosition": {
+        "row": 1
+      },
+      "nativeId": "feca120bacefd805853ee51f201e34360db043b78b53b7f29abea83515a78c7b",
+      "statementKey": "88e18f71fcfa36e95daaafcb7918eeed83780e1647920d6bd872506a1d2a4678"
+    },
+    {
+      "bank": "ccb",
+      "cardLast4": "5574",
+      "transactionDate": "2026-06-29",
+      "postingDate": "2026-06-29",
+      "amountMinor": 1183,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "商户_b999b5de",
+      "normalizedDescription": "商户-b999b5de",
+      "rawText": "2026-06-29 | 2026-06-29 | 5574 | ██-██-██U██ | CNY | 11.83 | CNY | 11.83",
+      "sourcePosition": {
+        "row": 2
+      },
+      "nativeId": "30db2aee0558ea28877625948212b0243691d904bd0de30bdaef2fa65da80300",
+      "statementKey": "88e18f71fcfa36e95daaafcb7918eeed83780e1647920d6bd872506a1d2a4678"
+    },
+    {
+      "bank": "ccb",
+      "cardLast4": "5574",
+      "transactionDate": "2026-07-12",
+      "postingDate": "2026-07-12",
+      "amountMinor": 750,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "商户_96a7f789",
+      "normalizedDescription": "商户-96a7f789",
+      "rawText": "2026-07-12 | 2026-07-12 | 5574 | 20260711██ | CNY | 7.50 | CNY | 7.50",
+      "sourcePosition": {
+        "row": 3
+      },
+      "nativeId": "9013e86e956f355c3274fd60c2eb8a06d3c85332ec89c2d5ddc07dae11f2fbfb",
+      "statementKey": "88e18f71fcfa36e95daaafcb7918eeed83780e1647920d6bd872506a1d2a4678"
+    },
+    {
+      "bank": "ccb",
+      "cardLast4": "5574",
+      "transactionDate": "2026-07-22",
+      "postingDate": "2026-07-22",
+      "amountMinor": 1,
+      "currency": "CNY",
+      "direction": "debit",
+      "description": "手机银行 商户_c3c0c3c2",
+      "normalizedDescription": "手机银行商户-c3c0c3c2",
+      "rawText": "2026-07-22 | 2026-07-22 | 5574 | 手机银行██-██ | CNY | 0.01 | CNY | 0.01",
+      "sourcePosition": {
+        "row": 4
+      },
+      "nativeId": "9fc166a0d24f4a873aa5f81c97b84b22c3ed9d0734b55b575a98fdcd129f3478",
+      "statementKey": "88e18f71fcfa36e95daaafcb7918eeed83780e1647920d6bd872506a1d2a4678"
+    }
+  ]
+}
