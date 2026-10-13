@@ -2,8 +2,8 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// GitHub Pages project site: https://<user>.github.io/Keepraw-Ledger/
-// Set VITE_BASE_PATH=/Keepraw-Ledger/ to publish under a project path.
+// Custom domain deployment: assets are served from the domain root.
+// GitHub Pages project paths should be supplied through VITE_BASE_PATH when needed.
 const base = process.env.VITE_BASE_PATH ?? '/'
 
 export default defineConfig({
