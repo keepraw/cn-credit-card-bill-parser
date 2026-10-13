@@ -28,7 +28,9 @@ export async function persistImportResults(results: IngestResult[]): Promise<voi
       await db.imports.put(result.record)
       if (!result.statement) continue
       await db.statements.put(result.statement)
-      await db.transactions.bulkPut(result.transactions)
+      // Existing rows may have been edited since parsing. Never write them back.
+      const insertedIds = new Set(result.inserted.map((tx) => tx.id))
+      await db.transactions.bulkAdd(result.transactions.filter((tx) => insertedIds.has(tx.id)))
     }
   })
 }
@@ -43,7 +45,7 @@ export async function persistLegacyImport(plan: {
     await db.imports.put(plan.record)
     await db.statements.bulkPut(plan.statements)
     for (let offset = 0; offset < plan.inserted.length; offset += 2000) {
-      await db.transactions.bulkPut(plan.inserted.slice(offset, offset + 2000))
+      await db.transactions.bulkAdd(plan.inserted.slice(offset, offset + 2000))
     }
   })
 }

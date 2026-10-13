@@ -18,6 +18,7 @@ import {
 } from '../src/importers/legacyImport'
 import { LEGACY_PYTHON_EXPORT_V1 } from '../src/importers/types'
 import { persistLegacyImport } from '../src/db/repository'
+import { failedImportRecord } from '../src/core/ingest'
 
 const HEADERS = [...LEGACY_UNIFIED_COLUMNS]
 
@@ -322,6 +323,46 @@ describe('duplicate legacy import', () => {  it('re-importing the same file adds
     await persistLegacyImport(second)
     expect(await db.transactions.count()).toBe(2)
     expect(await db.imports.count()).toBe(1)
+  })
+
+  it('counts occurrences consistently in preview and confirmation against bank imports', async () => {
+    const buffer = workbookBuffer(HEADERS, [legacyRow(), legacyRow()])
+    const first = planLegacyImport(await previewOf(workbookBuffer(HEADERS, [legacyRow()]), 'bank'), EMPTY)
+    first.inserted[0]!.origin = 'parser'
+    await persistLegacyImport(first)
+    const snapshot = await readSnapshot()
+    const preview = await previewLegacyWorkbook(buffer, { fileName: 'history.xlsx', fileSize: buffer.byteLength, fileHash: 'overlap' }, snapshot)
+    expect(preview.stats.alreadyStored).toBe(1)
+    const plan = planLegacyImport(preview, snapshot)
+    expect(plan.skipped).toBe(1)
+    expect(plan.inserted).toHaveLength(1)
+    await persistLegacyImport(plan)
+    expect(await db.transactions.count()).toBe(2)
+  })
+
+  it('rechecks colliding descriptions against the fresh snapshot before confirmation', async () => {
+    const buffer = workbookBuffer(HEADERS, [legacyRow({ description: '消费 商户(二)' })])
+    const preview = await previewOf(buffer, 'second')
+    await persistLegacyImport(planLegacyImport(await previewOf(workbookBuffer(HEADERS, [legacyRow({ description: '消费 商户(一)' })]), 'first'), EMPTY))
+    const plan = planLegacyImport(preview, await readSnapshot())
+    expect(plan.inserted).toHaveLength(1)
+    await persistLegacyImport(plan)
+    expect(await db.transactions.count()).toBe(2)
+  })
+
+  it('skips a known file after description edits and permits a failed-file retry', async () => {
+    const buffer = workbookBuffer(HEADERS, [legacyRow()])
+    const preview = await previewOf(buffer, 'same')
+    await persistLegacyImport(planLegacyImport(preview, EMPTY))
+    const stored = (await db.transactions.toArray())[0]!
+    await db.transactions.put({ ...stored, description: '消费 用户修正商户' })
+    const repeated = planLegacyImport(preview, await readSnapshot())
+    expect(repeated.inserted).toHaveLength(0)
+    const failed = failedImportRecord({ fileName: 'history.xlsx', fileHash: 'retry', fileSize: 1, sourceType: 'unknown' }, 'failed')
+    const existing = { ...EMPTY, imports: [failed] }
+    const retry = await previewLegacyWorkbook(buffer, { fileName: 'history.xlsx', fileSize: buffer.byteLength, fileHash: 'retry' }, existing)
+    expect(retry.stats.duplicateFile).toBe(false)
+    expect(planLegacyImport(retry, existing).record.status).toBe('imported')
   })
 })
 

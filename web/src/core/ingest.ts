@@ -1,5 +1,5 @@
 import { inferCategory } from './classify'
-import { assignOccurrences, detectDuplicates, transactionId } from './dedupe'
+import { assignOccurrences, assignStoredOccurrences, detectDuplicates, transactionId } from './dedupe'
 import { transactionFingerprint, statementKey } from './identity'
 import { reconcileStatement } from './reconcile'
 import type {
@@ -52,7 +52,8 @@ export function ingestParsedStatement(
   const key = statementKey(parsed.bank, cardLast4, parsed.cycleStart, parsed.cycleEnd)
 
   const duplicateImport = existing.imports.find(
-    (record) => record.fileHash === meta.fileHash && !record.isDemo === !isDemo,
+    (record) => record.fileHash === meta.fileHash && !record.isDemo === !isDemo &&
+      record.status !== 'failed' && record.status !== 'unsupported',
   )
 
   const fingerprints = parsed.transactions.map((tx) =>
@@ -69,7 +70,8 @@ export function ingestParsedStatement(
   )
   const occurrences = assignOccurrences(fingerprints)
 
-  const candidates: Transaction[] = parsed.transactions.map((tx, index) => {
+  const stored = existing.transactions.filter((tx) => !tx.isDemo === !isDemo)
+  const candidates = assignStoredOccurrences(parsed.transactions.map((tx, index): Transaction => {
     const rowCardLast4 = tx.cardLast4 || cardLast4
     const fingerprint = fingerprints[index]!
     const occurrence = occurrences[index]!.occurrence
@@ -109,30 +111,25 @@ export function ingestParsedStatement(
       occurrence,
       isDemo,
     }
-  })
+  }), stored)
 
-  const priorForStatement = existing.transactions.filter((tx) => tx.statementId === key)
-  const others = existing.transactions.filter((tx) => tx.statementId !== key)
+  if (duplicateImport) {
+    const statement = existing.statements.find((row) => row.id === duplicateImport.statementId && !row.isDemo === !isDemo) ?? null
+    return {
+      record: { ...duplicateImport, fileName: meta.fileName, status: 'duplicate', duplicateOf: duplicateImport.id,
+        transactionCount: 0, importedAt: new Date().toISOString(),
+        message: `与已导入文件 ${duplicateImport.fileName} 内容完全相同（SHA-256 一致），已跳过` },
+      statement,
+      transactions: statement ? stored.filter((row) => row.statementId === statement.id) : [],
+      inserted: [],
+      skippedDuplicates: candidates,
+    }
+  }
+
+  const priorForStatement = stored.filter((tx) => tx.statementId === key)
   const { duplicateIds, suspectedDuplicates } = detectDuplicates(
-    candidates.map((tx) => ({
-      id: tx.id,
-      fingerprint: tx.fingerprint,
-      bank: tx.bank,
-      cardLast4: tx.cardLast4,
-      transactionDate: tx.transactionDate,
-      settlementAmountMinor: tx.settlementAmountMinor,
-      type: tx.type,
-      description: tx.description,
-    })),
-    [...others, ...priorForStatement].map((tx) => ({
-      fingerprint: tx.fingerprint,
-      bank: tx.bank,
-      cardLast4: tx.cardLast4,
-      transactionDate: tx.transactionDate,
-      settlementAmountMinor: tx.settlementAmountMinor,
-      type: tx.type,
-      description: tx.description,
-    })),
+    candidates,
+    stored,
   )
 
   const skippedDuplicates = candidates.filter((tx) => duplicateIds.has(tx.id))
@@ -151,7 +148,9 @@ export function ingestParsedStatement(
     reconciliation.status === 'passed' ? 'reconciled' : reconciliation.status === 'mismatch' ? 'needs_review' : 'needs_review'
 
   const flaggedStatement = status !== 'reconciled'
+  const insertedIds = new Set(inserted.map((tx) => tx.id))
   const finalTransactions = statementTransactions.map((tx) => {
+    if (!insertedIds.has(tx.id)) return tx
     if (!flaggedStatement) return tx
     if (tx.flags.includes('statement_mismatch')) return tx
     return { ...tx, flags: [...tx.flags, 'statement_mismatch' as ReviewFlag] }
@@ -177,17 +176,13 @@ export function ingestParsedStatement(
     isDemo,
   }
 
-  const importStatus: ImportStatus = duplicateImport
-    ? 'duplicate'
-    : status === 'reconciled'
+  const importStatus: ImportStatus = status === 'reconciled'
       ? 'parsed'
       : status === 'needs_review'
         ? 'needs_review'
         : 'failed'
 
-  const message = duplicateImport
-    ? `与已导入文件 ${duplicateImport.fileName} 内容完全相同（SHA-256 一致），已跳过`
-    : describeOutcome(parsed, status, inserted.length, skippedDuplicates.length)
+  const message = describeOutcome(parsed, status, inserted.length, skippedDuplicates.length)
 
   const record: ImportRecord = {
     id: `${meta.fileHash}:${statement.parserId}`,
@@ -204,7 +199,7 @@ export function ingestParsedStatement(
     message,
     statementId: key,
     transactionCount: inserted.length,
-    duplicateOf: duplicateImport?.id ?? null,
+    duplicateOf: null,
     parserId: parsed.parserId,
     importedAt: new Date().toISOString(),
     isDemo,
