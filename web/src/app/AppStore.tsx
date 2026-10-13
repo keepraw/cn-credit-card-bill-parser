@@ -20,7 +20,7 @@ import {
   type Snapshot,
 } from '../db/repository'
 import { getDemoSnapshot } from '../demo/demoStore'
-import { buildFullBackupZip, previewFullBackupZip, restoreFullBackupZip } from '../backup/archive'
+import { buildFullBackupZip, restoreFullBackupZip } from '../backup/archive'
 import {
   hashLegacyFile,
   planLegacyImport,
@@ -33,6 +33,7 @@ import { buildSourceDocument, sha256Hex } from '../parsers/extract'
 import { detectParser, parseDocument, UnsupportedFileError } from '../parsers/registry'
 import type { AppSettings, ImportRecord, Statement, Transaction } from '../core/types'
 import { triggerDownload } from '../export/tabular'
+import { MAX_JSON_BYTES } from '../backup/zipSafety'
 
 export interface ImportProgress {
   fileName: string
@@ -324,12 +325,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (file: File) => {
       try {
         if (file.name.toLowerCase().endsWith('.zip')) {
-          const preview = await previewFullBackupZip(file)
           const result = await restoreFullBackupZip(file)
           await refresh()
           const base = `已恢复 ${result.transactions} 笔交易、${result.statements} 份账单、${result.files} 个原始文件。`
-          return { ok: true, message: preview.warning ? `${base}${preview.warning}。` : base }
+          return { ok: true, message: result.warning ? `${base}${result.warning}。` : base }
         }
+        if (file.size > MAX_JSON_BYTES) throw new Error('备份 JSON 文件过大')
         const payload: unknown = JSON.parse(await file.text())
         if (!validateBackup(payload)) return { ok: false, message: '文件格式不正确，不是本应用导出的备份。' }
         await importBackup(payload)

@@ -1,6 +1,9 @@
 import type { ExistingSnapshot, IngestResult } from '../core/ingest'
 import type { ImportRecord, Statement, Transaction } from '../core/types'
 import { type AttachmentRow, db } from './db'
+import { validateBackup } from '../backup/validation'
+import { reconcileStatement } from '../core/reconcile'
+export { validateBackup } from '../backup/validation'
 
 export interface Snapshot {
   statements: Statement[]
@@ -100,24 +103,49 @@ export async function exportDataBackup(): Promise<BackupPayload> {
   }
 }
 
-export function validateBackup(value: unknown): value is BackupPayload {
-  if (!value || typeof value !== 'object') return false
-  const payload = value as Partial<BackupPayload>
-  return (
-    (payload.format === 'credit-bill-manager-backup' || payload.format === 'credit-card-data-backup') &&
-    payload.version === 1 &&
-    Array.isArray(payload.statements) &&
-    Array.isArray(payload.transactions) &&
-    Array.isArray(payload.imports)
-  )
-}
-
-/** Restore merges by primary key, so restoring twice is harmless. */
+/** Matching primary keys keep current metadata; financial conflicts abort. */
 export async function importBackup(payload: BackupPayload): Promise<void> {
+  if (!validateBackup(payload)) throw new Error('备份包含无效记录，拒绝恢复')
   await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
-    await db.statements.bulkPut(payload.statements)
-    await db.transactions.bulkPut(payload.transactions)
-    await db.imports.bulkPut(payload.imports)
+    const [storedStatements, storedTransactions, storedImports] = await Promise.all([
+      db.statements.bulkGet(payload.statements.map((row) => row.id)),
+      db.transactions.bulkGet(payload.transactions.map((row) => row.id)),
+      db.imports.bulkGet(payload.imports.map((row) => row.id)),
+    ])
+    for (const [index, row] of payload.transactions.entries()) {
+      const current = storedTransactions[index]
+      if (current && ['statementId', 'bank', 'cardLast4', 'transactionDate', 'postingDate', 'description',
+        'transactionCurrency', 'transactionAmountMinor', 'settlementCurrency', 'settlementAmountMinor', 'type', 'direction']
+        .some((key) => current[key as keyof Transaction] !== row[key as keyof Transaction])) {
+        throw new Error(`交易标识冲突，拒绝覆盖：${row.id}`)
+      }
+    }
+    for (const [index, row] of payload.statements.entries()) {
+      const current = storedStatements[index]
+      if (current && ['statementKey', 'bank', 'cardLast4', 'cycleStart', 'cycleEnd']
+        .some((key) => current[key as keyof Statement] !== row[key as keyof Statement])) throw new Error('账单标识冲突，拒绝恢复')
+    }
+    for (const [index, row] of payload.imports.entries()) {
+      if (storedImports[index] && storedImports[index]!.fileHash !== row.fileHash) throw new Error('导入记录标识冲突，拒绝恢复')
+    }
+    await db.statements.bulkAdd(payload.statements.filter((_row, index) => !storedStatements[index]))
+    const addedTransactions = payload.transactions.filter((_row, index) => !storedTransactions[index])
+    await db.transactions.bulkAdd(addedTransactions)
+    await db.imports.bulkAdd(payload.imports.filter((_row, index) => !storedImports[index]))
+    const affected = [...new Set(addedTransactions.map((row) => row.statementId))]
+    const grouped = new Map<string, Transaction[]>()
+    for (const row of await db.transactions.where('statementId').anyOf(affected).toArray()) {
+      const rows = grouped.get(row.statementId) ?? []
+      rows.push(row)
+      grouped.set(row.statementId, rows)
+    }
+    for (const current of await db.statements.bulkGet(affected)) {
+      if (!current) continue
+      const transactions = grouped.get(current.id) ?? []
+      const reconciliation = reconcileStatement({ summary: current.summary, transactions })
+      await db.statements.put({ ...current, transactionCount: transactions.length, reconciliation,
+        status: current.status === 'imported' ? 'imported' : reconciliation.status === 'passed' ? 'reconciled' : 'needs_review' })
+    }
     if (payload.settings) await db.settings.put({ key: 'app', value: payload.settings })
   })
 }
@@ -291,7 +319,7 @@ export function validateManifest(value: unknown): value is ArchiveManifest {
       typeof entry.parserId === 'string' &&
       typeof entry.importedAt === 'string' &&
       (entry.storage === 'indexeddb' || entry.storage === 'external' || entry.storage === 'missing'),
-  )
+  ) && new Set(manifest.files.map((entry) => entry.importId)).size === manifest.files.length
 }
 
 /** Count how many imports still have evidence available vs. data-only rows. Real rows only. */
