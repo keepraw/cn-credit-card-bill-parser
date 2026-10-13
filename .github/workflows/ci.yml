@@ -11,7 +11,8 @@ permissions:
 
 concurrency:
   group: validation-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Supersede PR checks, but never interrupt a running production deployment.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   web:
@@ -35,6 +36,13 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Upload validated GitHub Pages artifact
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages
+          path: web/dist
+          retention-days: 1
 
   python:
     runs-on: ubuntu-latest
@@ -50,3 +58,44 @@ jobs:
             requirements.txt
       - run: python -m pip install -e '.[dev]'
       - run: python -m pytest -q
+
+  deploy:
+    needs: [web, python]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Concurrency queues are not ordered. Reject a superseded main revision
+      # after acquiring the deployment slot, without rebuilding its artifact.
+      - name: Check current main revision
+        id: revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VALIDATED_SHA: ${{ github.sha }}
+        run: |
+          current_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$current_sha" = "$VALIDATED_SHA" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping a superseded main revision."
+          fi
+      - name: Configure GitHub Pages
+        if: steps.revision.outputs.current == 'true'
+        uses: actions/configure-pages@v5
+      - name: Deploy GitHub Pages
+        if: steps.revision.outputs.current == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages
