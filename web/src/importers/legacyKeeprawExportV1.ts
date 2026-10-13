@@ -111,8 +111,11 @@ export function parseKeeprawRows(dataRows: unknown[][], shape: KeeprawSheetShape
       continue
     }
     const transactionCurrency = normalizeLegacyCurrency(at(row, '交易币种'))
-    const transactionAmountMinor =
-      parseLegacyAmount(at(row, '交易金额'), transactionCurrency) ?? settlementAmountMinor
+    const transactionAmountMinor = parseLegacyAmount(at(row, '交易金额'), transactionCurrency)
+    if (transactionAmountMinor === null) {
+      anomalies.push({ rowNumber, kind: 'amount_unparseable', detail: '交易金额无法解析，不以结算金额替代' })
+      continue
+    }
 
     const bank = normalizeLegacyBank(at(row, '银行'))
     const cardLast4 = normalizeLegacyCard(at(row, '卡尾号'))

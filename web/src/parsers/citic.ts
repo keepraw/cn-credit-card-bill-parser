@@ -287,9 +287,9 @@ export interface CombinedAmount {
 export function parseCombinedAmount(cell: string): CombinedAmount | null {
   const text = cell.trim()
   if (!text || text === '-' || /^-+$/.test(text)) return null
-  const match = /^\s*([A-Za-z]{3}|[\u4e00-\u9fa5]{2,4})?\s*(-?[\d,]+\.\d{2})\s*$/.exec(text)
+  const match = /^\s*([A-Za-z]{3}|[\u4e00-\u9fa5]{2,4})?\s*(-?[\d,]+(?:\.\d{2})?)\s*$/.exec(text)
   if (!match) return null
-  const parsed = parseAmountToMinor(match[2]!)
+  const parsed = parseAmountToMinor(match[2]!, normalizeCurrency(match[1] ?? 'CNY'))
   if (!parsed) return null
   return {
     currency: normalizeCurrency(match[1] ?? 'CNY'),

@@ -1,14 +1,17 @@
 import { assignOccurrences, assignStoredOccurrences, detectDuplicates, transactionId } from '../core/dedupe'
 import { statementKey, transactionFingerprint } from '../core/identity'
+import { auditMigrationRows } from '../core/migrationAudit'
 import { reconcileStatement } from '../core/reconcile'
 import type { ImportRecord, Statement, Transaction } from '../core/types'
 import { emptySummary } from '../parsers/types'
 import { sha256Hex } from '../parsers/extract'
 import { LEGACY_STANDARD_SHEET, detectLegacyShape, parseLegacyRows } from './legacyPythonExportV1'
 import { LEGACY_KEEPRAW_SHEET, detectKeeprawShape, parseKeeprawRows } from './legacyKeeprawExportV1'
+import { LEGACY_UNIFIED_BILL_SHEET, detectUnifiedBillShape, parseUnifiedBillRows } from './legacyUnifiedBillV1'
 import {
   LEGACY_KEEPRAW_EXPORT_V1,
   LEGACY_PYTHON_EXPORT_V1,
+  LEGACY_UNIFIED_BILL_V1,
   LEGACY_FORMAT_NAME,
   type LegacyAnomaly,
   type LegacyFileMeta,
@@ -56,6 +59,7 @@ function fingerprintOf(row: NormalizedLegacyRow): string {
  * Supported adapters (explicit only, never generic):
  * - `legacy-python-export-v1` (`标准字段` sheet, snake_case columns)
  * - `legacy-keepraw-export-v1` (`交易明细` sheet, 银行/卡尾号/交易日/入账日/说明/交易币种/交易金额/结算币种/结算金额)
+ * - `legacy-unified-bill-v1` (`统一账单` sheet, all nine historical columns)
  */
 export async function previewLegacyWorkbook(
   buffer: ArrayBuffer,
@@ -110,6 +114,8 @@ export async function previewLegacyWorkbook(
     },
     rows,
     anomalies: parsed.anomalies,
+    reviewIssues: parsed.reviewIssues ?? [],
+    migrationAudit: auditMigrationRows(rows, stored),
   }
 }
 
@@ -120,7 +126,7 @@ export async function previewLegacyWorkbook(
  */
 async function detectLegacyAdapter(
   buffer: ArrayBuffer,
-): Promise<{ formatId: LegacyFormatId; parsed: { rows: NormalizedLegacyRow[]; anomalies: LegacyAnomaly[]; totalRows: number } } | null> {
+): Promise<{ formatId: LegacyFormatId; parsed: { rows: NormalizedLegacyRow[]; anomalies: LegacyAnomaly[]; totalRows: number; reviewIssues?: LegacyPreview['reviewIssues'] } } | null> {
   const pythonSheet = await readSheetData(buffer, LEGACY_STANDARD_SHEET)
   if (pythonSheet.rows.length > 0) {
     const shape = detectLegacyShape(pythonSheet.rows[0] as unknown[])
@@ -143,6 +149,11 @@ async function detectLegacyAdapter(
     }
   }
 
+  const unifiedSheet = await readSheetData(buffer, LEGACY_UNIFIED_BILL_SHEET)
+  if (unifiedSheet.rows.length > 0) {
+    const shape = detectUnifiedBillShape(unifiedSheet.rows[0] as unknown[])
+    if (shape) return { formatId: LEGACY_UNIFIED_BILL_V1, parsed: parseUnifiedBillRows(unifiedSheet.rows.slice(1), shape) }
+  }
   return null
 }
 

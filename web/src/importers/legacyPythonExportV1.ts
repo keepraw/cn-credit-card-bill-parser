@@ -1,6 +1,6 @@
 import { extractMerchant, inferCategory, inferTransactionType } from '../core/classify'
 import { type IsoDate, parseDateInput } from '../core/dates'
-import { currencyExponent, parseAmountToMinor } from '../core/money'
+import { currencyExponent, isSupportedCurrency, parseAmountToMinor } from '../core/money'
 import type { BankId, ReviewFlag } from '../core/types'
 import type { LegacyAnomaly, NormalizedLegacyRow } from './types'
 
@@ -90,7 +90,8 @@ function dateFromParts(y: number, m: number, d: number): IsoDate | null {
  */
 export function excelSerialToIso(serial: number): IsoDate | null {
   if (!Number.isFinite(serial) || serial < 20_000 || serial > 80_000) return null
-  const ms = Date.UTC(1899, 11, 30) + Math.round(serial) * 86_400_000
+  // The fraction is time of day, not a reason to round into the next date.
+  const ms = Date.UTC(1899, 11, 30) + Math.floor(serial) * 86_400_000
   const date = new Date(ms)
   return dateFromParts(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate())
 }
@@ -125,6 +126,7 @@ export function parseLegacyDate(value: unknown): IsoDate | null {
  * rather than silently rounded into money.
  */
 export function parseLegacyAmount(value: unknown, currency: string): number | null {
+  if (!isSupportedCurrency(currency)) return null
   if (value === null || value === undefined) return null
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) return null
@@ -132,7 +134,15 @@ export function parseLegacyAmount(value: unknown, currency: string): number | nu
   }
   const text = String(value).trim()
   if (!text) return null
+  const currencyTokens = text.match(/[A-Z]{3}/gi) ?? []
+  if (currencyTokens.some((token) => normalizeLegacyCurrency(token) !== currency)) return null
+  // Bank parsers accept decorated free text. Structured history cells must
+  // contain only money, so arbitrary text cannot be stripped into a number.
+  const numeric = text.replace(/人民币|美元|港币|港元|欧元|日元|英镑|CNY|RMB|CHN|USD|HKD|EUR|JPY|GBP|SGD|AUD|CAD|CHF|KRW|VND|￥|¥|元/gi, '')
+    .replace(/\/\s*[CD]\b|\bDR\b|CR\b/gi, '').trim()
+  if (!/^(?:[+\-−–—]?[\d,.]+|[\d,.]+-|\([\d,.]+\))$/.test(numeric)) return null
   const parsed = parseAmountToMinor(text, currency)
+  if (parsed?.currency && parsed.currency !== currency) return null
   return parsed ? parsed.minor : null
 }
 
@@ -221,8 +231,11 @@ export function parseLegacyRows(dataRows: unknown[][], shape: LegacySheetShape):
       continue
     }
     const transactionCurrency = normalizeLegacyCurrency(at(row, 'transaction_currency'))
-    const transactionAmountMinor =
-      parseLegacyAmount(at(row, 'transaction_amount'), transactionCurrency) ?? settlementAmountMinor
+    const transactionAmountMinor = parseLegacyAmount(at(row, 'transaction_amount'), transactionCurrency)
+    if (transactionAmountMinor === null) {
+      anomalies.push({ rowNumber, kind: 'amount_unparseable', detail: '交易金额无法解析，不以结算金额替代' })
+      continue
+    }
 
     const bank = normalizeLegacyBank(at(row, 'bank'))
     const cardLast4 = normalizeLegacyCard(at(row, 'card_last4'))

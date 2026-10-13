@@ -440,8 +440,8 @@ export function parseSlashAmount(cell: string): { currency: string; minor: numbe
   const parts = text.split('/')
   const amountPart = (parts[0] ?? text).trim()
   const currencyPart = (parts[1] ?? 'CNY').trim().toUpperCase()
-  const parsed = parseAmountToMinor(amountPart)
-  if (!parsed) return null
   const currency = currencyPart === 'RMB' ? 'CNY' : currencyPart || 'CNY'
+  const parsed = parseAmountToMinor(amountPart, currency)
+  if (!parsed) return null
   return { currency, minor: Math.abs(parsed.minor), negative: parsed.negativeByFormat }
 }

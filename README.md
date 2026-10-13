@@ -44,6 +44,14 @@ These are the formats registered by the **web** parsing pipeline.
 
 Historical XLSX import is a **separate migration workflow**, not a general-purpose Excel statement parser. See `web/src/importers/` for the supported legacy adapters.
 
+Python retirement readiness is tracked in [the PR A audit](docs/python-retirement-readiness.md).
+The Web migration workflow retains `legacy-python-export-v1` (`标准字段`) and
+`legacy-keepraw-export-v1` (`交易明细`), and adds strictly detected
+`legacy-unified-bill-v1` (`统一账单`, nine full Chinese headers). Future dates are
+preserved for review; malformed original money, unsupported currency precision
+and 1904-date-system workbooks are refused explicitly. Python remains intact
+until a separate reviewed and authorized retirement PR.
+
 ## Getting started with the web app
 
 ### Use the hosted app
@@ -202,10 +210,9 @@ The repository includes golden fixtures for the six registered banks (`golden/RE
 
 ### Known limitations requiring follow-up
 
-- **Cross-import duplicate occurrences:** Identical real transactions appearing more than once may be incorrectly collapsed when overlapping sources are imported. Review duplicates carefully until this logic is corrected and regression-tested.
-- **Stored attachment lifecycle:** Clearing real data currently leaves some associated raw attachments and review notes behind.
-- **Import error paths:** The association between import results and retained raw files needs stronger handling when a file cannot be read.
-- **Backup integrity:** Restore validation should check individual records and cross-record consistency, not just top-level JSON structure.
+- **Transaction identity:** PR #12 preserves occurrences and user edits. Ambiguous legacy/native classification, posting-date, description and original-money disagreements now request review and remain distinct. Equal business rows without evidence distinguishing overlap from a new event still require care.
+- **Stored attachment lifecycle:** PR #13 fixes transactional clearing and evidence/result association. Evidence retention remains best effort under browser quota limits.
+- **Backup integrity:** PR #14 validates records and restores ZIP data/evidence atomically. Version-1 backups still exclude separately stored free-text review notes.
 - **Testing and dependencies:** Keep Python and browser checks mandatory, monitor dependency advisories, and extend large-dataset coverage as needed.
 
 This is a personal finance data tool. **Always compare imported results with official bank statements** before using the output for financial decisions.

@@ -1,4 +1,5 @@
 import type { ReviewFlag, Transaction } from './types'
+import { auditMigrationRows } from './migrationAudit'
 
 /**
  * Duplicate handling.
@@ -157,6 +158,15 @@ export function detectDuplicates(
     }
     bucket.add(row.description)
     loose.set(looseKey(row), bucket)
+  }
+
+  // Classification, posting-date and original-money disagreements used to be
+  // invisible when descriptions agreed. Observe them without broadening exact
+  // matching, consuming extra occurrences or touching existing records.
+  const audit = auditMigrationRows(incoming, existing)
+  for (const observation of audit.observations) {
+    if (observation.incomingId === null || duplicateIds.has(observation.incomingId) || observation.status === 'unmatched') continue
+    suspectedDuplicates.set(observation.incomingId, observation.candidateIds.length > 0 ? observation.candidateIds : ['需复核业务字段'])
   }
 
   return { duplicateIds, suspectedDuplicates }

@@ -2,7 +2,7 @@
  * Golden fixture generator, Web side (Task A-3.4.3).
  *
  * Run from web/:
- *   node_modules/.bin/vite-node scripts/generate-golden.ts --input <bill> --out <golden-dir>
+ *   npm run golden:generate -- --input <bill> --out <golden-dir>
  *
  * Reads a real bill file locally, parses it with the registered Web parsers
  * (read-only), and writes desensitized `web.json` next to the Python output.
@@ -31,7 +31,7 @@ function parseArgs(argv: string[]): Args {
   return args
 }
 
-async function main(): Promise<number> {
+export async function main(): Promise<number> {
   const args = parseArgs(process.argv.slice(2))
 
   // html.ts needs a DOMParser; provide it from jsdom when running under node.
@@ -92,11 +92,3 @@ async function main(): Promise<number> {
   console.log(`wrote ${resolve(outDir, 'web.json')} (generator=${GOLDEN_GENERATOR_WEB}, desensitized=${args.desensitize})`)
   return 0
 }
-
-main().then(
-  (code) => process.exit(code),
-  (error) => {
-    console.error(error instanceof Error ? error.message : error)
-    process.exit(2)
-  },
-)

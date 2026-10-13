@@ -10,8 +10,8 @@
  * Only business fields feed the hash (bank, card, dates, amount, currency,
  * type, normalised description). Import metadata — origin, sourceId, file
  * name/hash, import id, row number — must never participate, so the same real
- * transaction arriving from a legacy export and from a bank parser produces
- * the same fingerprint and de-duplicates.
+ * transaction produces the same fingerprint only when both implementations
+ * agree on every fingerprint field, including classification and posting date.
  */
 
 /** FNV-1a 64-bit style hash (two 32-bit lanes) rendered as hex. Stable across runs. */
