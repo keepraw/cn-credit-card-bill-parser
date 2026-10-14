@@ -1,6 +1,6 @@
 import { extractMerchant, inferCategory, inferTransactionType } from '../core/classify'
 import { type IsoDate, parseDateInput } from '../core/dates'
-import { currencyExponent, isSupportedCurrency, parseAmountToMinor } from '../core/money'
+import { isSupportedCurrency, parseAmountToMinor } from '../core/money'
 import type { BankId, ReviewFlag } from '../core/types'
 import type { LegacyAnomaly, NormalizedLegacyRow } from './types'
 
@@ -127,30 +127,14 @@ export function parseLegacyDate(value: unknown): IsoDate | null {
  */
 export function parseLegacyAmount(value: unknown, currency: string): number | null {
   if (!isSupportedCurrency(currency)) return null
-  if (value === null || value === undefined) return null
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) return null
-    return snapFloatToMinor(value, currency)
-  }
-  const text = String(value).trim()
-  if (!text) return null
   try {
-    return parseAmountToMinor(text, currency)?.minor ?? null
+    // Preserve numeric cells so the shared parser handles Excel float dust.
+    // String cells retain the complete strict grammar; other types are refused.
+    return parseAmountToMinor(value, currency)?.minor ?? null
   } catch {
     // Unsupported embedded currencies remain row-specific historical anomalies.
     return null
   }
-}
-
-const FLOAT_DUST_TOLERANCE = 1e-6
-
-function snapFloatToMinor(value: number, currency: string): number | null {
-  const exp = currencyExponent(currency)
-  const scaled = value * 10 ** exp
-  const snapped = Math.round(scaled)
-  if (!Number.isSafeInteger(snapped)) return null
-  if (Math.abs(scaled - snapped) > FLOAT_DUST_TOLERANCE) return null
-  return snapped
 }
 
 function collapseSpaces(text: string): string {
