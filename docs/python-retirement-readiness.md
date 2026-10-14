@@ -1,5 +1,11 @@
 # Python retirement readiness (PR A)
 
+For the subsequently verified browser-only XLSX → IndexedDB → JSON backup →
+fresh-profile restore workflow across all six banks and three named schemas,
+see [TypeScript historical migration](typescript-historical-migration.md).
+The audit below is retained as the original PR A record; SQLite-only history and
+other retirement boundaries still require separate verification.
+
 Python is retained in this PR. The tested TypeScript production contract is ready
 for review; **complete Python deletion is NO-GO now**. PR A must first be reviewed
 and made available on the latest main, and the owner must explicitly authorize

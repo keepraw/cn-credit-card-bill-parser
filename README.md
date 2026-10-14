@@ -42,7 +42,15 @@ These are the formats registered by the **web** parsing pipeline.
 
 **Scope:** These parsers support the bank statement layouts they have been developed and tested against, **not every historical or regional variation** of each bank's statement. The web app does not currently provide OCR for scanned, image-only PDFs. Unrecognized files should be treated as unsupported and checked manually.
 
-Historical XLSX import is a **separate migration workflow**, not a general-purpose Excel statement parser. See `web/src/importers/` for the supported legacy adapters.
+Historical XLSX migration runs entirely in the browser: **XLSX → TypeScript adapters → IndexedDB → JSON backup / XLSX archive**. It requires no Python installation, Python preprocessing, SQLite database, account, or parsing server. The same three adapters support BOC, ICBC, ABC, CCB, BOCOM and CITIC rows, including mixed-bank workbooks.
+
+| Historical sheet | Required column convention | TypeScript adapter |
+| --- | --- | --- |
+| `标准字段` | The complete 15-column snake_case export | `legacy-python-export-v1` |
+| `交易明细` | 银行 / 卡尾号 / 交易日 / 入账日 / 说明 / 交易币种 / 交易金额 / 结算币种 / 结算金额 | `legacy-keepraw-export-v1` |
+| `统一账单` | 银行名称 / 卡号 / 交易日期 / 入账日期 / 交易详情 / 交易币种 / 交易金额 / 入账币种 / 入账金额 | `legacy-unified-bill-v1` |
+
+The `python` in the first adapter's identifier records a compatible historical file format; it does not invoke Python. These fixed schemas are not a general-purpose bank XLSX layout detector. See the [TypeScript historical migration workflow and validation](docs/typescript-historical-migration.md) for import, review, backup, recovery and identity boundaries.
 
 Python retirement readiness is tracked in [the PR A audit](docs/python-retirement-readiness.md).
 The Web migration workflow retains `legacy-python-export-v1` (`标准字段`) and
@@ -90,6 +98,7 @@ npm run build                # Production build
 npm run verify               # Typecheck + lint + tests + build
 npx playwright install chromium
 npm run test:e2e             # Playwright browser tests
+npm run test:migration       # Browser-only historical migration + JSON recovery
 ```
 
 The single Validation workflow (`.github/workflows/ci.yml`) runs Web checks (TypeScript, ESLint, Vitest including goldens, build, npm audit, and Chromium Playwright) and Python pytest including goldens in parallel. Deployment requires both jobs to succeed and a push or explicit dispatch on `main`. It reuses that run's validated `web/dist` artifact; PRs neither upload Pages artifacts nor deploy. Deployments are serialized, and superseded main revisions are skipped. For a GitHub Pages project subpath instead of the configured custom-domain root, set `VITE_BASE_PATH` for the build.
@@ -117,7 +126,7 @@ IndexedDB data is isolated by browser profile and site origin:
 
 A full archive reports missing original documents in its manifest rather than inventing them. Both formats contain sensitive financial data and are **not encrypted by the application**. Protect downloaded backups accordingly.
 
-Backup restoration merges records by primary key; importing the same backup again does not create a new copy of the same primary-key records. **Existing records with matching IDs may be replaced.** Keep a separate backup before any restoration or migration.
+Backup restoration merges records by primary key; importing the same backup again does not create a new copy of the same records. Existing matching records retain their metadata; conflicting financial fields abort restoration instead of overwriting a transaction. Keep a separate backup before any restoration or migration. XLSX/CSV archives include transaction IDs, fingerprints and occurrence numbers for independent inspection; use JSON to restore the application state.
 
 ### Data deletion limitation
 
