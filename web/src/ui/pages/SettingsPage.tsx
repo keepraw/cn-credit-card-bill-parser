@@ -6,7 +6,7 @@ import { parserCatalog } from '../../parsers/registry'
 import { Badge, DemoBadge } from '../components/ui'
 
 export function SettingsPage() {
-  const { state, setSettings, backup, backupData, backupFull, restore, archiveStatus, clearData, loadDemoData } = useApp()
+  const { state, setSettings, backup, backupData, backupFull, exportLedgerXlsx, restore, archiveStatus, clearData, loadDemoData } = useApp()
   const [message, setMessage] = useState<{ tone: 'ok' | 'danger'; text: string } | null>(null)
   const [usage, setUsage] = useState<{ usage: number; quota: number } | null>(null)
   const [status, setStatus] = useState<ArchiveStatus | null>(null)
@@ -110,12 +110,12 @@ export function SettingsPage() {
           <div className="card-head">
             <div>
               <h2>数据备份</h2>
-              <p>轻量 JSON：交易 / 账单 / 导入记录 / 设置</p>
+              <p>备份 JSON：用于恢复应用</p>
             </div>
           </div>
           <div className="card-pad stack">
             <p className="subtle">
-              数据备份文件（credit-card-data.json）包含账单汇总、交易明细和复核状态，不含 PDF / EML / XLSX 原始文件或单独填写的复核备注，适合日常备份。恢复按主键合并，同标识的已有记录与用户编辑会保留；金融字段冲突时拒绝恢复。重复恢复不会产生重复数据。
+              备份 JSON 用于恢复应用，不适合直接阅读。数据备份文件（credit-card-data.json）包含账单汇总、交易明细和复核状态，不含 PDF / EML / XLSX 原始文件或单独填写的复核备注，适合日常备份。恢复按主键合并，同标识的已有记录与用户编辑会保留；金融字段冲突时拒绝恢复。重复恢复不会产生重复数据。如需在外部查看分析，请使用下方的表格归档（XLSX）导出。
             </p>
             <div className="row">
               <button
@@ -128,7 +128,7 @@ export function SettingsPage() {
                   )
                 }}
               >
-                导出数据备份
+                备份 JSON
               </button>
               <button
                 className="btn"
@@ -141,6 +141,37 @@ export function SettingsPage() {
                 }}
               >
                 导出备份 (JSON)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <h2>表格归档</h2>
+              <p>导出 XLSX：用于外部查看分析</p>
+            </div>
+          </div>
+          <div className="card-pad stack">
+            <p className="subtle">
+              导出 XLSX 用于在 Excel / LibreOffice 中查看和分析，不可用于恢复应用。备份 JSON 用于恢复应用；导出 XLSX
+              用于脱离本应用查看自有财务历史。工作簿包含 Transactions（交易）与 Statements（账单）两个工作表，保留交易标识、原始币种与金额、重复指纹与序号、来源账单，不做换算与重算，可独立打开。
+            </p>
+            <div className="row">
+              <button
+                className="btn btn-primary"
+                type="button"
+                data-testid="export-ledger-xlsx"
+                onClick={() => {
+                  void exportLedgerXlsx()
+                    .then(() => setMessage({ tone: 'ok', text: '表格归档（XLSX）已导出，可在 Excel / LibreOffice 中打开。' }))
+                    .catch((error: unknown) =>
+                      setMessage({ tone: 'danger', text: error instanceof Error ? error.message : '导出失败' }),
+                    )
+                }}
+              >
+                导出 XLSX
               </button>
             </div>
           </div>

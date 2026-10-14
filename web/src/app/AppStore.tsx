@@ -33,6 +33,7 @@ import { buildSourceDocument, sha256Hex } from '../parsers/extract'
 import { detectParser, parseDocument, UnsupportedFileError } from '../parsers/registry'
 import type { AppSettings, ImportRecord, Statement, Transaction } from '../core/types'
 import { triggerDownload } from '../export/tabular'
+import { downloadLedgerArchive, ledgerArchiveFileName } from '../export/ledgerArchive'
 import { MAX_JSON_BYTES } from '../backup/zipSafety'
 
 export interface ImportProgress {
@@ -64,6 +65,7 @@ interface AppApi {
   backup: () => Promise<void>
   backupData: () => Promise<void>
   backupFull: () => Promise<{ warning: string | null }>
+  exportLedgerXlsx: () => Promise<void>
   restore: (file: File) => Promise<{ ok: boolean; message: string }>
   archiveStatus: () => Promise<ArchiveStatus>
   clearData: (includeDemo: boolean) => Promise<void>
@@ -370,6 +372,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [settings.demoMode, snapshot.imports, demoSnapshot],
   )
 
+  /**
+   * Human-readable XLSX archive of the currently visible ledger.
+   * Unlike JSON backup, this file cannot restore the app: it keeps exact
+   * stored IDs, currencies, minor-unit amounts, fingerprints and occurrences
+   * for independent viewing in Excel / LibreOffice.
+   */
+  const exportLedgerXlsx = useCallback(async (): Promise<void> => {
+    const transactions = settings.demoMode ? demoSnapshot.transactions : snapshot.transactions.filter((row) => !row.isDemo)
+    const statements = settings.demoMode ? demoSnapshot.statements : snapshot.statements.filter((row) => !row.isDemo)
+    await downloadLedgerArchive(ledgerArchiveFileName(), transactions, statements)
+  }, [settings.demoMode, snapshot.transactions, snapshot.statements, demoSnapshot])
+
   const api = useMemo<AppApi>(
     () => ({
       state: { ...snapshot, ready, settings, notes, progress, demoMode: settings.demoMode },
@@ -384,6 +398,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       backup,
       backupData,
       backupFull,
+      exportLedgerXlsx,
       restore,
       archiveStatus,
       clearData,
@@ -408,6 +423,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       backup,
       backupData,
       backupFull,
+      exportLedgerXlsx,
       restore,
       archiveStatus,
       clearData,
