@@ -374,9 +374,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   /**
    * Human-readable XLSX archive of the currently visible ledger.
-   * Unlike JSON backup, this file cannot restore the app: it keeps exact
-   * stored IDs, currencies, minor-unit amounts, fingerprints and occurrences
-   * for independent viewing in Excel / LibreOffice.
+   * Unlike JSON backup, this file cannot restore the app: sheet 1 (交易明细)
+   * keeps exact stored currencies and minor-unit amounts for independent
+   * viewing in Excel / LibreOffice, while sheet 2 (Technical Metadata) keeps
+   * exact stored IDs, fingerprints and occurrences. No conversion or
+   * recalculation.
    */
   const exportLedgerXlsx = useCallback(async (): Promise<void> => {
     const transactions = settings.demoMode ? demoSnapshot.transactions : snapshot.transactions.filter((row) => !row.isDemo)
