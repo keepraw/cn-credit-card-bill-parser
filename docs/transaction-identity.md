@@ -24,9 +24,13 @@ is needed. This change cannot reconstruct transactions lost by earlier imports;
 recovery requires a separately reviewed overlapping source with a different hash,
 or an explicit recovery workflow for the already recorded file.
 Different descriptions or conflicting business fields remain distinct and are
-flagged for review. Historical legacy/parser differences in posting dates or
-transaction types remain subject to the existing migration audit; they are not
-silently reinterpreted. Separate disjoint statements with identical business
+flagged for review. Historical legacy/parser differences in posting dates,
+transaction types and original-money legs now produce read-only candidates and
+pending review on newly inserted rows; existing decisions and records remain
+untouched. `npm run migration:audit` compares known history against a validated
+version-1 JSON backup without mapping or rewriting IDs. See the
+[retirement readiness audit](python-retirement-readiness.md) for usage and limits.
+Separate disjoint statements with identical business
 fields provide no evidence of whether a row is new or overlapping, so count
 matching retains the existing conservative overlap policy.
 

@@ -138,7 +138,7 @@ export function ingestParsedStatement(
     .map((tx) => {
       const suspects = suspectedDuplicates.get(tx.id)
       if (!suspects || suspects.length === 0) return tx
-      return { ...tx, flags: [...tx.flags, 'suspected_duplicate' as ReviewFlag] }
+      return { ...tx, flags: [...tx.flags, 'suspected_duplicate' as ReviewFlag], reviewStatus: 'pending' as ReviewStatus }
     })
 
   const statementTransactions = [...priorForStatement.filter((tx) => !tx.isDemo === !isDemo), ...inserted]

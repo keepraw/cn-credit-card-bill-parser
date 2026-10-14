@@ -16,6 +16,9 @@ export interface SheetData {
 export async function readSheetData(buffer: ArrayBuffer, sheetName: string): Promise<SheetData> {
   const XLSX = await import('xlsx')
   const workbook = XLSX.read(buffer, { type: 'array' })
+  if (workbook.Workbook?.WBProps?.date1904) {
+    throw new Error('历史工作簿使用 1904 日期系统，暂不支持；请核实日期后转换为 1900 日期系统')
+  }
   const sheetNames: string[] = workbook.SheetNames ?? []
   const sheet = workbook.Sheets[sheetName]
   if (!sheet) return { sheetNames, rows: [] }

@@ -5,7 +5,7 @@
  * synthetic export-shaped rows to prove, with code rather than prose:
  *  1. legacy rows can produce fingerprints (incl. float dust + excel serials),
  *  2. token-dependent native types fork under legacy inference,
- *  3. forked rows are NOT linked by detectDuplicates (silent re-insert),
+ *  3. forked rows are NOT merged by detectDuplicates but now request review,
  *     while plain rows link and skip.
  */
 
@@ -109,7 +109,7 @@ describe('duplicate risk on re-import after legacy migration', () => {
     description: '1/3期-商户分期-示例通讯-分3期',
   }
 
-  it('forked installment rows are NOT linked: silent duplicate', () => {
+  it('forked installment rows request review without merging', () => {
     const nativeFingerprint = transactionFingerprint({ ...base, postingDate: '2026-07-16', type: 'installment_payment' })
     const legacyFingerprint = transactionFingerprint({ ...base, postingDate: '2026-07-16', type: 'purchase' })
     expect(nativeFingerprint).not.toBe(legacyFingerprint)
@@ -139,10 +139,10 @@ describe('duplicate risk on re-import after legacy migration', () => {
         },
       ],
     )
-    // Not an exact match (fingerprint differs) and not even in the same loose
-    // bucket (loose key includes type), so re-import inserts a duplicate silently.
+    // The fingerprint stays different. Read-only business candidates now expose
+    // the type disagreement, while insertion remains conservative.
     expect(duplicateIds.size).toBe(0)
-    expect(suspectedDuplicates.size).toBe(0)
+    expect(suspectedDuplicates.size).toBe(1)
   })
 
   it('plain purchase rows link and skip', () => {

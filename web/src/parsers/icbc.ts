@@ -269,9 +269,9 @@ export function parseSplitAmount(cell: string): SplitAmount | null {
   const parts = withoutSuffix.split('/')
   const amountPart = (parts[0] ?? '').trim()
   const currencyPart = (parts[1] ?? 'CNY').trim().toUpperCase()
-  const parsed = parseAmountToMinor(amountPart)
-  if (!parsed) return null
   const currency = CURRENCY_MAP[currencyPart] ?? (currencyPart || 'CNY')
+  const parsed = parseAmountToMinor(amountPart, currency)
+  if (!parsed) return null
   return { currency, minor: Math.abs(parsed.minor), direction }
 }
 

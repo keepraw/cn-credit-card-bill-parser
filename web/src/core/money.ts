@@ -30,6 +30,11 @@ export function currencyExponent(currency: string): number {
   return CURRENCY_EXPONENT[(currency || 'CNY').toUpperCase()] ?? 2
 }
 
+/** Historical adapters must not guess the exponent of an unfamiliar currency. */
+export function isSupportedCurrency(currency: string): boolean {
+  return Object.hasOwn(CURRENCY_EXPONENT, currency.toUpperCase())
+}
+
 /** Convert minor units back to a plain decimal string (no float math involved). */
 export function minorToDecimalString(minor: number, currency = 'CNY'): string {
   const exp = currencyExponent(currency)
@@ -94,9 +99,11 @@ export function parseAmountToMinor(raw: string | number | null | undefined, fall
   if (raw === null || raw === undefined) return null
   if (typeof raw === 'number') {
     if (!Number.isFinite(raw)) return null
-    // Only used for values that were produced by this module itself.
-    const asInt = Math.round(raw * 100)
+    if (!isSupportedCurrency(fallbackCurrency)) throw new Error(`尚未定义币种 ${fallbackCurrency} 的货币精度，拒绝猜测金额`)
+    const scaled = raw * 10 ** currencyExponent(fallbackCurrency)
+    const asInt = Math.round(scaled)
     if (!Number.isSafeInteger(asInt)) return null
+    if (Math.abs(scaled - asInt) > 1e-6) return null
     return { minor: asInt, negativeByFormat: raw < 0 }
   }
 
@@ -110,14 +117,19 @@ export function parseAmountToMinor(raw: string | number | null | undefined, fall
       break
     }
   }
+  const codedCurrency = /^([A-Z]{3})(?=\s|[-+(\d])/i.exec(text)?.[1]?.toUpperCase()
+  if (!currency && codedCurrency) currency = codedCurrency
+  const effectiveCurrency = currency ?? fallbackCurrency
+  if (!isSupportedCurrency(effectiveCurrency)) throw new Error(`尚未定义币种 ${effectiveCurrency} 的货币精度，拒绝猜测金额`)
+  const signedText = text.replace(/^(?:人民币|美元|港币|港元|欧元|日元|英镑|[A-Z]{3}|[￥¥])\s*/i, '').trim()
 
   const negativeByFormat =
-    /^\(.*\)$/.test(text) ||
+    /^\(.*\)$/.test(signedText) ||
     /\/\s*C\b/i.test(text) ||
     /\d\s*CR\b/i.test(text) ||
-    /^-/.test(text) ||
+    /^-/.test(signedText) ||
     /-$/.test(text) ||
-    /^[−–—]/.test(text) // unicode minus / en dash / em dash
+    /^[−–—]/.test(signedText) // unicode minus / en dash / em dash
 
   text = text
     .replace(/\/\s*[CD]\b/gi, '')
@@ -145,10 +157,13 @@ export function parseAmountToMinor(raw: string | number | null | undefined, fall
   const match = /^(\d+)(?:\.(\d*))?$/.exec(text)
   if (!match) return null
   const integerPart = match[1] ?? '0'
-  const fractionPart = match[2] ?? ''
+  let fractionPart = match[2] ?? ''
 
-  const exp = currencyExponent(currency ?? fallbackCurrency)
-  if (fractionPart.length > exp && exp > 0) {
+  const exp = currencyExponent(effectiveCurrency)
+  // Banks may format integer currencies as 100.00. Only zero fractional
+  // digits may be discarded; 100.50 JPY remains invalid.
+  if (exp === 0 && /^0*$/.test(fractionPart)) fractionPart = ''
+  if (fractionPart.length > exp) {
     // More precision than the currency supports: refuse instead of rounding silently.
     return null
   }

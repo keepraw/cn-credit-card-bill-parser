@@ -300,9 +300,9 @@ function parseEightColRow(cells: string[], rowIndex: number, fallbackCardLast4: 
 
   const rawDescription = (cells[3] ?? '').replace(/\s+/g, ' ').trim()
   const txnCurrency = normalizeCurrency(cells[4] ?? '')
-  const txnParsed = parseAmountToMinor(cells[5] ?? '')
+  const txnParsed = parseAmountToMinor(cells[5] ?? '', txnCurrency)
   const settleCurrency = normalizeCurrency(cells[6] ?? '')
-  const settleParsed = parseAmountToMinor(cells[7] ?? '')
+  const settleParsed = parseAmountToMinor(cells[7] ?? '', settleCurrency)
   if (!txnParsed || !settleParsed) return null
 
   const direction = directionFromSignedCell(cells[7] ?? '')
@@ -382,7 +382,7 @@ export function parseCombinedAmount(cell: string): { currency: string; minor: nu
   if (parts.length === 2) {
     const amountPart = parts[0]!.trim()
     const currencyPart = parts[1]!.trim()
-    const parsed = parseAmountToMinor(amountPart)
+    const parsed = parseAmountToMinor(amountPart, normalizeCurrency(currencyPart))
     if (!parsed) return null
     return { currency: normalizeCurrency(currencyPart), minor: Math.abs(parsed.minor), negative: parsed.negativeByFormat }
   }

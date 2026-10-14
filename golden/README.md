@@ -8,7 +8,7 @@ native `Transaction` models directly (see A-3.2/A-3.3 audits).
 ```text
 golden/
   <bank>/                  # boc | icbc | abc | ccb | bocom | citic (Web BankId)
-    <card>_<yyyymm>/       # e.g. 3443_202607 (statement identity, no PII)
+    <card>_<yyyymm>/       # linkable card suffix and statement month
       input.meta.json     # traceable input reference (hash, no content)
       python.json         # golden/v1 normalized Python output (desensitized)
       web.json            # golden/v1 normalized Web output (desensitized)
@@ -19,7 +19,9 @@ golden/
 
 1. **Raw bills are never committed.** `processed/`, `inbox/` and `*.eml/*.pdf`
    are git-ignored. Only `input.meta.json` (file name, size, SHA-256, cycle,
-   counts) is stored, so a run is reproducible without leaking content.
+   counts) is stored. These references are linkable financial metadata, not
+   anonymous data; exact dates/amounts and deterministic merchant hashes also
+   remain. See the [privacy audit](../docs/python-retirement-readiness.md).
 2. **Committed outputs are desensitized** (`"desensitized": true`). Merchant and
    personal names become `商户_<fnv1a32>` placeholders (order-independent, so
    both pipelines map the same merchant to the same placeholder); dates,
@@ -36,13 +38,21 @@ golden/
 .venv/Scripts/python scripts/generate_golden.py gen --input processed/<file> --out golden/<bank>/<stmt>
 
 # Web side (from web/)
-node_modules/.bin/vite-node scripts/generate-golden.ts --input ../processed/<file> --out ../golden/<bank>/<stmt>
+npm run golden:generate -- --input ../processed/<file> --out ../golden/<bank>/<stmt>
 
 # Diff
 .venv/Scripts/python scripts/generate_golden.py diff --dir golden/<bank>/<stmt>
 ```
 
 ## Batches
+
+`cd web && npm test` independently loads and validates all committed references,
+checks transaction multiplicity and financial fields, and recomputes the complete
+diff and identity pairing without Python. The six immutable historical snapshots
+remain unchanged: 66 transactions, zero BLOCKING differences and eight approved
+description warnings. Synthetic parser tests are separate; private originals are
+not required for this reference gate. Never regenerate expected files to make a
+regression pass.
 
 - Batch 1: `icbc/3443_202607`, `abc/3982_202607`, `ccb/5574_202607` — real EML.
 - Batch 2: `boc/6505_202607` (real PDF via pdfplumber / pdf.js geometry),

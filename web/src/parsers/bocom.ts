@@ -481,7 +481,7 @@ export function parseCurrencyAmount(cell: string): CurrencyAmount | null {
   if (!match) return null
   const raw = match[1]!.toUpperCase()
   const currency = CURRENCY_MAP[raw] ?? raw
-  const parsed = parseAmountToMinor(`${match[2]}${(match[3] ?? '').toUpperCase() === 'CR' ? '-' : ''}`)
+  const parsed = parseAmountToMinor(`${match[2]}${(match[3] ?? '').toUpperCase() === 'CR' ? '-' : ''}`, currency)
   if (!parsed) return null
   return { currency, minor: parsed.minor }
 }

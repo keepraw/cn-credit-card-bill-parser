@@ -16,11 +16,13 @@ import type { BankId, Category, Direction, TransactionType } from '../core/types
 /** Historical formats supported. Each one has an explicit adapter; unknown sheets are rejected. */
 export const LEGACY_PYTHON_EXPORT_V1 = 'legacy-python-export-v1' as const
 export const LEGACY_KEEPRAW_EXPORT_V1 = 'legacy-keepraw-export-v1' as const
-export type LegacyFormatId = typeof LEGACY_PYTHON_EXPORT_V1 | typeof LEGACY_KEEPRAW_EXPORT_V1
+export const LEGACY_UNIFIED_BILL_V1 = 'legacy-unified-bill-v1' as const
+export type LegacyFormatId = typeof LEGACY_PYTHON_EXPORT_V1 | typeof LEGACY_KEEPRAW_EXPORT_V1 | typeof LEGACY_UNIFIED_BILL_V1
 
 export const LEGACY_FORMAT_NAME: Record<LegacyFormatId, string> = {
   [LEGACY_PYTHON_EXPORT_V1]: 'Legacy Python Export',
   [LEGACY_KEEPRAW_EXPORT_V1]: 'Keepraw History Export',
+  [LEGACY_UNIFIED_BILL_V1]: '统一账单历史格式',
 }
 
 export interface LegacyFileMeta {
@@ -85,4 +87,8 @@ export interface LegacyPreview {
   /** Valid rows with stable ids assigned (deterministic per batch). */
   rows: Array<NormalizedLegacyRow & { id: string; fingerprint: string; occurrence: number }>
   anomalies: LegacyAnomaly[]
+  /** Valid rows retained unchanged but requiring explicit date review. */
+  reviewIssues?: Array<{ rowNumber: number; detail: string }>
+  /** Read-only cross-source observations. Never an ID migration or merge plan. */
+  migrationAudit?: import('../core/migrationAudit').MigrationAudit
 }

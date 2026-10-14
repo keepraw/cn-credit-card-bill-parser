@@ -107,6 +107,14 @@ describe('golden diff rules', () => {
     expect(report.findings.some((f) => f.severity === 'BLOCKING' && f.rule === 'direction')).toBe(true)
   })
 
+  it('currency mismatch blocks rather than becoming an approved warning', () => {
+    const web = norm()
+    web.currency = 'USD'
+    const report = diffGolden(makeDoc(norm()), makeDoc(web), 'test')
+    expect(report.verdict).toBe('BLOCKING')
+    expect(report.severityCounts.BLOCKING).toBeGreaterThan(0)
+  })
+
   it('scope mismatch blocks', () => {
     const web = norm()
     web.cardLast4 = '9999'
