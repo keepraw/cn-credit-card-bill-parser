@@ -1,16 +1,28 @@
-# Python retirement readiness (PR A)
+# Python retirement readiness (PR A + SQLite-gate follow-up)
 
-> Current status (2026-10-14, SQLite audit gate PR, no retirement executed):
+> Current status (2026-10-14, SQLite audit gate merged, status updated after
+> artifact check, no retirement executed):
 >
-> - SQLite historical audit tooling: COMPLETE (`scripts/sqlite_historical_audit.py`
->   plus `tests/test_sqlite_historical_audit.py`, read-only, one-off).
-> - Real data audit: PENDING (must run on the machine holding the real
->   `data/statements.db` with a fresh version-1 JSON backup).
-> - Python retirement: BLOCKED UNTIL SAFE AUDIT (only a `Python removal: SAFE`
->   report on real data authorizes the next-stage removal PR).
+> - SQLite Historical Data Audit Gate: MERGED (`scripts/sqlite_historical_audit.py`
+>   plus `tests/test_sqlite_historical_audit.py`, read-only, one-off tooling retained).
+> - SQLite historical audit status: NOT APPLICABLE.
+> - Reason: Legacy SQLite artifact unavailable. No database file exists for
+>   retrospective comparison. Verified 2026-10-14: no `data/statements.db`, no
+>   `statements.db-wal` / `statements.db-shm`, no `**/*.db` or `**/*.sqlite*` in
+>   the repo; `data/` contains only `.gitkeep`.
+> - No empty SQLite was created and no SQLite SAFE report was fabricated.
+> - Verified migration path:
+>   XLSX → TypeScript importer → IndexedDB → JSON backup → restore.
+> - Migration evidence:
+>   six banks validated; historical formats validated; transaction counts
+>   validated; amounts/currencies/sign/direction validated; browser restore
+>   validated (see [TypeScript historical migration](typescript-historical-migration.md)).
+> - Retirement decision: Python retirement can proceed based on the verified
+>   active migration path, with historical SQLite comparison unavailable due to
+>   the missing artifact.
 >
-> This PR does not delete Python, change importers, schemas, backup formats,
-> UI, or CI behavior.
+> This update changes documentation status only. It does not delete Python,
+> change importers, schemas, backup formats, UI, database code, or CI behavior.
 
 For the subsequently verified browser-only XLSX → IndexedDB → JSON backup →
 fresh-profile restore workflow across all six banks and three named schemas,
@@ -261,8 +273,12 @@ not represented as real-browser database measurements.
 No newly discovered critical defect remains in the validated supported contract.
 **Deletion remains NO-GO** until PR A is accepted on the latest main, the owner
 explicitly authorizes PR B and accepts the proposed obsolete-capability boundaries.
-Do not claim all private historical data has a verified XLSX export; histories
-existing only in SQLite remain a migration precondition, not disposable files.
+The former `BLOCKED UNTIL SAFE AUDIT` condition is superseded: SQLite historical
+comparison is NOT APPLICABLE because the legacy SQLite artifact is unavailable
+(no `data/statements.db`, WAL/SHM, or other `*.db` / `*.sqlite*` in the repo).
+Do not claim all private historical data has a verified XLSX export; if a SQLite
+history surfaces outside the repo later, it still needs a verified export before
+its Python access path is retired.
 
 PR B must remove Python consumers together, preserve the three TS adapters and
 all approved references, and rerun the mandatory suite. Keep one CI workflow:
