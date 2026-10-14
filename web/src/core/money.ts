@@ -33,6 +33,10 @@ const CURRENCY_EXPONENT: Record<string, number> = {
   AUD: 2,
   CAD: 2,
   CHF: 2,
+  TRY: 2,
+  MYR: 2,
+  PHP: 2,
+  IDR: 2,
   JPY: 0,
   KRW: 0,
   VND: 0,
@@ -95,14 +99,14 @@ const CURRENCY_PREFIX = /^(人民币|美元|港币|港元|欧元|日元|英镑|[
 const CURRENCY_SUFFIX = /\s*(人民币|美元|港币|港元|欧元|日元|英镑|[￥¥$€£]|[A-Z]{3})$/i
 
 /**
- * Parse a bank-provided amount string into signed minor units.
+ * Parse a numeric Excel cell or bank-provided amount string into signed minor units.
  *
  * Recognised formats: `1,234.56`, `1234.56`, `-1234.56`, `1234.56-`, `(1234.56)`,
  * `1234.56/C`, `1234.56CR`, `CNY 1234.56`, `&yen;6512.48`.
- * Returns `null` when the text does not contain a usable number.
+ * Returns `null` for unsupported cell types or invalid amounts.
  */
-export function parseAmountToMinor(raw: string | number | null | undefined, fallbackCurrency?: string): ParsedAmount | null {
-  if (raw === null || raw === undefined) return null
+export function parseAmountToMinor(raw: unknown, fallbackCurrency?: string): ParsedAmount | null {
+  if (typeof raw !== 'number' && typeof raw !== 'string') return null
   if (typeof raw === 'number') {
     if (!Number.isFinite(raw)) return null
     const currency = normalizeCurrencyCode(fallbackCurrency ?? 'CNY')
@@ -114,7 +118,7 @@ export function parseAmountToMinor(raw: string | number | null | undefined, fall
     return { minor: asInt, negativeByFormat: raw < 0 }
   }
 
-  let text = String(raw).trim().replace(/&yen;/gi, '¥').replace(/[−–—]/g, '-')
+  let text = raw.trim().replace(/&yen;/gi, '¥').replace(/[−–—]/g, '-')
   if (!text) return null
 
   let currency: string | undefined
