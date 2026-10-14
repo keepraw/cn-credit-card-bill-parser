@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:migration": "vitest run tests/historicalMigration.test.ts && playwright test e2e/historicalMigration.spec.ts",
     "migration:audit": "node scripts/migration-audit.mjs",
     "golden:generate": "node scripts/generate-golden.mjs",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build"

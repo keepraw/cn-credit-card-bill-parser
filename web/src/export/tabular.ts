@@ -27,6 +27,9 @@ export const EXPORT_COLUMNS = [
   { key: 'sourceFileHash', header: '文件指纹' },
   { key: 'sourcePage', header: '来源页' },
   { key: 'rawText', header: '原始片段' },
+  { key: 'id', header: '交易标识' },
+  { key: 'fingerprint', header: '业务指纹' },
+  { key: 'occurrence', header: '重复序号' },
 ] as const
 
 export function escapeCsvCell(value: string): string {
@@ -55,6 +58,9 @@ export function transactionToRow(transaction: Transaction): string[] {
     transaction.sourceFileHash,
     transaction.sourcePage === null ? '' : String(transaction.sourcePage),
     transaction.rawText,
+    transaction.id,
+    transaction.fingerprint,
+    String(transaction.occurrence),
   ]
 }
 

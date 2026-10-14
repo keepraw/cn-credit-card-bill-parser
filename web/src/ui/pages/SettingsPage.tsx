@@ -46,7 +46,7 @@ export function SettingsPage() {
         <div>
           <strong>账单不会离开这台设备</strong>
           <p>
-            本项目没有后端、没有云端 AI 解析、没有统计埋点。导入的 PDF / EML 只在浏览器进程内解析。
+            本项目没有后端、没有云端 AI 解析、没有统计埋点。导入的 PDF / EML / XLSX 只在浏览器进程内解析。
             请注意：清理浏览器数据、使用无痕窗口或更换设备都会导致 IndexedDB 中的数据丢失，建议定期导出备份。
           </p>
         </div>

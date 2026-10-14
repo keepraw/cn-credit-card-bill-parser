@@ -20,7 +20,7 @@ export const LEGACY_UNIFIED_BILL_V1 = 'legacy-unified-bill-v1' as const
 export type LegacyFormatId = typeof LEGACY_PYTHON_EXPORT_V1 | typeof LEGACY_KEEPRAW_EXPORT_V1 | typeof LEGACY_UNIFIED_BILL_V1
 
 export const LEGACY_FORMAT_NAME: Record<LegacyFormatId, string> = {
-  [LEGACY_PYTHON_EXPORT_V1]: 'Legacy Python Export',
+  [LEGACY_PYTHON_EXPORT_V1]: '标准字段历史格式',
   [LEGACY_KEEPRAW_EXPORT_V1]: 'Keepraw History Export',
   [LEGACY_UNIFIED_BILL_V1]: '统一账单历史格式',
 }
