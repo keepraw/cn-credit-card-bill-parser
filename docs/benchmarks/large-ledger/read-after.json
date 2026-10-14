@@ -1,0 +1,177 @@
+{
+  "metadata": {
+    "date": "2026-10-14T16:40:22.717Z",
+    "mode": "read",
+    "seed": 1263684657,
+    "source": "/workspace/keepraw-ledger-large-ledger/web",
+    "commit": "06800f20039bab2ebbc3cdb301d53645e8d1b699",
+    "reusedProfileRoot": "/workspace/scratch/large-ledger-seBumd",
+    "node": "v24.19.0",
+    "cpu": "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz",
+    "cpus": 5,
+    "memoryBytes": 18882699264,
+    "temporary": "/workspace/scratch/large-ledger-oLrGbr",
+    "sourceFiles": {
+      "app/AppStore.tsx": "5f127bee9c0ef6d43c32c16c1d6dff0933f1b5163aa8d2594c2f90cbf82e73e0",
+      "db/db.ts": "5af871b83069bb1da941fed779b6fde63cb78cf6537018a0be50eff34c540f54",
+      "db/repository.ts": "069d83c66fbdfa19a6990d5f3b376b91643d7241265b076098ae70d3c368f465",
+      "backup/json.ts": "25e0302aa465ecee75fe953dfbb2ba2e5dbb1fcff22782ad5a7ca1eb09f2a17a",
+      "backup/archive.ts": "38d94eb540bde04ba727bd2fb57e28cda61b4b4f39cca358bb1bf22db7108f7c",
+      "backup/zipSafety.ts": "2b9dcb30da05010a0883dac878973dded14a4cfd99f40a36b1d1264c7013f03a",
+      "ui/pages/TransactionsPage.tsx": "401841575c0dbd079803d259777b9838450ff22948f002547eb7f5e7dea1a81e"
+    },
+    "origin": "http://127.0.0.1:37109",
+    "completedAt": "2026-10-14T16:41:34.966Z"
+  },
+  "cases": [
+    {
+      "count": 100000,
+      "profiles": [
+        {
+          "profile": "/workspace/scratch/large-ledger-seBumd/performance-100000-0",
+          "repeat": 0,
+          "samples": [
+            {
+              "ms": 1409.4000000022352,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1459.199999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1563.6000000014901,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1875.7999999970198,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 2483.10000000149,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1865.199999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1626.699999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            }
+          ]
+        },
+        {
+          "profile": "/workspace/scratch/large-ledger-seBumd/performance-100000-1",
+          "repeat": 1,
+          "samples": [
+            {
+              "ms": 1739.5,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1666.699999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1530.199999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 2196.199999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1947.6000000014901,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1703.8999999985099,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1806.9000000022352,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            }
+          ]
+        },
+        {
+          "profile": "/workspace/scratch/large-ledger-seBumd/performance-100000-2",
+          "repeat": 2,
+          "samples": [
+            {
+              "ms": 1552,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1509.4000000022352,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1478.5,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1403,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1895.4000000022352,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1381.5999999977648,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1439.9000000022352,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

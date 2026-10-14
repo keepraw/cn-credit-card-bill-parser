@@ -205,6 +205,19 @@ async function attachmentExperiment(name: string) {
   return { before, after: await metrics(), inputBytes: buffer.byteLength }
 }
 
+async function nativeSnapshotExperiment(): Promise<repository.Snapshot> {
+  const transaction = db.backendDB().transaction(['statements', 'transactions', 'imports'], 'readonly')
+  const snapshot = {} as repository.Snapshot
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve(snapshot)
+    transaction.onabort = () => reject(transaction.error ?? new Error('native read aborted'))
+    for (const name of ['statements', 'transactions', 'imports'] as const) {
+      const request = transaction.objectStore(name).getAll()
+      request.onsuccess = () => { snapshot[name] = request.result }
+    }
+  })
+}
+
 const historicStores = {
   statements: 'id, bank, cardLast4, cycleEnd, status, isDemo',
   transactions: 'id, statementId, bank, transactionDate, postingDate, type, category, reviewStatus, isDemo, fingerprint, [bank+transactionDate]',
@@ -266,7 +279,33 @@ async function databaseSamples(repeats: number) {
 }
 
 Object.assign(window, { benchmark: {
+  nativeReadExperiment: async (repeats: number) => {
+    for (let i = 0; i < 3; i++) { await repository.readSnapshot(); await nativeSnapshotExperiment() }
+    const samples = []
+    for (let i = 0; i < repeats; i++) {
+      const sample: Record<string, number> = {}
+      for (const native of i % 2 ? [true, false] : [false, true]) {
+        const start = now(), snapshot = await (native ? nativeSnapshotExperiment() : repository.readSnapshot())
+        sample[native ? 'nativeMs' : 'dexieMs'] = now() - start
+        sample.records = snapshot.transactions.length
+      }
+      samples.push(sample)
+    }
+    const dexie = await repository.readSnapshot(), native = await nativeSnapshotExperiment()
+    const equal = ['statements', 'transactions', 'imports'].every(key => JSON.stringify(Reflect.get(dexie, key)) === JSON.stringify(Reflect.get(native, key)))
+    return { samples, equal }
+  },
+  isolatedReads: async (repeats: number) => {
+    for (let warm = 0; warm < 3; warm++) await repository.readSnapshot()
+    const samples = []
+    for (let i = 0; i < repeats; i++) {
+      const start = now(), snapshot = await repository.readSnapshot()
+      samples.push({ ms: now() - start, records: snapshot.transactions.length, statements: snapshot.statements.length, imports: snapshot.imports.length })
+    }
+    return samples
+  },
   seedVersion, upgradeVersion, databaseSamples,
+  openHistorical: async () => { db.close(); verificationDb = new Dexie(db.name); await verificationDb.open(); return schemaOf(verificationDb) },
   databaseReopen: async () => { verificationDb.close(); const start = now(); await verificationDb.open(); return { ms: now() - start, schema: schemaOf(verificationDb) } },
   ready: () => databaseOnly || Boolean(api?.state.ready), count: () => api?.state.transactions.length ?? 0,
   disableDemo: async () => { await api.setSettings({ ...DEFAULT_SETTINGS, demoMode: false }); await paint() },

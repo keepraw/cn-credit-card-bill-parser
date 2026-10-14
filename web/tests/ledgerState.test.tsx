@@ -96,6 +96,17 @@ describe('persisted ledger state', () => {
     await act(async () => { await app.saveNote(id, ' ') })
     expect(app.state.notes[id]).toBeUndefined()
     expect(await db.reviewNotes.get(id)).toBeUndefined()
+    await act(async () => { await app.setSettings({ demoMode: true }) })
+    vi.spyOn(db.settings, 'put').mockRejectedValueOnce(new Error('synthetic settings quota'))
+    await act(async () => {
+      const failedPreference = app.setSettings({ demoMode: false })
+      const blockedImport = app.importFiles([new File(['synthetic'], 'synthetic.txt')])
+      await expect(failedPreference).rejects.toThrow('quota')
+      await expect(blockedImport).rejects.toThrow('演示模式')
+    })
+    expect(app.state.demoMode).toBe(true)
+    expect(await db.transactions.count()).toBe(1)
+    expect(await db.imports.count()).toBe(1)
   })
 })
 

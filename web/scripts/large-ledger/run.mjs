@@ -14,10 +14,13 @@ import { SEED, makeRows, makeWorkbook } from '../storage-benchmark/fixture.mjs'
 const directory = path.dirname(fileURLToPath(import.meta.url)), ownWeb = path.resolve(directory, '../..')
 const web = path.resolve(process.env.LEDGER_WEB_ROOT ?? ownWeb), repo = path.resolve(ownWeb, '..')
 const mode = process.env.LEDGER_MODE ?? 'backup'
+if (['read', 'read-native'].includes(mode) && (!process.env.LEDGER_PROFILE_ROOT || !process.env.LEDGER_ORIGIN_PORT)) throw new Error('Read mode requires generated synthetic profile root and original origin port')
+if (['read', 'read-native'].includes(mode) && (!process.env.LEDGER_PROFILE_ROOT || !process.env.LEDGER_ORIGIN_PORT)) throw new Error('Read mode requires generated synthetic profile root and original origin port')
 const sizes = (process.env.LEDGER_SIZES ?? (mode === 'backup' ? '18000,36000,100000' : '18000,100000')).split(',').map(Number)
 const output = process.env.LEDGER_OUTPUT ?? path.join(repo, `docs/benchmarks/large-ledger-${mode}.json`)
-await mkdir('/workspace/scratch', { recursive: true })
-const temporary = await mkdtemp('/workspace/scratch/large-ledger-'), buildDirectory = path.join(web, 'scripts/large-ledger')
+const scratchRoot = process.env.LEDGER_TEMP_DIR ?? path.join(os.tmpdir(), 'keepraw-ledger-benchmark')
+await mkdir(scratchRoot, { recursive: true })
+const temporary = await mkdtemp(path.join(scratchRoot, 'large-ledger-')), buildDirectory = path.join(web, 'scripts/large-ledger')
 await mkdir(buildDirectory, { recursive: true })
 const generated = path.join(buildDirectory, '.generated.html'), generatedProbe = path.join(buildDirectory, '.generated-probe.tsx')
 const dist = path.join(temporary, 'dist'), assets = new Map(), contexts = new Set()
@@ -25,7 +28,7 @@ const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 const log = value => process.stdout.write(`${new Date().toISOString()} ${value}\n`)
 const result = { metadata: { date: new Date().toISOString(), mode, seed: SEED, source: web,
   commit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: web, encoding: 'utf8' }).trim(),
-  node: process.version, cpu: os.cpus()[0].model, cpus: os.cpus().length, memoryBytes: os.totalmem(), temporary }, cases: [] }
+  reusedProfileRoot: process.env.LEDGER_PROFILE_ROOT ?? null, node: process.version, cpu: os.cpus()[0].model, cpus: os.cpus().length, memoryBytes: os.totalmem(), temporary }, cases: [] }
 result.metadata.sourceFiles = {}
 for (const name of ['app/AppStore.tsx', 'db/db.ts', 'db/repository.ts', 'backup/json.ts', 'backup/archive.ts', 'backup/zipSafety.ts', 'ui/pages/TransactionsPage.tsx']) {
   const file = path.join(web, 'src', name)
@@ -35,7 +38,7 @@ const save = async () => { await mkdir(path.dirname(output), { recursive: true }
 const call = (page, method, ...args) => page.evaluate(async ({ method, args }) => window.benchmark[method](...args), { method, args })
 let server, origin
 async function launch(name, databaseOnly = false) {
-  const profile = path.join(temporary, name)
+  const profile = path.join(process.env.LEDGER_PROFILE_ROOT ?? temporary, name)
   const context = await chromium.launchPersistentContext(profile, { executablePath: process.env.CHROMIUM_PATH ?? '/usr/bin/chromium',
     headless: true, locale: 'zh-CN', timezoneId: 'UTC', acceptDownloads: true,
     viewport: { width: 1440, height: 1000 }, args: ['--no-sandbox', '--disable-dev-shm-usage'] })
@@ -61,7 +64,12 @@ async function launch(name, databaseOnly = false) {
     })()
   }
   page.on('pageerror', error => log(`PAGE ERROR: ${error.message}`))
-  await page.goto(`${origin}/scripts/large-ledger/.generated.html${databaseOnly ? '?database=1' : ''}#/transactions`)
+  if (['read', 'read-native'].includes(mode)) {
+    const cdp = await context.newCDPSession(page)
+    await cdp.send('Network.enable')
+    await cdp.send('Network.setCacheDisabled', { cacheDisabled: true })
+  }
+  await page.goto(`${origin}/scripts/large-ledger/.generated.html${databaseOnly ? '?database=1' : ['read', 'read-native'].includes(mode) ? `?read=${encodeURIComponent(result.metadata.date)}` : ''}#/transactions`)
   await page.waitForFunction(() => window.benchmark?.ready())
   if (!databaseOnly) await call(page, 'disableDemo')
   return { context, page, profile, memory }
@@ -102,8 +110,9 @@ async function backupCase(count) {
   entry.checks.push({ context: 'clear-json', ...await verified(source.page, `${count}.json`, extras, 'json') })
   await source.context.close(); entry.memoryProfiles.push({ label: 'source', ...source.memory })
   for (const kind of ['json', 'zip']) {
-    const target = await launch(`fresh-${kind}-${count}`)
-    if (kind === 'zip' && count === 100000) {
+    for (let profileRepeat = 0; profileRepeat < Number(process.env.LEDGER_FRESH_PROFILES ?? 1); profileRepeat++) {
+    const target = await launch(`fresh-${kind}-${count}-${profileRepeat}`)
+    if (kind === 'zip' && count === 100000 && profileRepeat === 0) {
       const failed = await call(target.page, 'attachmentFailure', `${count}.zip`); assert.equal(failed.ok, false)
       const state = await call(target.page, 'counts')
       for (const table of ['transactions', 'statements', 'imports', 'attachments']) assert.equal(state[table], 0, 'late error must roll back')
@@ -111,11 +120,12 @@ async function backupCase(count) {
     }
     for (let repeat = 0; repeat < 3; repeat++) {
       const restored = await call(target.page, 'restoreFile', `${count}.${kind}`); assert.equal(restored.ok, true, restored.message)
-      entry.restore.push({ context: 'fresh-profile', kind, repeat, ...restored })
-      entry.checks.push({ context: `fresh-${kind}-${repeat}`, ...await verified(target.page, `${count}.json`, extras, kind) })
-      log(`RESTORE ${count} ${kind} ${repeat}: ${restored.ms.toFixed(1)}ms`)
+      entry.restore.push({ context: 'fresh-profile', kind, profileRepeat, repeat, ...restored })
+      entry.checks.push({ context: `fresh-${kind}-${profileRepeat}-${repeat}`, ...await verified(target.page, `${count}.json`, extras, kind) })
+      log(`RESTORE ${count} ${kind} profile ${profileRepeat} repeat ${repeat}: ${restored.ms.toFixed(1)}ms`)
     }
-    await target.context.close(); entry.memoryProfiles.push({ label: `fresh-${kind}`, ...target.memory })
+    await target.context.close(); entry.memoryProfiles.push({ label: `fresh-${kind}-${profileRepeat}`, ...target.memory })
+    }
   }
   const legacyPayload = JSON.parse(assets.get(`${count}.json`).toString('utf8'))
   legacyPayload.format = 'credit-bill-manager-backup'; legacyPayload.settings = { demoMode: false, theme: 'dark' }
@@ -146,7 +156,7 @@ async function indexedFiles(profile) {
   await visit(path.join(profile, 'Default/IndexedDB'))
   return { fileBytes: files.reduce((sum, file) => sum + file.bytes, 0), allocatedBytes: files.reduce((sum, file) => sum + file.allocatedBytes, 0), files }
 }
-async function migrationCase(count) {
+async function migrationCase(count, control = false) {
   log(`MIGRATION ${count}`)
   const workbookName = `python-${count}.xlsx`, jsonName = `${count}-migration.json`
   assets.set(workbookName, makeWorkbook(makeRows(count)))
@@ -158,7 +168,7 @@ async function migrationCase(count) {
   const extras = { notes: await call(source.page, 'rows', 'reviewNotes', null), attachments: await call(source.page, 'rows', 'attachments', null) }
   await source.context.close()
   const entry = { count, imported, versions: [] }
-  for (const version of [1, 2, 3]) {
+  for (const version of (control ? [2, 3] : [1, 2, 3])) {
     const repeats = version === 1 ? 1 : 3
     for (let repeat = 0; repeat < repeats; repeat++) {
       const target = await launch(`migration-${count}-v${version}-${repeat}`, true)
@@ -166,6 +176,35 @@ async function migrationCase(count) {
       const seeded = await call(target.page, 'seedVersion', version, jsonName, workbookName, extras)
       const checks = [await verified(target.page, jsonName, expectedExtras, 'migration', true)]
       const beforeSamples = await call(target.page, 'databaseSamples', 3), beforeDisk = await indexedFiles(target.profile)
+      if (control) {
+        await target.context.close()
+        const closedDisk = await indexedFiles(target.profile)
+        const reopened = await launch(`migration-${count}-v${version}-${repeat}`, true)
+        const schema = await call(reopened.page, 'openHistorical')
+        assert.equal(schema.version, version * 10)
+        const stableUsage = await call(reopened.page, 'usage')
+        checks.push(await verified(reopened.page, jsonName, expectedExtras, 'migration', true))
+        await reopened.context.close()
+        const stableDisk = await indexedFiles(target.profile)
+        let firstReadyAfterUpgradeMs
+        if (version === 2) {
+          const boot = await launch(`migration-${count}-v${version}-${repeat}`, true)
+          const appPage = await boot.context.newPage()
+          await appPage.addInitScript(count => { const observer = new MutationObserver(() => {
+            if (document.querySelector('.page-head p')?.textContent.startsWith(`共 ${count} 笔`)) { window.firstReady = performance.now(); observer.disconnect() }
+          }); observer.observe(document, { childList: true, subtree: true, characterData: true }) }, count)
+          await appPage.goto(origin + '/#/transactions'); await appPage.waitForFunction(() => window.firstReady !== undefined, undefined, { timeout: 180000 })
+          firstReadyAfterUpgradeMs = await appPage.evaluate(() => window.firstReady)
+          await call(boot.page, 'openHistorical')
+          checks.push(await verified(boot.page, jsonName, expectedExtras, 'migration', true))
+          await boot.context.close()
+        }
+        entry.versions.push({ version, repeat, seeded, beforeSamples, beforeDisk, closedDisk, stableUsage,
+          stableDisk, firstReadyAfterUpgradeMs, checks })
+        result.cases = result.cases.filter(item => item.count !== count).concat(entry); await save()
+        log(`PASS INDEX CONTROL ${count} v${version} #${repeat}`)
+        continue
+      }
       let aborted
       if (version === 2 && repeat === 0) {
         aborted = await call(target.page, 'upgradeVersion', true)
@@ -243,11 +282,24 @@ try {
       response.end(await readFile(target))
     } catch { response.statusCode = 404; response.end('Not found') }
   })
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); origin = `http://127.0.0.1:${server.address().port}`; result.metadata.origin = origin
+  await new Promise(resolve => server.listen(Number(process.env.LEDGER_ORIGIN_PORT ?? 0), '127.0.0.1', resolve)); origin = `http://127.0.0.1:${server.address().port}`; result.metadata.origin = origin
   for (const count of sizes) {
     if (mode === 'backup') await backupCase(count)
     else if (mode === 'performance') await performanceCase(count)
     else if (mode === 'migration') await migrationCase(count)
+    else if (mode === 'index') await migrationCase(count, true)
+    else if (['read', 'read-native'].includes(mode)) {
+      const entry = { count, profiles: [] }
+      for (let repeat = 0; repeat < 3; repeat++) {
+        const target = await launch(`performance-${count}-${repeat}`)
+        const experiment = mode === 'read-native' ? await call(target.page, 'nativeReadExperiment', 7) : { samples: await call(target.page, 'isolatedReads', 7), equal: true }
+        for (const sample of experiment.samples) assert.equal(sample.records, count)
+        assert.equal(experiment.equal, true)
+        entry.profiles.push({ profile: target.profile, repeat, ...experiment })
+        await target.context.close(); log(`PASS ISOLATED READ ${count} #${repeat}`)
+      }
+      result.cases.push(entry); await save()
+    }
     else throw new Error(`Unknown mode: ${mode}`)
   }
   result.metadata.completedAt = new Date().toISOString(); await save(); log(`RESULT ${output}`)
