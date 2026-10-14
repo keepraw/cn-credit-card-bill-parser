@@ -1,8 +1,9 @@
 # TypeScript historical migration
 
 The browser can migrate the three supported historical XLSX schemas without
-running Python, generating SQLite, or calling a parsing service. Python remains
-an independent application and is not deleted by this change.
+running Python, generating SQLite, or calling a parsing service. The retired
+Python implementation has been removed; TypeScript is the only production path:
+XLSX Import → TypeScript Importer → IndexedDB → JSON Backup → Browser Restore.
 
 The audited production path is `AppStore.previewLegacyImport` →
 `previewLegacyWorkbook` → `readSheetData` / SheetJS, followed by
@@ -56,7 +57,11 @@ layout, renamed columns, unknown sheet or incomplete schema is not guessed.
 An existing `标准字段` export may have been produced by an old tool, but importing
 an already available file never requires that tool to run again. A history that
 exists only in a SQLite database is outside this XLSX workflow; do not delete its
-only access path or claim those native IDs were migrated.
+artifacts or claim those native IDs were migrated. The repository's SQLite
+historical audit is **NOT APPLICABLE** because the legacy SQLite artifact is
+unavailable. No empty database or SAFE report was created. The one-off Python
+audit tooling was removed with the retired implementation; its preparation and
+artifact check are recorded in the [readiness audit](python-retirement-readiness.md).
 
 ## Data and identity guarantees
 
@@ -110,10 +115,10 @@ npm run test:migration
 ```
 
 This verification command runs only Node/TypeScript and Chromium. The existing
-CI Web job also discovers both suites through its normal unit and browser runs;
-the separate Python job remains unchanged until Python retirement is authorized.
+CI Web job also discovers both suites through its normal unit and browser runs.
+The retired Python job has been removed.
 
 Real statements and their backups remain private local validation inputs. They
 must not be committed, uploaded to CI or used as public test fixtures. This
 evidence covers the named schemas and tested layouts, not universal compatibility
-with every bank statement or a blanket authorization to retire Python.
+with every bank statement.

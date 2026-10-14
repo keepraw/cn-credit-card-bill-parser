@@ -1,15 +1,17 @@
-# Python retirement readiness (PR A + SQLite-gate follow-up)
+# Python retirement status and readiness record
 
-> Current status (2026-10-14, SQLite audit gate merged, status updated after
-> artifact check, no retirement executed):
+> Current status (2026-10-14, PR B):
 >
-> - SQLite Historical Data Audit Gate: MERGED (`scripts/sqlite_historical_audit.py`
->   plus `tests/test_sqlite_historical_audit.py`, read-only, one-off tooling retained).
+> - Retired Python implementation removed: parsers, CLI, SQLite layer, folder
+>   workflows, audit/golden scripts, pytest tests, dependencies and Python CI.
+> - TypeScript is the sole production path; there is no application backend.
+> - SQLite Historical Data Audit Gate was implemented and merged before
+>   retirement. Its one-off Python script and tests are removed in PR B.
 > - SQLite historical audit status: NOT APPLICABLE.
 > - Reason: Legacy SQLite artifact unavailable. No database file exists for
->   retrospective comparison. Verified 2026-10-14: no `data/statements.db`, no
+>   retrospective comparison. Before retirement, verified 2026-10-14: no `data/statements.db`, no
 >   `statements.db-wal` / `statements.db-shm`, no `**/*.db` or `**/*.sqlite*` in
->   the repo; `data/` contains only `.gitkeep`.
+>   the repo; `data/` contained only `.gitkeep`. PR B removes that placeholder.
 > - No empty SQLite was created and no SQLite SAFE report was fabricated.
 > - Verified migration path:
 >   XLSX → TypeScript importer → IndexedDB → JSON backup → restore.
@@ -17,18 +19,26 @@
 >   six banks validated; historical formats validated; transaction counts
 >   validated; amounts/currencies/sign/direction validated; browser restore
 >   validated (see [TypeScript historical migration](typescript-historical-migration.md)).
-> - Retirement decision: Python retirement can proceed based on the verified
+> - Retirement decision: PR B removes Python based on the verified
 >   active migration path, with historical SQLite comparison unavailable due to
 >   the missing artifact.
 >
-> This update changes documentation status only. It does not delete Python,
-> change importers, schemas, backup formats, UI, database code, or CI behavior.
+> PR B preserves the TypeScript importer, transaction schema/identity/fingerprint,
+> IndexedDB structure, JSON backup format, XLSX export and UI behavior. Frozen
+> Golden references remain unchanged. Ignored local financial artifacts are
+> preserved. CI removes only the Python job and its deployment dependency.
+
+## Historical PR A readiness audit
+
+The remainder of this document records PR A as it was written before PR B was
+authorized. Its former NO-GO statements, Python paths and validation results are
+historical evidence, not current instructions or available Python workflows.
 
 For the subsequently verified browser-only XLSX → IndexedDB → JSON backup →
 fresh-profile restore workflow across all six banks and three named schemas,
 see [TypeScript historical migration](typescript-historical-migration.md).
-The audit below is retained as the original PR A record; SQLite-only history and
-other retirement boundaries still require separate verification.
+The audit below is retained as the original PR A record. SQLite retrospective
+comparison is NOT APPLICABLE for the reason recorded above.
 
 Python is retained in this PR. The tested TypeScript production contract is ready
 for review; **complete Python deletion is NO-GO now**. PR A must first be reviewed

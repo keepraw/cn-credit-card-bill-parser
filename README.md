@@ -2,14 +2,11 @@
 
 **A privacy-first, local-first credit card statement parser, ledger, and reconciliation tool for Chinese bank statements.**
 
-Keepraw-Ledger converts supported credit card statements into structured transactions for review, reporting, and archival. The repository contains two independent applications:
-
-- **Web app (primary interface):** A browser-based React and TypeScript application with IndexedDB storage, statement import, transaction review, reconciliation, and backup tools.
-- **Python CLI:** A standalone batch-processing pipeline that reads files from local folders, stores results in SQLite, and exports Excel workbooks.
+Keepraw-Ledger converts supported credit card statements into structured transactions for review, reporting, and archival. The supported application is a browser-based React and TypeScript frontend with IndexedDB storage, statement import, transaction review, reconciliation, and backup tools. There is no application backend. The retired Python implementation has been removed.
 
 **Live project homepage:** [ledger.keepraw.com](https://ledger.keepraw.com/) (as listed in the GitHub repository settings).
 
-The web app and Python CLI are **separate data-processing implementations**. They do not share a database or automatically synchronize their results. This project is under active development and is not a replacement for your bank's official records.
+This project is under active development and is not a replacement for your bank's official records.
 
 ## Features
 
@@ -52,13 +49,14 @@ Historical XLSX migration runs entirely in the browser: **XLSX → TypeScript ad
 
 The `python` in the first adapter's identifier records a compatible historical file format; it does not invoke Python. These fixed schemas are not a general-purpose bank XLSX layout detector. See the [TypeScript historical migration workflow and validation](docs/typescript-historical-migration.md) for import, review, backup, recovery and identity boundaries.
 
-Python retirement readiness is tracked in [the PR A audit](docs/python-retirement-readiness.md).
-The Web migration workflow retains `legacy-python-export-v1` (`标准字段`) and
-`legacy-keepraw-export-v1` (`交易明细`), and adds strictly detected
+Python retirement and its migration evidence are recorded in [the readiness audit](docs/python-retirement-readiness.md).
+The Web migration workflow supports `legacy-python-export-v1` (`标准字段`),
+`legacy-keepraw-export-v1` (`交易明细`), and strictly detected
 `legacy-unified-bill-v1` (`统一账单`, nine full Chinese headers). Future dates are
 preserved for review; malformed original money, unsupported currency precision
-and 1904-date-system workbooks are refused explicitly. Python remains intact
-until a separate reviewed and authorized retirement PR.
+and 1904-date-system workbooks are refused explicitly. The supported historical
+data path is **XLSX Import → TypeScript Importer → IndexedDB → JSON Backup → Browser Restore**.
+SQLite historical audit: **NOT APPLICABLE** — legacy SQLite artifact unavailable.
 
 ## Getting started with the web app
 
@@ -101,7 +99,7 @@ npm run test:e2e             # Playwright browser tests
 npm run test:migration       # Browser-only historical migration + JSON recovery
 ```
 
-The single Validation workflow (`.github/workflows/ci.yml`) runs Web checks (TypeScript, ESLint, Vitest including goldens, build, npm audit, and Chromium Playwright) and Python pytest including goldens in parallel. Deployment requires both jobs to succeed and a push or explicit dispatch on `main`. It reuses that run's validated `web/dist` artifact; PRs neither upload Pages artifacts nor deploy. Deployments are serialized, and superseded main revisions are skipped. For a GitHub Pages project subpath instead of the configured custom-domain root, set `VITE_BASE_PATH` for the build.
+The single Validation workflow (`.github/workflows/ci.yml`) runs Web checks (TypeScript, ESLint, Vitest including goldens, build, npm audit, and Chromium Playwright). Deployment requires the Web job to succeed and a push or explicit dispatch on `main`. It reuses that run's validated `web/dist` artifact; PRs neither upload Pages artifacts nor deploy. Deployments are serialized, and superseded main revisions are skipped. For a GitHub Pages project subpath instead of the configured custom-domain root, set `VITE_BASE_PATH` for the build.
 
 ## Storage, privacy, and backup
 
@@ -134,62 +132,6 @@ Backup restoration merges records by primary key; importing the same backup agai
 
 For local cleanup, back up anything you need first, then use **Clear All Data** to remove ledger rows and attachments, or clear the site's browser storage. Application settings may remain after the in-app operation; clearing site storage is the more complete browser-side cleanup.
 
-## Standalone Python CLI
-
-The Python pipeline remains available for local folder-based processing and Excel exports. It is **independent** of the web application, and its supported source formats and parsing behavior may differ.
-
-**Requirements:** Python 3.10 or newer (Python 3.12 recommended).
-
-From the repository root:
-
-```bash
-python -m venv .venv
-# Linux / macOS
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-```
-
-On Windows PowerShell, activate the environment using:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-```
-
-Put statement files in `inbox/`, then run:
-
-```powershell
-# Windows PowerShell
-.\run_parser.ps1
-```
-
-```bash
-# Linux / macOS
-PYTHONPATH=src python -m ccparser.cli
-```
-
-The Python pipeline uses these directories:
-
-| Path | Purpose |
-| --- | --- |
-| `inbox/` | Input statements awaiting processing |
-| `processed/` | Original files processed successfully |
-| `review_files/` | Original files needing manual attention |
-| `data/` | Local SQLite data |
-| `output/unified_transactions.xlsx` | Consolidated transaction export |
-| `output/review.xlsx` | Items requiring review |
-| `backups/` and `logs/` | Local runtime backups and diagnostic logs |
-
-For profiling without importing transactions, debugging, or unit tests:
-
-```bash
-PYTHONPATH=src python -m ccparser.cli --profile
-PYTHONPATH=src python -m ccparser.cli --debug
-python -m pytest -q
-```
-
-The CLI also has historical spreadsheet import and optional OCR-related dependencies. Scanned PDFs may need additional local setup; do not assume OCR works out of the box. Review the older pipeline's documentation and test cases before processing important original statements.
-
 ## Repository layout
 
 ```text
@@ -203,19 +145,17 @@ web/
   src/ui/                Views and components
   tests/                 Vitest unit and integration tests
   e2e/                   Playwright tests
-src/ccparser/            Independent Python parser implementation
-tests/                   Python pytest suite
-scripts/                 Migration and golden-fixture tooling
-golden/                  Desensitized cross-pipeline regression baselines
+  scripts/               TypeScript migration audit and golden-fixture tooling
+golden/                  Frozen historical regression baselines
 docs/                    Parser and format research
-.github/workflows/       Unified Web/Python validation and GitHub Pages deployment
+.github/workflows/       Web validation and GitHub Pages deployment
 ```
 
 ## Development and correctness guidelines
 
 Changes to bank parsers, monetary amounts, deduplication, migration, or backup logic should be tested against **synthetic or desensitized fixtures**. Check transaction counts, duplicate occurrences, signed amounts, currencies, statement periods, reconciliation differences, and review flags.
 
-The repository includes golden fixtures for the six registered banks (`golden/README.md`), plus focused Web and Python tests. These are regression aids, **not** proof that every statement template is supported or every financial edge case has been verified.
+The repository includes golden fixtures for the six registered banks (`golden/README.md`), plus focused Web tests. Frozen `python.json` snapshots remain as TypeScript regression inputs and do not require a Python runtime. These are regression aids, **not** proof that every statement template is supported or every financial edge case has been verified.
 
 ### Known limitations requiring follow-up
 
@@ -224,7 +164,7 @@ The repository includes golden fixtures for the six registered banks (`golden/RE
 - **Currency and duplicate totals:** Dashboard amounts, trends and distributions include only CNY settlement rows; other settlement currencies are retained with an explicit exclusion warning, without FX conversion. Unresolved suspected duplicates remain included with a warning and bounded source comparisons in Review.
 - **Stored attachment lifecycle:** PR #13 fixes transactional clearing and evidence/result association. Evidence retention remains best effort under browser quota limits.
 - **Backup integrity:** PR #14 validates records and restores ZIP data/evidence atomically. Version-1 backups still exclude separately stored free-text review notes.
-- **Testing and dependencies:** Keep Python and browser checks mandatory, monitor dependency advisories, and extend large-dataset coverage as needed.
+- **Testing and dependencies:** Keep Web and browser checks mandatory, monitor dependency advisories, and extend large-dataset coverage as needed.
 
 This is a personal finance data tool. **Always compare imported results with official bank statements** before using the output for financial decisions.
 
