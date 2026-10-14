@@ -12,6 +12,10 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['list']] : [['list']],
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
+    // No test records video, so the Playwright-bundled FFmpeg binary is never
+    // invoked. Keep failure diagnostics: screenshots and traces on failure.
+    video: 'off',
+    screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
     locale: 'zh-CN',
   },
