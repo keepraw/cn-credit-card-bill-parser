@@ -3,7 +3,7 @@ import { inferTransactionType, signForDirection } from '../core/classify'
 import { parseAmountToMinor } from '../core/money'
 import type { BankId, Direction, NamedAmount, StatementSummary } from '../core/types'
 import { itemCenterX, pageRows, type TextRow } from './pdfLayout'
-import { emptySummary, ParseError, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
+import { assertCreditSign, emptySummary, ParseError, requireTransactionAmount, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
 
 const PARSER_ID = 'boc_pdf'
 const PARSER_VERSION = '2.0.0'
@@ -347,8 +347,7 @@ function parseTransactions(doc: SourceDocument, fallbackCardLast4: string): Pars
       if (isNoise(row)) continue
       const dateItems = row.items.filter((item) => ISO_DATE_RE.test(item.text.trim()) || COMPACT_DATE_RE.test(item.text.trim()))
       const hasCard = row.items.some((item) => /^\d{4}$/.test(item.text.trim()))
-      const hasAmount = row.items.some((item) => AMOUNT_RE.test(item.text.trim()))
-      if (dateItems.length >= 2 && hasCard && hasAmount) {
+      if (dateItems.length >= 2 && hasCard) {
         transactionRows.push({ pageNumber: page.pageNumber, row })
         continue
       }
@@ -401,16 +400,15 @@ function buildTransaction(entry: RowRef, fragments: Fragment[], config: ColumnCo
   // The two amount columns are far apart; pick the column the amount was printed in.
   let selected: { text: string; direction: Direction } | null = null
   for (const item of row.items) {
-    if (!AMOUNT_RE.test(item.text.trim())) continue
+    if (item.x < config.depositCenter - 45) continue
     const center = itemCenterX(item)
     if (center >= config.expenditureCenter - 45) selected = { text: item.text, direction: 'debit' }
     else if (center >= config.depositCenter - 45) selected = { text: item.text, direction: 'credit' }
   }
-  if (!selected) return null
-
-  const parsed = parseAmountToMinor(selected.text.trim())
-  if (!parsed) return null
-  const minor = signForDirection(parsed.minor, selected.direction)
+  const selectedAmount = requireTransactionAmount(selected, config.sourceRow)
+  const parsed = requireTransactionAmount(parseAmountToMinor(selectedAmount.text.trim(), 'CNY'), config.sourceRow)
+  assertCreditSign(parsed.negativeByFormat, selectedAmount.direction, config.sourceRow)
+  const minor = signForDirection(parsed.minor, selectedAmount.direction)
 
   const descriptionStart = cardItem ? cardItem.x + cardItem.width : 0
   const parts: Array<{ y: number; text: string }> = []
@@ -442,7 +440,7 @@ function buildTransaction(entry: RowRef, fragments: Fragment[], config: ColumnCo
 
   const cleaned = cleanDescription(rawDescription)
   const bankToken = /^(消费|取现|还款|退款|退货|返现|利息|手续费|调整)/.exec(cleaned)?.[1] ?? ''
-  const type = inferTransactionType(bankToken, cleaned, selected.direction)
+  const type = inferTransactionType(bankToken, cleaned, selectedAmount.direction)
 
   return {
     cardLast4: rowCardLast4,
@@ -456,7 +454,7 @@ function buildTransaction(entry: RowRef, fragments: Fragment[], config: ColumnCo
     settlementCurrency: 'CNY',
     settlementAmountMinor: minor,
     type,
-    direction: selected.direction,
+    direction: selectedAmount.direction,
     bankToken,
     confidence: cleaned && cleaned !== '未识别交易' ? 0.95 : 0.6,
     sourcePage: pageNumber,

@@ -149,6 +149,23 @@ Audited reference digests prevent silent edits to the existing approved warnings
 Severity rules remain unchanged, with synthetic blocking-mutation tests separate
 from reference-file validation. No expected file was regenerated or changed.
 
+The committed-reference gate compares frozen JSON outputs; it does not execute
+the current parsers against the six private originals. Financial hardening adds
+`currentParserGolden.test.ts`, which invokes all six current TypeScript parsers on
+invented templates and checks independently specified counts and financial
+multisets through ingestion and persistence. It covers both monetary legs,
+currencies, direction and classification without changing approved references.
+Neither gate by itself establishes that all private historical layouts still parse.
+
+The financial hardening also rejects malformed separators and conflicting currency
+tokens, refuses unsafe monetary legs in recognized transaction rows instead of
+silently omitting or substituting them, and preserves parsed negative signs or
+rejects contradictory directions. Dashboard amounts and charts explicitly exclude
+non-CNY settlement rows without conversion. Suspected duplicates remain separate
+and included, with a statistics warning and bounded, read-only source comparisons
+rebuilt from the ledger. No database schema, identity algorithm or stored history
+is rewritten; existing recovery and Python retirement prerequisites still apply.
+
 | Bank | Transactions | Recomputed result |
 | --- | ---: | --- |
 | BOC | 4 | 1 description WARNING |

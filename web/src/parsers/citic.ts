@@ -2,7 +2,7 @@ import { parseDateInput } from '../core/dates'
 import { extractMerchant, inferTransactionType, signForDirection } from '../core/classify'
 import { parseAmountToMinor } from '../core/money'
 import type { BankId, Direction, NamedAmount, StatementSummary } from '../core/types'
-import { emptySummary, ParseError, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
+import { assertCreditSign, emptySummary, ParseError, requireTransactionAmount, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
 
 const PARSER_ID = 'citic_eml'
 const PARSER_VERSION = '1.0.0'
@@ -287,12 +287,10 @@ export interface CombinedAmount {
 export function parseCombinedAmount(cell: string): CombinedAmount | null {
   const text = cell.trim()
   if (!text || text === '-' || /^-+$/.test(text)) return null
-  const match = /^\s*([A-Za-z]{3}|[\u4e00-\u9fa5]{2,4})?\s*(-?[\d,]+(?:\.\d{2})?)\s*$/.exec(text)
-  if (!match) return null
-  const parsed = parseAmountToMinor(match[2]!, normalizeCurrency(match[1] ?? 'CNY'))
+  const parsed = parseAmountToMinor(text)
   if (!parsed) return null
   return {
-    currency: normalizeCurrency(match[1] ?? 'CNY'),
+    currency: parsed.currency ?? 'CNY',
     minor: Math.abs(parsed.minor),
     negative: parsed.negativeByFormat || parsed.minor < 0,
   }
@@ -342,14 +340,14 @@ function parseRow(cells: string[], rowIndex: number, fallbackCardLast4: string):
 
   const rawDescription = (normalized[4] ?? '').replace(/\s+/g, ' ').trim()
   if (!rawDescription || TXN_HEADER_CELL.test(rawDescription)) return null
-  const txnSplit = parseCombinedAmount(normalized[5] ?? '')
-  const settleSplit = parseCombinedAmount(normalized[6] ?? '')
-  const primary = settleSplit ?? txnSplit
-  if (!primary) return null
+  const txnSplit = requireTransactionAmount(parseCombinedAmount(normalized[5] ?? ''), rowIndex)
+  const settleSplit = requireTransactionAmount(parseCombinedAmount(normalized[6] ?? ''), rowIndex)
+  const primary = settleSplit
 
   const direction = directionFromSignedCell(primary.negative)
-  const transactionCurrency = txnSplit?.currency ?? primary.currency
-  const transactionAmountMinor = signForDirection(txnSplit?.minor ?? primary.minor, direction)
+  assertCreditSign(txnSplit.negative, direction, rowIndex)
+  const transactionCurrency = txnSplit.currency
+  const transactionAmountMinor = signForDirection(txnSplit.minor, direction)
   const settlementAmountMinor = signForDirection(primary.minor, direction)
 
   const bankToken = extractBankToken(rawDescription)

@@ -99,6 +99,21 @@ export class ParseError extends Error {
   }
 }
 
+/** A recognized transaction must not disappear or borrow the other monetary leg. */
+export function requireTransactionAmount<T>(amount: T | null, rowIndex: number): T {
+  if (amount === null) {
+    throw new ParseError(`第 ${rowIndex + 1} 行交易金额无效：格式、币种或精度无法安全解析，整份账单未导入`, 'invalid_transaction_amount')
+  }
+  return amount
+}
+
+/** For banks whose minus means credit, reject an explicit minus that would be lost. */
+export function assertCreditSign(negative: boolean, direction: 'credit' | 'debit', rowIndex: number): void {
+  if (negative && direction === 'debit') {
+    throw new ParseError(`第 ${rowIndex + 1} 行金额符号与交易方向冲突，整份账单未导入`, 'amount_direction_conflict')
+  }
+}
+
 export function emptySummary(): StatementSummary {
   return {
     previousBalanceMinor: null,

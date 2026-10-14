@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useApp } from '../../app/AppStore'
 import { DEFAULT_FILTERS, applyFilters, groupBy, groupByBank, monthlyTrend, summarize, untrustedAmount, type Filters } from '../../core/analytics'
 import { bankName, type BankId } from '../../core/types'
-import { formatMinor } from '../../core/money'
+import { formatMinor, normalizeCurrencyCode } from '../../core/money'
 import { monthEnd } from '../../core/dates'
 import { BarChart, Badge, DemoBadge, EmptyState, HorizontalBars, Stat } from '../components/ui'
 
@@ -21,6 +21,16 @@ export function DashboardPage() {
   }, [filters, visibleStatements, visibleTransactions])
 
   const summary = useMemo(() => summarize(trusted), [trusted])
+  const excludedCurrencies = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const tx of trusted) {
+      const currency = normalizeCurrencyCode(tx.settlementCurrency)
+      if (currency !== 'CNY') counts.set(currency, (counts.get(currency) ?? 0) + 1)
+    }
+    return [...counts.entries()].sort(([a], [b]) => a.localeCompare(b))
+  }, [trusted])
+  const pendingDuplicates = trusted.filter((tx) => tx.flags.includes('suspected_duplicate') &&
+    tx.reviewStatus !== 'confirmed' && normalizeCurrencyCode(tx.settlementCurrency) === 'CNY').length
   const trend = useMemo(() => monthlyTrend(trusted), [trusted])
   const byBank = useMemo(() => groupByBank(trusted), [trusted])
   const byCard = useMemo(() => groupBy(trusted, (tx) => `${bankName(tx.bank)} ·${tx.cardLast4}`), [trusted])
@@ -45,7 +55,7 @@ export function DashboardPage() {
       <div className="page-head">
         <div>
           <h1>消费总览</h1>
-          <p>实际消费额与银行账单入账金额分开统计，未通过对账的账单默认不计入。</p>
+          <p>本页仅汇总人民币结算交易，未通过对账的账单默认不计入；原币金额不会换算为人民币。</p>
         </div>
         <div className="row">
           {months.length > 0 ? (
@@ -111,6 +121,19 @@ export function DashboardPage() {
             <strong>当前展示的全部为虚构示例数据</strong>
             <p>真实账单已被隐藏，演示数据不会被混入真实统计。关闭演示模式后可导入自己的 PDF / EML 账单。</p>
           </div>
+        </div>
+      ) : null}
+
+      {excludedCurrencies.length > 0 ? (
+        <div className="notice notice-warn" data-testid="currency-summary-warning">
+          非人民币结算交易未计入本页金额、趋势和分布：{excludedCurrencies.map(([currency, count]) => `${currency} ${count} 笔`).join('、')}。
+          未进行汇率换算，完整记录可在「交易明细」查看。
+        </div>
+      ) : null}
+      {pendingDuplicates > 0 ? (
+        <div className="notice notice-warn" data-testid="duplicate-summary-warning">
+          有 {pendingDuplicates} 笔未解决的疑似重复交易仍计入统计，总额可能重复累计。
+          <a href="#/review">前往人工复核查看候选对照</a>。不会自动合并或删除。
         </div>
       ) : null}
 

@@ -54,6 +54,13 @@ description warnings. Synthetic parser tests are separate; private originals are
 not required for this reference gate. Never regenerate expected files to make a
 regression pass.
 
+This reference gate compares saved outputs, not a fresh parse of the six historical
+private originals. `web/tests/currentParserGolden.test.ts` separately invokes all
+six current parsers on invented templates and checks independently specified
+transaction counts, multiplicities, both monetary legs, currencies, directions and
+classifications through ingestion and IndexedDB persistence. These synthetic
+references supplement the historical JSON; they do not certify private layouts.
+
 - Batch 1: `icbc/3443_202607`, `abc/3982_202607`, `ccb/5574_202607` — real EML.
 - Batch 2: `boc/6505_202607` (real PDF via pdfplumber / pdf.js geometry),
   `bocom/5155_202607` (real EML), `citic/7650_202607` (real EML, Web side uses

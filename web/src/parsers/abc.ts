@@ -2,7 +2,7 @@ import { parseDateInput, type IsoDate } from '../core/dates'
 import { extractMerchant, inferTransactionType, signForDirection } from '../core/classify'
 import { parseAmountToMinor } from '../core/money'
 import type { BankId, Direction, NamedAmount, StatementSummary } from '../core/types'
-import { emptySummary, ParseError, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
+import { emptySummary, ParseError, requireTransactionAmount, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
 
 const PARSER_ID = 'abc_eml'
 const PARSER_VERSION = '1.0.0'
@@ -386,9 +386,8 @@ function parseRow(
   if (!cardLast4) return null
 
   const rawDescription = (cells[3] ?? '').replace(/\s+/g, ' ').trim()
-  const txnSplit = parseSlashAmount(cells[4] ?? '')
-  const settleSplit = parseSlashAmount(cells[5] ?? '')
-  if (!txnSplit || !settleSplit) return null
+  const txnSplit = requireTransactionAmount(parseSlashAmount(cells[4] ?? ''), sourceRow)
+  const settleSplit = requireTransactionAmount(parseSlashAmount(cells[5] ?? ''), sourceRow)
 
   // Settlement convention is `支出为-`: negative = expense.
   const settleIsExpense = settleSplit.negative
@@ -438,6 +437,7 @@ export function parseSlashAmount(cell: string): { currency: string; minor: numbe
   const text = cell.trim()
   if (!text || text === '-' || /^-+$/.test(text)) return null
   const parts = text.split('/')
+  if (parts.length > 2) return null
   const amountPart = (parts[0] ?? text).trim()
   const currencyPart = (parts[1] ?? 'CNY').trim().toUpperCase()
   const currency = currencyPart === 'RMB' ? 'CNY' : currencyPart || 'CNY'
