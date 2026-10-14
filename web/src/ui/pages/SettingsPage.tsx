@@ -156,7 +156,7 @@ export function SettingsPage() {
           <div className="card-pad stack">
             <p className="subtle">
               导出 XLSX 用于在 Excel / LibreOffice 中查看和分析，不可用于恢复应用。备份 JSON 用于恢复应用；导出 XLSX
-              用于脱离本应用查看自有财务历史。工作簿包含 Transactions（交易）与 Statements（账单）两个工作表，保留交易标识、原始币种与金额、重复指纹与序号、来源账单，不做换算与重算，可独立打开。
+              用于脱离本应用查看自有财务历史。工作簿包含 交易明细（日常查看，可直接阅读）与 Technical Metadata（迁移审计）两个工作表，前者保留银行、卡尾号、日期、说明、类型、方向与原始币种金额，不做换算与重算，可独立打开；后者保留交易标识、账单标识、业务指纹、重复序号、来源文件与导入时间。
             </p>
             <div className="row">
               <button
