@@ -1,5 +1,5 @@
 import { SPENDING_TYPES } from './classify'
-import { formatMinor } from './money'
+import { formatMinor, normalizeCurrencyCode } from './money'
 import type { ReconciliationCheck, ReconciliationResult, StatementSummary, Transaction } from './types'
 
 /**
@@ -27,6 +27,14 @@ export function reconcileStatement(input: ReconcileInput): ReconciliationResult 
   const currency = summary.components[0]?.currency ?? 'CNY'
 
   const active = transactions.filter((tx) => tx.reviewStatus !== 'rejected')
+  const otherCurrencies = active.filter((tx) => normalizeCurrencyCode(tx.settlementCurrency) !== normalizeCurrencyCode(currency))
+  if (otherCurrencies.length > 0) {
+    checks.push({
+      id: 'other_currencies', label: '其他结算币种单独保留', status: 'skipped',
+      expectedMinor: null, actualMinor: null, differenceMinor: null,
+      detail: `${otherCurrencies.length} 笔非 ${currency} 结算交易未纳入本次 ${currency} 对账；未进行汇率换算`,
+    })
+  }
 
   // --- 1. balance equation -------------------------------------------------
   const hasPrevious = summary.previousBalanceMinor !== null
@@ -150,7 +158,7 @@ export function reconcileStatement(input: ReconcileInput): ReconciliationResult 
   const hasMismatch = checks.some((check) => check.status === 'mismatch')
   const status: ReconciliationResult['status'] = hasMismatch ? 'mismatch' : hasMissing ? 'insufficient' : 'passed'
 
-  return { status, checks, computedBalanceMinor: checks[0]?.actualMinor ?? null }
+  return { status, checks, computedBalanceMinor: checks.find((check) => check.id === 'balance_equation')?.actualMinor ?? null }
 }
 
 /** Transaction types that make up the bank's 新增消费 / New Spending line. */
@@ -244,7 +252,7 @@ export interface SpendingBreakdown {
   netMinor: number
 }
 
-export function summarizeTransactions(transactions: Transaction[]): SpendingBreakdown {
+export function summarizeTransactions(transactions: Transaction[], currency = 'CNY'): SpendingBreakdown {
   const result: SpendingBreakdown = {
     spendingMinor: 0,
     cashAdvanceMinor: 0,
@@ -263,6 +271,8 @@ export function summarizeTransactions(transactions: Transaction[]): SpendingBrea
 
   for (const tx of transactions) {
     if (tx.reviewStatus === 'rejected') continue
+    // Minor units from different settlement currencies must never be added.
+    if (normalizeCurrencyCode(tx.settlementCurrency) !== normalizeCurrencyCode(currency)) continue
     const amount = tx.settlementAmountMinor
     if (tx.type === 'purchase') result.spendingMinor += amount
     else if (tx.type === 'cash_advance') result.cashAdvanceMinor += amount

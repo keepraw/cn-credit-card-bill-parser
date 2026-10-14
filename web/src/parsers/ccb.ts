@@ -2,7 +2,7 @@ import { parseDateInput } from '../core/dates'
 import { extractMerchant, inferTransactionType, signForDirection } from '../core/classify'
 import { parseAmountToMinor } from '../core/money'
 import type { BankId, Direction, NamedAmount, StatementSummary } from '../core/types'
-import { emptySummary, ParseError, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
+import { assertCreditSign, emptySummary, ParseError, requireTransactionAmount, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
 
 const PARSER_ID = 'ccb_eml'
 const PARSER_VERSION = '1.0.0'
@@ -286,10 +286,6 @@ function collectTransactions(
   return transactions
 }
 
-function directionFromSignedCell(cell: string): Direction {
-  return /^-/.test(cell.trim()) ? 'credit' : 'debit'
-}
-
 function parseEightColRow(cells: string[], rowIndex: number, fallbackCardLast4: string): ParsedTransaction | null {
   const transactionDate = parseDateInput((cells[0] ?? '').trim())
   const postingDate = parseDateInput((cells[1] ?? '').trim()) ?? transactionDate
@@ -300,12 +296,12 @@ function parseEightColRow(cells: string[], rowIndex: number, fallbackCardLast4: 
 
   const rawDescription = (cells[3] ?? '').replace(/\s+/g, ' ').trim()
   const txnCurrency = normalizeCurrency(cells[4] ?? '')
-  const txnParsed = parseAmountToMinor(cells[5] ?? '', txnCurrency)
+  const txnParsed = requireTransactionAmount(parseAmountToMinor(cells[5] ?? '', txnCurrency), rowIndex)
   const settleCurrency = normalizeCurrency(cells[6] ?? '')
-  const settleParsed = parseAmountToMinor(cells[7] ?? '', settleCurrency)
-  if (!txnParsed || !settleParsed) return null
+  const settleParsed = requireTransactionAmount(parseAmountToMinor(cells[7] ?? '', settleCurrency), rowIndex)
 
-  const direction = directionFromSignedCell(cells[7] ?? '')
+  const direction: Direction = settleParsed.negativeByFormat ? 'credit' : 'debit'
+  assertCreditSign(txnParsed.negativeByFormat, direction, rowIndex)
   const transactionAmountMinor = signForDirection(txnParsed.minor, direction)
   const settlementAmountMinor = signForDirection(settleParsed.minor, direction)
 
@@ -344,10 +340,10 @@ function parseSixColRow(cells: string[], rowIndex: number, fallbackCardLast4: st
   const cardLast4 = /^\d{4}$/.test(cardCell) ? cardCell : fallbackCardLast4
   if (!cardLast4) return null
   const rawDescription = (cells[3] ?? '').replace(/\s+/g, ' ').trim()
-  const txnSplit = parseCombinedAmount(cells[4] ?? '')
-  const settleSplit = parseCombinedAmount(cells[5] ?? '')
-  if (!txnSplit || !settleSplit) return null
-  const direction: Direction = settleSplit.negative || txnSplit.negative ? 'credit' : 'debit'
+  const txnSplit = requireTransactionAmount(parseCombinedAmount(cells[4] ?? ''), rowIndex)
+  const settleSplit = requireTransactionAmount(parseCombinedAmount(cells[5] ?? ''), rowIndex)
+  const direction: Direction = settleSplit.negative ? 'credit' : 'debit'
+  assertCreditSign(txnSplit.negative, direction, rowIndex)
   const transactionAmountMinor = signForDirection(txnSplit.minor, direction)
   const settlementAmountMinor = signForDirection(settleSplit.minor, direction)
   const bankToken = extractBankToken(rawDescription)
@@ -379,6 +375,7 @@ export function parseCombinedAmount(cell: string): { currency: string; minor: nu
   const text = cell.trim()
   if (!text || text === '-' || /^-+$/.test(text)) return null
   const parts = text.split('/')
+  if (parts.length > 2) return null
   if (parts.length === 2) {
     const amountPart = parts[0]!.trim()
     const currencyPart = parts[1]!.trim()
@@ -388,5 +385,5 @@ export function parseCombinedAmount(cell: string): { currency: string; minor: nu
   }
   const parsed = parseAmountToMinor(text)
   if (!parsed) return null
-  return { currency: 'CNY', minor: Math.abs(parsed.minor), negative: parsed.negativeByFormat }
+  return { currency: parsed.currency ?? 'CNY', minor: Math.abs(parsed.minor), negative: parsed.negativeByFormat }
 }

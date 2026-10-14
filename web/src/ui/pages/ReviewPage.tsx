@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../../app/AppStore'
 import { formatMinor } from '../../core/money'
+import { buildDuplicateReviewDetails } from '../../core/migrationAudit'
 import { reconcileStatement } from '../../core/reconcile'
 import { REVIEW_FLAG_LABELS, bankName, type Statement, type Transaction } from '../../core/types'
 import {
@@ -19,6 +20,9 @@ export function ReviewPage() {
   const [tab, setTab] = useState<'statements' | 'transactions'>('statements')
   const [selectedStatement, setSelectedStatement] = useState<string | null>(null)
   const [draftNote, setDraftNote] = useState('')
+  const duplicateDetails = useMemo(() => buildDuplicateReviewDetails(visibleTransactions,
+    visibleTransactions.filter((tx) => tx.flags.includes('suspected_duplicate'))), [visibleTransactions])
+  const transactionsById = useMemo(() => new Map(visibleTransactions.map((tx) => [tx.id, tx])), [visibleTransactions])
 
   const flaggedStatements = useMemo(
     // Imported history has no balance to reconcile, so it never enters the review queue.
@@ -232,6 +236,17 @@ export function ReviewPage() {
                     </td>
                     <td>
                       <FlagList flags={tx.flags} />
+                      {tx.flags.includes('suspected_duplicate') ? (
+                        <DuplicateComparison
+                          transaction={tx}
+                          candidates={(duplicateDetails.get(tx.id)?.candidateIds ?? []).flatMap((id) => {
+                            const peer = transactionsById.get(id)
+                            return peer ? [peer] : []
+                          })}
+                          candidateCount={duplicateDetails.get(tx.id)?.candidateCount ?? 0}
+                          differingFields={duplicateDetails.get(tx.id)?.differingFields ?? []}
+                        />
+                      ) : null}
                     </td>
                     <td>
                       <ReviewStatusBadge status={tx.reviewStatus} />
@@ -327,3 +342,38 @@ function SummaryRow({ label, minor, strong }: { label: string; minor: number | n
 }
 
 export const REVIEW_FLAG_ORDER = Object.keys(REVIEW_FLAG_LABELS) as Array<keyof typeof REVIEW_FLAG_LABELS>
+
+const DIFFERENCE_LABELS: Record<string, string> = {
+  postingDate: '入账日', description: '描述', type: '类型', direction: '方向',
+  transactionCurrency: '原币币种', transactionAmountMinor: '原币金额',
+}
+
+function DuplicateComparison({ transaction, candidates, candidateCount, differingFields }: {
+  transaction: Transaction; candidates: Transaction[]; candidateCount: number; differingFields: string[]
+}) {
+  return (
+    <details data-testid="duplicate-comparison">
+      <summary>查看疑似重复对照（{candidateCount} 笔候选）</summary>
+      <p>保留全部记录；确认前统计可能重复累计。以下最多显示 3 笔候选，不代表同一真实交易。</p>
+      <p>示例差异：{differingFields.map((field) => DIFFERENCE_LABELS[field] ?? field).join('、') || '所列业务字段相同，仍需核实来源和交易次数'}</p>
+      {candidates.length === 0 ? <p>当前账本无法定位候选，请对照原始文件核实。</p> : null}
+      <div className="table-wrap">
+        <table className="data">
+          <thead><tr><th>记录</th><th>银行 / 卡尾号</th><th>交易日 / 入账日</th><th>描述</th><th>原币金额</th><th>结算金额</th><th>类型 / 方向</th><th>来源</th><th>复核状态</th></tr></thead>
+          <tbody>{[transaction, ...candidates].map((row, index) => (
+            <tr key={row.id}>
+              <td>{index === 0 ? '当前交易' : '候选交易'}</td>
+              <td>{bankName(row.bank)} / {row.cardLast4}</td>
+              <td>{row.transactionDate} / {row.postingDate}</td><td>{row.description}</td>
+              <td>{row.transactionCurrency} {formatMinor(row.transactionAmountMinor, row.transactionCurrency)}</td>
+              <td>{row.settlementCurrency} {formatMinor(row.settlementAmountMinor, row.settlementCurrency)}</td>
+              <td><TypeBadge type={row.type} /> / {row.direction === 'credit' ? '贷记' : '借记'}</td>
+              <td>{row.sourceFileName}{row.sourceRow === null ? '' : `（来源行 ${row.sourceRow}）`}</td>
+              <td><ReviewStatusBadge status={row.reviewStatus} /></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </details>
+  )
+}

@@ -2,7 +2,7 @@ import { parseDateInput, resolveShortDate } from '../core/dates'
 import { extractMerchant, inferTransactionType, signForDirection } from '../core/classify'
 import { parseAmountToMinor } from '../core/money'
 import type { BankId, NamedAmount, StatementSummary } from '../core/types'
-import { emptySummary, ParseError, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
+import { assertCreditSign, emptySummary, ParseError, requireTransactionAmount, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
 
 const PARSER_ID = 'bocom_eml'
 const PARSER_VERSION = '2.0.0'
@@ -406,14 +406,13 @@ function parseRow(
   const cardLast4 = cardIndex === -1 ? '' : cells[cardIndex]!
 
   const amountIndexes = cells
-    .map((cell, index) => (parseCurrencyAmount(cell) ? index : -1))
-    .filter((index) => index >= 0 && index !== cardIndex)
-  if (amountIndexes.length === 0) return null
+    .map((cell, index) => (/^(?:[A-Za-z]{3}(?=\s|[-+(\d])|[¥￥$])/.test(cell.trim()) ? index : -1))
+    .filter((index) => index >= 0 && index !== cardIndex && (cardIndex < 0 || index > cardIndex + 1))
+  if (amountIndexes.length !== 2) requireTransactionAmount(null, ref.rowIndex)
 
-  const transactionParsed = parseCurrencyAmount(cells[amountIndexes[0]!]!)
-  const settlementParsed =
-    (amountIndexes.length > 1 ? parseCurrencyAmount(cells[amountIndexes[1]!]!) : null) ?? transactionParsed
-  if (!transactionParsed || !settlementParsed) return null
+  const transactionParsed = requireTransactionAmount(parseCurrencyAmount(cells[amountIndexes[0]!]!), ref.rowIndex)
+  const settlementParsed = requireTransactionAmount(parseCurrencyAmount(cells[amountIndexes[1]!]!), ref.rowIndex)
+  assertCreditSign(transactionParsed.minor < 0 || settlementParsed.minor < 0, direction, ref.rowIndex)
 
   const skip = new Set<number>([...dateIndexes, cardIndex, ...amountIndexes])
   const rawDescription = cells
@@ -472,7 +471,7 @@ const CURRENCY_MAP: Record<string, string> = {
   $: 'USD',
 }
 
-const AMOUNT_CELL_RE = /^([A-Za-z]{3}|[¥￥$])\s*(-?[\d,]+\.?\d*)\s*(CR|DR)?$/i
+const AMOUNT_CELL_RE = /^([A-Za-z]{3}(?=\s|[-+(\d])|[¥￥$])/i
 
 export function parseCurrencyAmount(cell: string): CurrencyAmount | null {
   const text = cell.trim()
@@ -481,7 +480,7 @@ export function parseCurrencyAmount(cell: string): CurrencyAmount | null {
   if (!match) return null
   const raw = match[1]!.toUpperCase()
   const currency = CURRENCY_MAP[raw] ?? raw
-  const parsed = parseAmountToMinor(`${match[2]}${(match[3] ?? '').toUpperCase() === 'CR' ? '-' : ''}`, currency)
+  const parsed = parseAmountToMinor(text, currency)
   if (!parsed) return null
   return { currency, minor: parsed.minor }
 }

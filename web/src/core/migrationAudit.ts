@@ -47,6 +47,41 @@ export interface MigrationAudit {
   observations: MigrationObservation[]
 }
 
+export interface DuplicateReviewDetail {
+  candidateIds: string[]
+  candidateCount: number
+  differingFields: string[]
+}
+
+/** Rebuild bounded review details from the ledger; no stored IDs or schema change. */
+export function buildDuplicateReviewDetails(rows: MigrationRow[], targets: MigrationRow[] = rows): Map<string, DuplicateReviewDetail> {
+  if (targets.length === 0) return new Map()
+  const buckets = new Map<string, { count: number; examples: MigrationRow[] }>()
+  for (const row of rows) {
+    const scope = scopeKey(row)
+    if (scope === null) continue
+    const bucket = buckets.get(scope) ?? { count: 0, examples: [] }
+    bucket.count += 1
+    const key = fullKey(row)
+    const identical = bucket.examples.filter((other) => fullKey(other) === key)
+    // Retain two IDs per signature so excluding the current row cannot hide its peer.
+    if (identical.length < 2 && (identical.length > 0 || new Set(bucket.examples.map(fullKey)).size < 4)) bucket.examples.push(row)
+    buckets.set(scope, bucket)
+  }
+  const details = new Map<string, DuplicateReviewDetail>()
+  for (const row of targets) {
+    if (!row.id) continue
+    const scope = scopeKey(row)
+    const bucket = scope === null ? undefined : buckets.get(scope)
+    const peers = bucket?.examples.filter((other) => other.id !== row.id).slice(0, 3) ?? []
+    details.set(row.id, {
+      candidateIds: peers.flatMap((peer) => peer.id ? [peer.id] : []), candidateCount: Math.max(0, (bucket?.count ?? 1) - 1),
+      differingFields: COMPARED_FIELDS.filter((field) => peers.some((peer) => peer[field] !== row[field])),
+    })
+  }
+  return details
+}
+
 /**
  * Consume exact business occurrences one-to-one; ambiguous scope matches only
  * request review. Output cannot authorize a merge, deletion or ID rewrite.

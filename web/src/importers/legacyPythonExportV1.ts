@@ -134,16 +134,12 @@ export function parseLegacyAmount(value: unknown, currency: string): number | nu
   }
   const text = String(value).trim()
   if (!text) return null
-  const currencyTokens = text.match(/[A-Z]{3}/gi) ?? []
-  if (currencyTokens.some((token) => normalizeLegacyCurrency(token) !== currency)) return null
-  // Bank parsers accept decorated free text. Structured history cells must
-  // contain only money, so arbitrary text cannot be stripped into a number.
-  const numeric = text.replace(/人民币|美元|港币|港元|欧元|日元|英镑|CNY|RMB|CHN|USD|HKD|EUR|JPY|GBP|SGD|AUD|CAD|CHF|KRW|VND|￥|¥|元/gi, '')
-    .replace(/\/\s*[CD]\b|\bDR\b|CR\b/gi, '').trim()
-  if (!/^(?:[+\-−–—]?[\d,.]+|[\d,.]+-|\([\d,.]+\))$/.test(numeric)) return null
-  const parsed = parseAmountToMinor(text, currency)
-  if (parsed?.currency && parsed.currency !== currency) return null
-  return parsed ? parsed.minor : null
+  try {
+    return parseAmountToMinor(text, currency)?.minor ?? null
+  } catch {
+    // Unsupported embedded currencies remain row-specific historical anomalies.
+    return null
+  }
 }
 
 const FLOAT_DUST_TOLERANCE = 1e-6

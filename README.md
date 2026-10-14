@@ -211,6 +211,8 @@ The repository includes golden fixtures for the six registered banks (`golden/RE
 ### Known limitations requiring follow-up
 
 - **Transaction identity:** PR #12 preserves occurrences and user edits. Ambiguous legacy/native classification, posting-date, description and original-money disagreements now request review and remain distinct. Equal business rows without evidence distinguishing overlap from a new event still require care.
+- **Financial import safety:** Malformed money, conflicting currency tokens and invalid precision in a recognized bank transaction fail the complete parse. Historical adapters report excluded source rows. No stored history is repaired automatically.
+- **Currency and duplicate totals:** Dashboard amounts, trends and distributions include only CNY settlement rows; other settlement currencies are retained with an explicit exclusion warning, without FX conversion. Unresolved suspected duplicates remain included with a warning and bounded source comparisons in Review.
 - **Stored attachment lifecycle:** PR #13 fixes transactional clearing and evidence/result association. Evidence retention remains best effort under browser quota limits.
 - **Backup integrity:** PR #14 validates records and restores ZIP data/evidence atomically. Version-1 backups still exclude separately stored free-text review notes.
 - **Testing and dependencies:** Keep Python and browser checks mandatory, monitor dependency advisories, and extend large-dataset coverage as needed.

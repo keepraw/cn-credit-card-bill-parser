@@ -2,7 +2,7 @@ import { parseDateInput } from '../core/dates'
 import { extractMerchant, inferTransactionType, signForDirection } from '../core/classify'
 import { parseAmountToMinor } from '../core/money'
 import type { BankId, Direction, NamedAmount, StatementSummary } from '../core/types'
-import { emptySummary, ParseError, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
+import { assertCreditSign, emptySummary, ParseError, requireTransactionAmount, type BankParser, type ParsedStatement, type ParsedTransaction, type SourceDocument } from './types'
 
 const PARSER_ID = 'icbc_eml'
 const PARSER_VERSION = '1.0.0'
@@ -263,16 +263,17 @@ export function parseSplitAmount(cell: string): SplitAmount | null {
   const text = cell.trim()
   if (!text || text === '/' || text === '-' || /^-+$/.test(text)) return null
   let direction: Direction | null = null
-  if (/\(存入\)/.test(text)) direction = 'credit'
-  else if (/\(支出\)/.test(text)) direction = 'debit'
+  if (/[（(]\s*存入\s*[）)]/.test(text)) direction = 'credit'
+  else if (/[（(]\s*支出\s*[）)]/.test(text)) direction = 'debit'
   const withoutSuffix = text.replace(/\s*[（(]\s*(存入|支出)\s*[）)]\s*$/, '').trim()
   const parts = withoutSuffix.split('/')
+  if (parts.length > 2) return null
   const amountPart = (parts[0] ?? '').trim()
   const currencyPart = (parts[1] ?? 'CNY').trim().toUpperCase()
   const currency = CURRENCY_MAP[currencyPart] ?? (currencyPart || 'CNY')
   const parsed = parseAmountToMinor(amountPart, currency)
   if (!parsed) return null
-  return { currency, minor: Math.abs(parsed.minor), direction }
+  return { currency, minor: parsed.minor, direction }
 }
 
 const CREDIT_TYPE_TOKENS = /^(退款|退货|刷卡金|返现|还款|存入|贷方|调整|冲正)/
@@ -330,19 +331,19 @@ function parseRow(cells: string[], rowIndex: number, fallbackCardLast4: string):
 
   const bankToken = (cells[3] ?? '').trim()
   const rawDescription = (cells[4] ?? '').replace(/\s+/g, ' ').trim()
-  const txnSplit = parseSplitAmount(cells[5] ?? '')
-  const settleSplit = parseSplitAmount(cells[6] ?? '')
-  const primary = settleSplit ?? txnSplit
-  if (!primary) return null
+  const txnSplit = requireTransactionAmount(parseSplitAmount(cells[5] ?? ''), rowIndex)
+  const settleSplit = requireTransactionAmount(parseSplitAmount(cells[6] ?? ''), rowIndex)
+  const primary = settleSplit
 
-  let direction: Direction | null = primary.direction ?? directionFromTypeToken(bankToken)
+  let direction: Direction | null = primary.direction ?? (primary.minor < 0 ? 'credit' : null) ?? directionFromTypeToken(bankToken)
   if (!direction) {
     direction = 'debit'
   }
 
-  const txnCurrency = txnSplit?.currency ?? primary.currency
-  const txnMinor = txnSplit ? signForDirection(txnSplit.minor, direction) : signForDirection(primary.minor, direction)
-  const settleCurrency = settleSplit?.currency ?? txnCurrency
+  assertCreditSign(txnSplit.minor < 0 || settleSplit.minor < 0, direction, rowIndex)
+  const txnCurrency = txnSplit.currency
+  const txnMinor = signForDirection(txnSplit.minor, direction)
+  const settleCurrency = settleSplit.currency
   const settleMinor = signForDirection(primary.minor, direction)
 
   const cleaned = cleanDescription(rawDescription)

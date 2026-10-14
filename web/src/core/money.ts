@@ -9,6 +9,18 @@
 
 export type CurrencyCode = string
 
+/** Normalize supported aliases without assigning a currency to unknown text. */
+const CURRENCY_ALIASES: Record<string, string> = {
+  RMB: 'CNY', CHN: 'CNY', 人民币: 'CNY', '￥': 'CNY', '¥': 'CNY',
+  美元: 'USD', '$': 'USD', 港币: 'HKD', 港元: 'HKD', 欧元: 'EUR', '€': 'EUR',
+  日元: 'JPY', 英镑: 'GBP', '£': 'GBP',
+}
+
+export function normalizeCurrencyCode(currency: string): string {
+  const text = currency.trim().toUpperCase()
+  return CURRENCY_ALIASES[text] ?? text
+}
+
 /** Decimal places used by a currency. */
 const CURRENCY_EXPONENT: Record<string, number> = {
   CNY: 2,
@@ -27,12 +39,12 @@ const CURRENCY_EXPONENT: Record<string, number> = {
 }
 
 export function currencyExponent(currency: string): number {
-  return CURRENCY_EXPONENT[(currency || 'CNY').toUpperCase()] ?? 2
+  return CURRENCY_EXPONENT[normalizeCurrencyCode(currency || 'CNY')] ?? 2
 }
 
 /** Historical adapters must not guess the exponent of an unfamiliar currency. */
 export function isSupportedCurrency(currency: string): boolean {
-  return Object.hasOwn(CURRENCY_EXPONENT, currency.toUpperCase())
+  return Object.hasOwn(CURRENCY_EXPONENT, normalizeCurrencyCode(currency))
 }
 
 /** Convert minor units back to a plain decimal string (no float math involved). */
@@ -79,14 +91,8 @@ export interface ParsedAmount {
   currency?: string
 }
 
-const CURRENCY_WORDS: Array<[RegExp, string]> = [
-  [/(?:人民币|￥|¥|RMB|CNY)/i, 'CNY'],
-  [/(?:美元|USD)/i, 'USD'],
-  [/(?:港币|港元|HKD)/i, 'HKD'],
-  [/(?:欧元|EUR)/i, 'EUR'],
-  [/(?:日元|JPY)/i, 'JPY'],
-  [/(?:英镑|GBP)/i, 'GBP'],
-]
+const CURRENCY_PREFIX = /^(人民币|美元|港币|港元|欧元|日元|英镑|[￥¥$€£]|[A-Z]{3}(?=\s|[-+(\d]))\s*/i
+const CURRENCY_SUFFIX = /\s*(人民币|美元|港币|港元|欧元|日元|英镑|[￥¥$€£]|[A-Z]{3})$/i
 
 /**
  * Parse a bank-provided amount string into signed minor units.
@@ -95,66 +101,60 @@ const CURRENCY_WORDS: Array<[RegExp, string]> = [
  * `1234.56/C`, `1234.56CR`, `CNY 1234.56`, `&yen;6512.48`.
  * Returns `null` when the text does not contain a usable number.
  */
-export function parseAmountToMinor(raw: string | number | null | undefined, fallbackCurrency = 'CNY'): ParsedAmount | null {
+export function parseAmountToMinor(raw: string | number | null | undefined, fallbackCurrency?: string): ParsedAmount | null {
   if (raw === null || raw === undefined) return null
   if (typeof raw === 'number') {
     if (!Number.isFinite(raw)) return null
-    if (!isSupportedCurrency(fallbackCurrency)) throw new Error(`尚未定义币种 ${fallbackCurrency} 的货币精度，拒绝猜测金额`)
-    const scaled = raw * 10 ** currencyExponent(fallbackCurrency)
+    const currency = normalizeCurrencyCode(fallbackCurrency ?? 'CNY')
+    if (!isSupportedCurrency(currency)) throw new Error(`尚未定义币种 ${currency} 的货币精度，拒绝猜测金额`)
+    const scaled = raw * 10 ** currencyExponent(currency)
     const asInt = Math.round(scaled)
     if (!Number.isSafeInteger(asInt)) return null
     if (Math.abs(scaled - asInt) > 1e-6) return null
     return { minor: asInt, negativeByFormat: raw < 0 }
   }
 
-  let text = String(raw).trim()
+  let text = String(raw).trim().replace(/&yen;/gi, '¥').replace(/[−–—]/g, '-')
   if (!text) return null
 
   let currency: string | undefined
-  for (const [re, code] of CURRENCY_WORDS) {
-    if (re.test(text)) {
-      currency = code
-      break
-    }
+  const prefix = CURRENCY_PREFIX.exec(text)
+  if (prefix) {
+    currency = normalizeCurrencyCode(prefix[1]!)
+    text = text.slice(prefix[0].length).trim()
   }
-  const codedCurrency = /^([A-Z]{3})(?=\s|[-+(\d])/i.exec(text)?.[1]?.toUpperCase()
-  if (!currency && codedCurrency) currency = codedCurrency
-  const effectiveCurrency = currency ?? fallbackCurrency
+  // Bank credit/debit suffixes are parsed before an optional currency suffix.
+  const bankSign = /(?:\/\s*([CD])|(CR|DR))$/i.exec(text)
+  if (bankSign) text = text.slice(0, bankSign.index).trim()
+  const suffix = CURRENCY_SUFFIX.exec(text)
+  if (suffix) {
+    const code = normalizeCurrencyCode(suffix[1]!)
+    if (currency && currency !== code) return null
+    currency = code
+    text = text.slice(0, suffix.index).trim()
+  }
+  const expectedCurrency = fallbackCurrency === undefined ? undefined : normalizeCurrencyCode(fallbackCurrency)
+  if (currency && expectedCurrency && currency !== expectedCurrency) return null
+  const effectiveCurrency = currency ?? expectedCurrency ?? 'CNY'
   if (!isSupportedCurrency(effectiveCurrency)) throw new Error(`尚未定义币种 ${effectiveCurrency} 的货币精度，拒绝猜测金额`)
-  const signedText = text.replace(/^(?:人民币|美元|港币|港元|欧元|日元|英镑|[A-Z]{3}|[￥¥])\s*/i, '').trim()
+  if (text.endsWith('元') && effectiveCurrency === 'CNY') text = text.slice(0, -1).trim()
+  const parenthesized = /^\((.*)\)$/.exec(text)
+  const leadingSign = /^[+-]/.exec(text)
+  const trailingMinus = text.endsWith('-')
+  if (Number(!!parenthesized) + Number(!!leadingSign) + Number(trailingMinus) > 1) return null
+  const amountNegative = !!parenthesized || leadingSign?.[0] === '-' || trailingMinus
+  const bankCredit = /^(C|CR)$/i.test(bankSign?.[1] ?? bankSign?.[2] ?? '')
+  if (bankSign && !bankCredit && amountNegative) return null
+  if (bankCredit && leadingSign?.[0] === '+') return null
+  const negativeByFormat = amountNegative || bankCredit
+  if (parenthesized) text = parenthesized[1]!
+  else if (leadingSign) text = text.slice(1)
+  else if (trailingMinus) text = text.slice(0, -1)
 
-  const negativeByFormat =
-    /^\(.*\)$/.test(signedText) ||
-    /\/\s*C\b/i.test(text) ||
-    /\d\s*CR\b/i.test(text) ||
-    /^-/.test(signedText) ||
-    /-$/.test(text) ||
-    /^[−–—]/.test(signedText) // unicode minus / en dash / em dash
-
-  text = text
-    .replace(/\/\s*[CD]\b/gi, '')
-    .replace(/\bDR\b/gi, '')
-    .replace(/\s*CR\b/gi, '')
-    .replace(/[^\d.,\-−–—]/g, '')
-    .replace(/[−–—]/g, '-')
-
-  if (text.startsWith('-')) {
-    text = text.slice(1)
-  } else if (text.endsWith('-')) {
-    text = text.slice(0, -1)
-  }
-  text = text.replace(/-/g, '')
-
-  // Normalise the thousands/decimal separators without losing precision.
-  if (text.includes(',') && text.includes('.')) {
-    text = text.lastIndexOf(',') > text.lastIndexOf('.') ? text.replace(/\./g, '').replace(',', '.') : text.replace(/,/g, '')
-  } else if (text.includes(',')) {
-    text = /,\d{3}$/.test(text) ? text.replace(/,/g, '') : text.replace(',', '.')
-  } else if ((text.match(/\./g) ?? []).length > 1) {
-    text = text.replace(/\./g, '')
-  }
-
-  const match = /^(\d+)(?:\.(\d*))?$/.exec(text)
+  // Only a decimal point and complete three-digit comma groups are accepted.
+  // Never remove arbitrary text or malformed separators to manufacture money.
+  if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(text)) return null
+  const match = /^(\d+)(?:\.(\d+))?$/.exec(text.replace(/,/g, ''))
   if (!match) return null
   const integerPart = match[1] ?? '0'
   let fractionPart = match[2] ?? ''
