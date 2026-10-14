@@ -2,7 +2,8 @@ import { useLayoutEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AppProvider, useApp } from '../../src/app/AppStore'
 import { AppShell } from '../../src/ui/AppShell'
-import { db, DEFAULT_SETTINGS } from '../../src/db/db'
+import Dexie from 'dexie'
+import { BillDatabase, db, DEFAULT_SETTINGS } from '../../src/db/db'
 import * as repository from '../../src/db/repository'
 import { hashLegacyFile, planLegacyImport, previewLegacyWorkbook } from '../../src/importers/legacyImport'
 import { validateBackup } from '../../src/backup/validation'
@@ -26,7 +27,9 @@ function Probe() {
   useLayoutEffect(() => { if (current.state.ready) window.dispatchEvent(new Event('benchmark-ready')) }, [current.state.ready])
   return <AppShell />
 }
-createRoot(document.getElementById('root')!).render(<AppProvider><Probe /></AppProvider>)
+const databaseOnly = new URLSearchParams(location.search).has('database')
+if (!databaseOnly) createRoot(document.getElementById('root')!).render(<AppProvider><Probe /></AppProvider>)
+let verificationDb: Dexie = db
 
 async function file(name: string) {
   const bytes = await (await fetch(`/__fixture/${name}`)).arrayBuffer()
@@ -202,8 +205,70 @@ async function attachmentExperiment(name: string) {
   return { before, after: await metrics(), inputBytes: buffer.byteLength }
 }
 
+const historicStores = {
+  statements: 'id, bank, cardLast4, cycleEnd, status, isDemo',
+  transactions: 'id, statementId, bank, transactionDate, postingDate, type, category, reviewStatus, isDemo, fingerprint, [bank+transactionDate]',
+  imports: 'id, fileHash, importedAt, status, isDemo', settings: 'key', reviewNotes: 'transactionId',
+}
+const minimalStores = { statements: 'id', transactions: 'id, statementId', imports: 'id', settings: 'key', reviewNotes: 'transactionId', attachments: 'fileHash' }
+const stripProbeKeys = (row: Record<string, unknown>) => Object.fromEntries(Object.entries(row).filter(([key]) => !['__key', 'binaryHash', 'binaryBytes'].includes(key)))
+function schemaOf(database: Dexie) {
+  return { version: database.backendDB().version, indexes: database.tables.map(table => ({ table: table.name,
+    primary: table.schema.primKey.keyPath, indexes: table.schema.indexes.map(index => index.name) })) }
+}
+async function seedVersion(version: number, jsonName: string, originalName: string,
+  extras: { notes: Record<string, unknown>[]; attachments: Record<string, unknown>[] }) {
+  db.close()
+  const old = new Dexie(db.name)
+  old.version(version).stores(version === 1 ? historicStores : version === 2 ? { ...historicStores, attachments: 'fileHash, importId, importedAt' } : minimalStores)
+  await old.open()
+  const payload = JSON.parse(await (await fetch(`/__fixture/${jsonName}`)).text()) as repository.BackupPayload
+  const evidence = version >= 2 ? await (await fetch(`/__fixture/${originalName}`)).arrayBuffer() : null
+  const start = now()
+  await old.transaction('rw', old.tables, async () => {
+    for (const name of ['statements', 'transactions', 'imports'] as const) {
+      for (let offset = 0; offset < payload[name].length; offset += 2000) await old.table(name).bulkAdd(payload[name].slice(offset, offset + 2000))
+    }
+    await old.table('settings').put({ key: 'app', value: payload.settings })
+    await old.table('reviewNotes').bulkAdd(extras.notes.map(stripProbeKeys))
+    if (evidence) await old.table('attachments').bulkAdd(extras.attachments.map(row => ({ ...stripProbeKeys(row), data: evidence })))
+  })
+  verificationDb = old
+  return { writeMs: now() - start, schema: schemaOf(old), usage: await settleUsage(),
+    transactionJsonBytes: byteSize(payload.transactions), originalBytes: evidence?.byteLength ?? 0 }
+}
+async function upgradeVersion(fail: boolean) {
+  verificationDb.close(); db.close()
+  if (fail) {
+    const failing = new BillDatabase(db.name)
+    failing.version(3).upgrade(() => { throw new Error('synthetic schema upgrade failure') })
+    let message = ''
+    try { await failing.open() } catch (error) { message = String(error) } finally { failing.close() }
+    if (!message.includes('synthetic schema upgrade failure')) throw new Error('Upgrade injection did not fail')
+    verificationDb = new Dexie(db.name)
+    await verificationDb.open()
+    return { message, schema: schemaOf(verificationDb) }
+  }
+  const start = now(); await db.open(); const upgradeMs = now() - start
+  verificationDb = db
+  return { upgradeMs, schema: schemaOf(db), usage: await settleUsage() }
+}
+async function databaseSamples(repeats: number) {
+  const table = verificationDb.table('transactions'), first = await table.toCollection().first(), samples = []
+  for (let i = 0; i < repeats; i++) {
+    let start = now(); await table.get(first.id); const primaryMs = now() - start
+    start = now(); const rows = await table.where('statementId').equals(first.statementId).toArray(); const statementMs = now() - start
+    start = now(); await table.put(first); const editWriteMs = now() - start
+    start = now(); await table.toArray(); const readMs = now() - start
+    samples.push({ primaryMs, statementMs, statementRecords: rows.length, editWriteMs, readMs })
+  }
+  return samples
+}
+
 Object.assign(window, { benchmark: {
-  ready: () => Boolean(api?.state.ready), count: () => api?.state.transactions.length ?? 0,
+  seedVersion, upgradeVersion, databaseSamples,
+  databaseReopen: async () => { verificationDb.close(); const start = now(); await verificationDb.open(); return { ms: now() - start, schema: schemaOf(verificationDb) } },
+  ready: () => databaseOnly || Boolean(api?.state.ready), count: () => api?.state.transactions.length ?? 0,
   disableDemo: async () => { await api.setSettings({ ...DEFAULT_SETTINGS, demoMode: false }); await paint() },
   metrics, normalImport, performanceSamples, components: async (name: string) => { const { plan: _plan, ...result } = await components(name); return result },
   persistenceSample: async () => {
@@ -255,11 +320,15 @@ Object.assign(window, { benchmark: {
   },
   verify: async (name: string, extras: { notes: Record<string, unknown>[]; attachments: Record<string, unknown>[] }, format: string, existing: boolean, override: { id: string; category: string; reviewStatus: string } | null) => {
     const expected = JSON.parse(await (await fetch(`/__fixture/${name}`)).text()) as repository.BackupPayload
-    const actual = await repository.readSnapshot()
+    const actual = verificationDb === db ? await repository.readSnapshot() : {
+      transactions: await verificationDb.table<Transaction, string>('transactions').toArray(),
+      statements: await verificationDb.table<repository.Snapshot['statements'][number], string>('statements').toArray(),
+      imports: await verificationDb.table<repository.Snapshot['imports'][number], string>('imports').toArray(),
+    }
     const counts = { transactionCountMismatches: Math.abs(expected.transactions.length - actual.transactions.length), idMismatches: 0,
       amountMismatches: 0, currencyMismatches: 0, duplicateRelationshipMismatches: 0, missingStatements: 0,
       missingAttachments: 0, lostReviewStates: 0, otherTransactionMismatches: 0, statementMismatches: 0,
-      importMismatches: 0, noteMismatches: 0, attachmentMismatches: 0 }
+      importMismatches: 0, noteMismatches: 0, attachmentMismatches: 0, settingsMismatches: 0 }
     const byId = new Map(actual.transactions.map(row => [row.id, row]))
     const statements = new Set(actual.statements.map(row => row.id))
     for (const original of expected.transactions) {
@@ -282,14 +351,14 @@ Object.assign(window, { benchmark: {
     }
     const clean = (row: object, attachment: boolean) => Object.fromEntries(Object.entries(row).filter(([key]) => !['__key', 'binaryHash', 'binaryBytes', 'data'].includes(key) && !(attachment && !existing && key === 'importedAt')))
     const notes = existing ? extras.notes : []
-    const storedNotes = await db.reviewNotes.toArray()
+    const storedNotes = await verificationDb.table<import('../../src/db/db').ReviewNoteRow, string>('reviewNotes').toArray()
     if (notes.length !== storedNotes.length) counts.noteMismatches++
     for (const row of notes) {
       const got = storedNotes.find(note => note.transactionId === row.transactionId)
       if (!got || JSON.stringify(clean(row, false)) !== JSON.stringify(got)) counts.noteMismatches++
     }
     const files = existing || format === 'zip' ? extras.attachments : []
-    const storedFiles = await db.attachments.toArray()
+    const storedFiles = verificationDb.tables.some(table => table.name === 'attachments') ? await verificationDb.table<import('../../src/db/db').AttachmentRow, string>('attachments').toArray() : []
     if (files.length !== storedFiles.length) counts.missingAttachments += Math.abs(files.length - storedFiles.length)
     for (const row of files) {
       const got = storedFiles.find(file => file.fileHash === row.fileHash)
@@ -299,6 +368,7 @@ Object.assign(window, { benchmark: {
       if (got.data.byteLength !== row.binaryBytes || hash !== row.binaryHash) counts.missingAttachments++
       if (JSON.stringify(clean(row, true)) !== JSON.stringify(clean(got, true))) counts.attachmentMismatches++
     }
+    if (format === 'migration' && JSON.stringify((await verificationDb.table('settings').get('app'))?.value) !== JSON.stringify(expected.settings)) counts.settingsMismatches++
     return counts
   },
   counts: async () => Object.fromEntries(await Promise.all(db.tables.map(async t => [t.name, await t.count()]))),

@@ -34,7 +34,7 @@ for (const name of ['app/AppStore.tsx', 'db/db.ts', 'db/repository.ts', 'backup/
 const save = async () => { await mkdir(path.dirname(output), { recursive: true }); await writeFile(output, JSON.stringify(result, null, 2) + '\n') }
 const call = (page, method, ...args) => page.evaluate(async ({ method, args }) => window.benchmark[method](...args), { method, args })
 let server, origin
-async function launch(name) {
+async function launch(name, databaseOnly = false) {
   const profile = path.join(temporary, name)
   const context = await chromium.launchPersistentContext(profile, { executablePath: process.env.CHROMIUM_PATH ?? '/usr/bin/chromium',
     headless: true, locale: 'zh-CN', timezoneId: 'UTC', acceptDownloads: true,
@@ -61,9 +61,9 @@ async function launch(name) {
     })()
   }
   page.on('pageerror', error => log(`PAGE ERROR: ${error.message}`))
-  await page.goto(`${origin}/scripts/large-ledger/.generated.html#/transactions`)
+  await page.goto(`${origin}/scripts/large-ledger/.generated.html${databaseOnly ? '?database=1' : ''}#/transactions`)
   await page.waitForFunction(() => window.benchmark?.ready())
-  await call(page, 'disableDemo')
+  if (!databaseOnly) await call(page, 'disableDemo')
   return { context, page, profile, memory }
 }
 async function verified(page, name, extras, format = 'database', existing = false, override = null) {
@@ -134,6 +134,61 @@ async function backupCase(count) {
   result.cases.push(entry); await save(); log(`PASS BACKUP ${count}`)
   for (const key of [...assets.keys()]) if (key.startsWith(String(count)) || key === workbookName) assets.delete(key)
 }
+async function indexedFiles(profile) {
+  const files = []
+  const visit = async directory => {
+    for (const name of await (await import('node:fs/promises')).readdir(directory).catch(() => [])) {
+      const file = path.join(directory, name), value = await stat(file)
+      if (value.isDirectory()) await visit(file)
+      else files.push({ path: path.relative(profile, file), bytes: value.size, allocatedBytes: value.blocks * 512 })
+    }
+  }
+  await visit(path.join(profile, 'Default/IndexedDB'))
+  return { fileBytes: files.reduce((sum, file) => sum + file.bytes, 0), allocatedBytes: files.reduce((sum, file) => sum + file.allocatedBytes, 0), files }
+}
+async function migrationCase(count) {
+  log(`MIGRATION ${count}`)
+  const workbookName = `python-${count}.xlsx`, jsonName = `${count}-migration.json`
+  assets.set(workbookName, makeWorkbook(makeRows(count)))
+  const source = await launch(`migration-source-${count}`)
+  const imported = await call(source.page, 'normalImport', workbookName)
+  const first = (await call(source.page, 'rows', 'transactions', null))[0]
+  await call(source.page, 'edit', first.id, '旅行', 'confirmed'); await call(source.page, 'note', first.id); await call(source.page, 'originals', workbookName)
+  await exported(source.page, 'json', jsonName)
+  const extras = { notes: await call(source.page, 'rows', 'reviewNotes', null), attachments: await call(source.page, 'rows', 'attachments', null) }
+  await source.context.close()
+  const entry = { count, imported, versions: [] }
+  for (const version of [1, 2, 3]) {
+    const repeats = version === 1 ? 1 : 3
+    for (let repeat = 0; repeat < repeats; repeat++) {
+      const target = await launch(`migration-${count}-v${version}-${repeat}`, true)
+      const expectedExtras = version === 1 ? { notes: extras.notes, attachments: [] } : extras
+      const seeded = await call(target.page, 'seedVersion', version, jsonName, workbookName, extras)
+      const checks = [await verified(target.page, jsonName, expectedExtras, 'migration', true)]
+      const beforeSamples = await call(target.page, 'databaseSamples', 3), beforeDisk = await indexedFiles(target.profile)
+      let aborted
+      if (version === 2 && repeat === 0) {
+        aborted = await call(target.page, 'upgradeVersion', true)
+        assert.equal(aborted.schema.version, 20)
+        assert.equal(aborted.schema.indexes.reduce((sum, table) => sum + table.indexes.length, 0), 21)
+        checks.push(await verified(target.page, jsonName, expectedExtras, 'migration', true))
+      }
+      const upgraded = await call(target.page, 'upgradeVersion', false)
+      assert.equal(upgraded.schema.version, 30)
+      assert.equal(upgraded.schema.indexes.reduce((sum, table) => sum + table.indexes.length, 0), 1)
+      checks.push(await verified(target.page, jsonName, expectedExtras, 'migration', true))
+      const afterSamples = await call(target.page, 'databaseSamples', 3), reopens = []
+      for (let i = 0; i < 3; i++) reopens.push(await call(target.page, 'databaseReopen'))
+      checks.push(await verified(target.page, jsonName, expectedExtras, 'migration', true))
+      await target.context.close()
+      entry.versions.push({ version, repeat, seeded, beforeSamples, beforeDisk, aborted, upgraded, afterSamples, reopens,
+        afterDisk: await indexedFiles(target.profile), checks })
+      result.cases = result.cases.filter(item => item.count !== count).concat(entry); await save()
+      log(`PASS MIGRATION ${count} v${version} #${repeat}`)
+    }
+  }
+  assets.delete(workbookName); assets.delete(jsonName)
+}
 async function uiSamples(page) {
   const samples = []
   const measure = async (kind, action) => {
@@ -192,6 +247,7 @@ try {
   for (const count of sizes) {
     if (mode === 'backup') await backupCase(count)
     else if (mode === 'performance') await performanceCase(count)
+    else if (mode === 'migration') await migrationCase(count)
     else throw new Error(`Unknown mode: ${mode}`)
   }
   result.metadata.completedAt = new Date().toISOString(); await save(); log(`RESULT ${output}`)
