@@ -1,5 +1,17 @@
 # Python retirement readiness (PR A)
 
+> Current status (2026-10-14, SQLite audit gate PR, no retirement executed):
+>
+> - SQLite historical audit tooling: COMPLETE (`scripts/sqlite_historical_audit.py`
+>   plus `tests/test_sqlite_historical_audit.py`, read-only, one-off).
+> - Real data audit: PENDING (must run on the machine holding the real
+>   `data/statements.db` with a fresh version-1 JSON backup).
+> - Python retirement: BLOCKED UNTIL SAFE AUDIT (only a `Python removal: SAFE`
+>   report on real data authorizes the next-stage removal PR).
+>
+> This PR does not delete Python, change importers, schemas, backup formats,
+> UI, or CI behavior.
+
 For the subsequently verified browser-only XLSX → IndexedDB → JSON backup →
 fresh-profile restore workflow across all six banks and three named schemas,
 see [TypeScript historical migration](typescript-historical-migration.md).
