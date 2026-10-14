@@ -10,6 +10,22 @@ type SortKey = 'transactionDate' | 'postingDate' | 'description' | 'settlementAm
 type SortDir = 'asc' | 'desc'
 
 const PAGE_SIZE = 50
+const collator = new Intl.Collator()
+const compareDates = (left: string, right: string) => left < right ? -1 : left > right ? 1 : 0
+
+/** Same null placement, date tie-break and stable order as the historical list. */
+export function sortTransactions(transactions: Transaction[], sortKey: SortKey, sortDir: SortDir): Transaction[] {
+  const direction = sortDir === 'asc' ? 1 : -1
+  const dateKey = sortKey === 'transactionDate' || sortKey === 'postingDate'
+  return [...transactions].sort((a, b) => {
+    const left = a[sortKey], right = b[sortKey]
+    if (left === right) return compareDates(a.transactionDate ?? '', b.transactionDate ?? '')
+    if (left === null) return 1
+    if (right === null) return -1
+    // Amount ordering deliberately retains the existing string comparison.
+    return (dateKey ? compareDates(String(left), String(right)) : collator.compare(String(left), String(right))) * direction
+  })
+}
 
 export function TransactionsPage() {
   const { visibleTransactions, updateTransaction, state } = useApp()
@@ -20,11 +36,13 @@ export function TransactionsPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [page, setPage] = useState(0)
 
-  const rows = useMemo(() => {
-    const filtered = applyFilters(visibleTransactions, filters).filter((tx) => {
+  const banks = useMemo(() => [...new Set(visibleTransactions.map(tx => tx.bank))], [visibleTransactions])
+  const cards = useMemo(() => [...new Set(visibleTransactions.map(tx => tx.cardLast4))], [visibleTransactions])
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase()
+    return applyFilters(visibleTransactions, filters).filter((tx) => {
       if (typeFilter && tx.type !== typeFilter) return false
-      if (!search.trim()) return true
-      const needle = search.trim().toLowerCase()
+      if (!needle) return true
       return (
         tx.description.toLowerCase().includes(needle) ||
         tx.merchant.toLowerCase().includes(needle) ||
@@ -32,16 +50,8 @@ export function TransactionsPage() {
         bankName(tx.bank).includes(needle)
       )
     })
-    const direction = sortDir === 'asc' ? 1 : -1
-    return filtered.sort((a, b) => {
-      const left = a[sortKey]
-      const right = b[sortKey]
-      if (left === right) return (a.transactionDate ?? '').localeCompare(b.transactionDate ?? '')
-      if (left === null) return 1
-      if (right === null) return -1
-      return String(left).localeCompare(String(right)) * direction
-    })
-  }, [visibleTransactions, filters, search, typeFilter, sortKey, sortDir])
+  }, [visibleTransactions, filters, search, typeFilter])
+  const rows = useMemo(() => sortTransactions(filtered, sortKey, sortDir), [filtered, sortKey, sortDir])
 
   const pageRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
@@ -110,7 +120,7 @@ export function TransactionsPage() {
             onChange={(event) => setFilters((prev) => ({ ...prev, banks: event.target.value ? [event.target.value as BankId] : [] }))}
           >
             <option value="">全部银行</option>
-            {[...new Set(visibleTransactions.map((tx) => tx.bank))].map((bank) => (
+            {banks.map((bank) => (
               <option key={bank} value={bank}>
                 {bankName(bank)}
               </option>
@@ -122,7 +132,7 @@ export function TransactionsPage() {
             onChange={(event) => setFilters((prev) => ({ ...prev, cards: event.target.value ? [event.target.value] : [] }))}
           >
             <option value="">全部卡片</option>
-            {[...new Set(visibleTransactions.map((tx) => tx.cardLast4))].map((card) => (
+            {cards.map((card) => (
               <option key={card} value={card}>
                 尾号 {card}
               </option>

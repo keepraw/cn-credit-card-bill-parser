@@ -10,10 +10,11 @@ import {
   persistImportResults,
   persistLegacyImport,
   purgeDemoRows,
+  ensureDemoRowsPurged,
   readSnapshot,
   saveOriginalFile,
   setReviewNote,
-  updateTransaction,
+  patchTransaction as persistTransactionPatch,
   updateTransactions,
   validateBackup,
   type ArchiveStatus,
@@ -89,46 +90,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [progress, setProgress] = useState<ImportProgress | null>(null)
   const initialised = useRef(false)
+  const committedPreferences = useRef<AppSettings>(DEFAULT_SETTINGS)
+  const pendingPreferences = useRef(0)
 
-  const refresh = useCallback(async () => {
-    const [next, nextNotes, nextSettings] = await Promise.all([readSnapshot(), getReviewNotes(), loadSettings()])
+  // Serialize state-changing operations with refreshes. A delayed read cannot
+  // overwrite a later successful edit; rejected writes do not poison the queue.
+  const pending = useRef<Promise<unknown>>(Promise.resolve())
+  const enqueue = useCallback(<T,>(operation: () => Promise<T>): Promise<T> => {
+    const result = pending.current.then(operation)
+    pending.current = result.catch(() => undefined)
+    return result
+  }, [])
+
+  const reload = useCallback(async (firstVisit = false) => {
+    const [next, nextNotes, storedSettings] = await Promise.all([readSnapshot(), getReviewNotes(), loadSettings()])
+    const nextSettings = firstVisit && next.imports.length === 0 ? { ...DEFAULT_SETTINGS, demoMode: true } : storedSettings
+    if (nextSettings !== storedSettings) await saveSettings(nextSettings)
     setSnapshot(next)
     setNotes(nextNotes)
-    setSettingsState(nextSettings)
+    committedPreferences.current = nextSettings
+    if (pendingPreferences.current === 0) setSettingsState(nextSettings)
   }, [])
+
+  const refresh = useCallback(() => enqueue(() => reload()), [enqueue, reload])
 
   useEffect(() => {
     if (initialised.current) return
     initialised.current = true
-    void (async () => {
-      // Migration: demo rows must never live in the production tables. Purge
-      // any fictional rows written by older versions; real rows are untouched.
-      await purgeDemoRows()
-      await refresh()
-      const existing = await db.imports.count()
-      // A first visit lands in Demo Mode so every page has something to show.
-      // Demo data is served from memory (see getDemoSnapshot), never written
-      // to IndexedDB.
-      if (existing === 0) {
-        await saveSettings({ ...DEFAULT_SETTINGS, demoMode: true })
-      }
-      await refresh()
+    void enqueue(async () => {
+      await ensureDemoRowsPurged()
+      // First visits still use the in-memory demo; load the real snapshot once.
+      await reload(true)
       setReady(true)
-    })()
-  }, [refresh])
+    })
+  }, [enqueue, reload])
 
-  const setSettings = useCallback(
-    async (patch: Partial<AppSettings>) => {
-      const next = { ...settings, ...patch }
-      setSettingsState(next)
-      await saveSettings(next)
-    },
-    [settings],
-  )
+  const setSettings = useCallback((patch: Partial<AppSettings>) => {
+    const ownedPatch = { ...patch }
+    // Preserve immediate controlled-input feedback for preferences. Imports
+    // check committed settings in the queue; failed saves roll the preview back.
+    pendingPreferences.current++
+    setSettingsState(current => ({ ...current, ...ownedPatch }))
+    return enqueue(async () => {
+      try {
+        const current = await loadSettings()
+        committedPreferences.current = current
+        const next = { ...current, ...ownedPatch }
+        await saveSettings(next)
+        committedPreferences.current = next
+      } finally {
+        pendingPreferences.current--
+        if (pendingPreferences.current === 0) setSettingsState(committedPreferences.current)
+      }
+    })
+  }, [enqueue])
 
   const importFiles = useCallback(
-    async (files: File[]): Promise<ImportRecord[]> => {
-      if (settings.demoMode) {
+    (files: File[]): Promise<ImportRecord[]> => enqueue(async () => {
+      if ((await loadSettings()).demoMode) {
         throw new Error('演示模式下无法导入真实账单，请先在设置中关闭演示模式。')
       }
       const results: ImportBatchResult[] = []
@@ -216,28 +235,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
           try { await db.imports.put(result.record) } catch { /* Evidence remains missing. */ }
         }
       }
-      await refresh()
+      await reload()
       return results.map((result) => result.record)
-    },
-    [refresh, settings.demoMode],
+    }),
+    [enqueue, reload],
   )
 
-  const loadDemoData = useCallback(async () => {
+  const loadDemoData = useCallback(() => enqueue(async () => {
     // Demo data lives in memory only: drop any legacy fictional rows, warm
     // the cache and reload the real snapshot. Nothing demo is ever written
     // to the production tables.
     await purgeDemoRows()
     getDemoSnapshot()
-    await refresh()
-  }, [refresh])
+    await reload()
+  }), [enqueue, reload])
 
   /**
    * Legacy history import, kept strictly separate from bank-statement imports.
    * Preview is read-only; the confirm step writes one atomic transaction.
    */
   const previewLegacyImport = useCallback(
-    async (file: File): Promise<LegacyPreview> => {
-      if (settings.demoMode) {
+    (file: File): Promise<LegacyPreview> => enqueue(async () => {
+      if ((await loadSettings()).demoMode) {
         throw new Error('演示模式下无法导入历史数据，请先在设置中关闭演示模式。')
       }
       setProgress({ fileName: file.name, index: 0, total: 1, phase: '读取历史数据' })
@@ -258,13 +277,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } finally {
         setProgress(null)
       }
-    },
-    [settings.demoMode],
+    }),
+    [enqueue],
   )
 
   const confirmLegacyImport = useCallback(
-    async (preview: LegacyPreview): Promise<ImportRecord> => {
-      if (settings.demoMode) {
+    (preview: LegacyPreview): Promise<ImportRecord> => enqueue(async () => {
+      if ((await loadSettings()).demoMode) {
         throw new Error('演示模式下无法导入历史数据，请先在设置中关闭演示模式。')
       }
       setProgress({ fileName: preview.meta.fileName, index: 0, total: 1, phase: '写入历史数据' })
@@ -276,79 +295,83 @@ export function AppProvider({ children }: { children: ReactNode }) {
           transactions: snapshot.transactions,
         })
         await persistLegacyImport(plan)
-        await refresh()
+        await reload()
         return plan.record
       } finally {
         setProgress(null)
       }
-    },
-    [refresh, settings.demoMode],
+    }),
+    [enqueue, reload],
   )
 
-  const patchTransaction = useCallback(
-    async (patch: Partial<Transaction> & { id: string }) => {
-      const current = snapshot.transactions.find((tx) => tx.id === patch.id)
-      if (!current) return
-      await updateTransaction({ ...current, ...patch })
-      await refresh()
-    },
-    [refresh, snapshot.transactions],
-  )
+  const patchTransaction = useCallback((patch: Partial<Transaction> & { id: string }) => {
+    // Own caller-provided arrays before the operation waits in the queue.
+    const ownedPatch = structuredClone(patch)
+    return enqueue(async () => {
+      const committed = await persistTransactionPatch(ownedPatch)
+      if (!committed) return
+      setSnapshot(current => ({ ...current,
+        transactions: current.transactions.map(tx => tx.id === committed.id ? committed : tx),
+      }))
+    })
+  }, [enqueue])
 
-  const saveNote = useCallback(
-    async (transactionId: string, note: string) => {
-      await setReviewNote(transactionId, note)
-      setNotes(await getReviewNotes())
-    },
-    [],
-  )
+  const saveNote = useCallback((transactionId: string, note: string) => enqueue(async () => {
+    await setReviewNote(transactionId, note)
+    setNotes(current => {
+      const next = { ...current }
+      if (note.trim()) next[transactionId] = note.trim()
+      else delete next[transactionId]
+      return next
+    })
+  }), [enqueue])
 
-  const backupData = useCallback(async () => {
+  const backupData = useCallback(() => enqueue(async () => {
     triggerDownload(
       await buildDataBackupBlob(),
       `credit-card-data-${new Date().toISOString().slice(0, 10)}.json`,
     )
-  }, [])
+  }), [enqueue])
 
   const backup = useCallback(async () => {
     await backupData()
   }, [backupData])
 
-  const backupFull = useCallback(async (): Promise<{ warning: string | null }> => {
+  const backupFull = useCallback((): Promise<{ warning: string | null }> => enqueue(async () => {
     const { blob, warning } = await buildFullBackupZip()
     triggerDownload(blob, `credit-card-full-backup-${new Date().toISOString().slice(0, 10)}.zip`)
     return { warning }
-  }, [])
+  }), [enqueue])
 
   const archiveStatus = useCallback(async (): Promise<ArchiveStatus> => getArchiveStatus(), [])
 
   const restore = useCallback(
-    async (file: File) => {
+    (file: File) => enqueue(async () => {
       try {
         if (file.name.toLowerCase().endsWith('.zip')) {
           const result = await restoreFullBackupZip(file)
-          await refresh()
+          await reload()
           const base = `已恢复 ${result.transactions} 笔交易、${result.statements} 份账单、${result.files} 个原始文件。`
           return { ok: true, message: result.warning ? `${base}${result.warning}。` : base }
         }
         const payload = await readJsonBackup(file)
         if (!validateBackup(payload)) return { ok: false, message: '文件格式不正确，不是本应用导出的备份。' }
         await importBackup(payload)
-        await refresh()
+        await reload()
         return { ok: true, message: `已恢复 ${payload.transactions.length} 笔交易、${payload.statements.length} 份账单。` }
       } catch (error) {
         return { ok: false, message: `恢复失败：${describeError(error)}` }
       }
-    },
-    [refresh],
+    }),
+    [enqueue, reload],
   )
 
   const clearData = useCallback(
-    async (includeDemo: boolean) => {
+    (includeDemo: boolean) => enqueue(async () => {
       await clearAllData({ includeDemo })
-      await refresh()
-    },
-    [refresh],
+      await reload()
+    }),
+    [enqueue, reload],
   )
 
   // Demo Mode is a view switch, not a second database: the fictional rows

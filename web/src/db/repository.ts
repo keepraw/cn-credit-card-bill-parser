@@ -2,6 +2,8 @@ import type { ExistingSnapshot, IngestResult } from '../core/ingest'
 import type { Table } from 'dexie'
 import type { ImportRecord, Statement, Transaction } from '../core/types'
 import { type AttachmentRow, db } from './db'
+
+const DEMO_PURGE_KEY = 'migration:memory-only-demo'
 import { validateBackup } from '../backup/validation'
 import { createJsonBlob } from '../backup/json'
 import { reconcileStatement } from '../core/reconcile'
@@ -14,12 +16,12 @@ export interface Snapshot {
 }
 
 export async function readSnapshot(): Promise<Snapshot> {
-  const [statements, transactions, imports] = await Promise.all([
-    db.statements.toArray(),
-    db.transactions.toArray(),
-    db.imports.toArray(),
-  ])
-  return { statements, transactions, imports }
+  return db.transaction('r', db.statements, db.transactions, db.imports, async () => {
+    const [statements, transactions, imports] = await Promise.all([
+      db.statements.toArray(), db.transactions.toArray(), db.imports.toArray(),
+    ])
+    return { statements, transactions, imports }
+  })
 }
 
 export function toExistingSnapshot(snapshot: Snapshot): ExistingSnapshot {
@@ -28,7 +30,10 @@ export function toExistingSnapshot(snapshot: Snapshot): ExistingSnapshot {
 
 /** Persist a batch of ingest results in a single transaction. */
 export async function persistImportResults(results: IngestResult[]): Promise<void> {
-  await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
+  await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
+    if (results.some(result => result.record.isDemo || result.statement?.isDemo || result.transactions.some(row => row.isDemo))) {
+      await db.settings.delete(DEMO_PURGE_KEY)
+    }
     for (const result of results) {
       await db.imports.put(result.record)
       if (!result.statement) continue
@@ -46,7 +51,10 @@ export async function persistLegacyImport(plan: {
   statements: Statement[]
   inserted: Transaction[]
 }): Promise<void> {
-  await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
+  await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
+    if (plan.record.isDemo || plan.statements.some(row => row.isDemo) || plan.inserted.some(row => row.isDemo)) {
+      await db.settings.delete(DEMO_PURGE_KEY)
+    }
     await db.imports.put(plan.record)
     await db.statements.bulkPut(plan.statements)
     for (let offset = 0; offset < plan.inserted.length; offset += 2000) {
@@ -55,12 +63,28 @@ export async function persistLegacyImport(plan: {
   })
 }
 
+/** Merge against the latest committed row, never against a captured React snapshot. */
+export async function patchTransaction(patch: Partial<Transaction> & { id: string }): Promise<Transaction | undefined> {
+  const ownedPatch = structuredClone(patch)
+  return db.transaction('rw', db.transactions, db.settings, async () => {
+    const current = await db.transactions.get(ownedPatch.id)
+    if (!current) return undefined
+    const next = { ...current, ...ownedPatch }
+    await db.transactions.put(next)
+    if (next.isDemo) await db.settings.delete(DEMO_PURGE_KEY)
+    return next
+  })
+}
+
 export async function updateTransaction(transaction: Transaction): Promise<void> {
-  await db.transactions.put(transaction)
+  await patchTransaction(transaction)
 }
 
 export async function updateTransactions(transactions: Transaction[]): Promise<void> {
-  await db.transactions.bulkPut(transactions)
+  await db.transaction('rw', db.transactions, db.settings, async () => {
+    await db.transactions.bulkPut(transactions)
+    if (transactions.some(row => row.isDemo)) await db.settings.delete(DEMO_PURGE_KEY)
+  })
 }
 
 export async function getReviewNotes(): Promise<Record<string, string>> {
@@ -164,6 +188,7 @@ export async function importBackup(payload: BackupPayload): Promise<void> {
       await db.statements.put({ ...current, transactionCount: transactions.length, reconciliation,
         status: current.status === 'imported' ? 'imported' : reconciliation.status === 'passed' ? 'reconciled' : 'needs_review' })
     }
+    if (payload.transactions.some(row => row.isDemo) || payload.statements.some(row => row.isDemo) || payload.imports.some(row => row.isDemo)) await db.settings.delete(DEMO_PURGE_KEY)
     if (payload.settings) await db.settings.put({ key: 'app', value: payload.settings })
   })
 }
@@ -191,11 +216,17 @@ export async function clearDemoData(): Promise<void> {
  * rows, review notes, attachments and backups are untouched.
  */
 export async function purgeDemoRows(): Promise<void> {
-  await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
+  await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
     await db.statements.filter((row) => row.isDemo === true).delete()
     await db.transactions.filter((row) => row.isDemo === true).delete()
     await db.imports.filter((row) => row.isDemo === true).delete()
+    await db.settings.put({ key: DEMO_PURGE_KEY, value: true })
   })
+}
+
+/** Only scan old ledgers once. Importing persisted demo rows invalidates the marker atomically. */
+export async function ensureDemoRowsPurged(): Promise<void> {
+  if ((await db.settings.get(DEMO_PURGE_KEY))?.value !== true) await purgeDemoRows()
 }
 
 export async function clearAllData(options: { includeDemo: boolean }): Promise<void> {
