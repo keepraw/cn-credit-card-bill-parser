@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { DEFAULT_SETTINGS, db, loadSettings, saveSettings } from '../db/db'
 import {
   clearAllData,
-  exportDataBackup,
+  buildDataBackupBlob,
   getArchiveStatus,
   getReviewNotes,
   importBackup,
@@ -34,7 +34,7 @@ import { detectParser, parseDocument, UnsupportedFileError } from '../parsers/re
 import type { AppSettings, ImportRecord, Statement, Transaction } from '../core/types'
 import { triggerDownload } from '../export/tabular'
 import { downloadLedgerArchive, ledgerArchiveFileName } from '../export/ledgerArchive'
-import { MAX_JSON_BYTES } from '../backup/zipSafety'
+import { readJsonBackup } from '../backup/json'
 
 export interface ImportProgress {
   fileName: string
@@ -304,9 +304,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const backupData = useCallback(async () => {
-    const payload = await exportDataBackup()
     triggerDownload(
-      new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }),
+      await buildDataBackupBlob(),
       `credit-card-data-${new Date().toISOString().slice(0, 10)}.json`,
     )
   }, [])
@@ -332,8 +331,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const base = `已恢复 ${result.transactions} 笔交易、${result.statements} 份账单、${result.files} 个原始文件。`
           return { ok: true, message: result.warning ? `${base}${result.warning}。` : base }
         }
-        if (file.size > MAX_JSON_BYTES) throw new Error('备份 JSON 文件过大')
-        const payload: unknown = JSON.parse(await file.text())
+        const payload = await readJsonBackup(file)
         if (!validateBackup(payload)) return { ok: false, message: '文件格式不正确，不是本应用导出的备份。' }
         await importBackup(payload)
         await refresh()
