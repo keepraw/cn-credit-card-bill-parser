@@ -15,12 +15,6 @@ inbox/*
 backups/*
 logs/*
 
-!data/.gitkeep
-!output/.gitkeep
-!processed/.gitkeep
-!review_files/.gitkeep
-!inbox/.gitkeep
-
 # Secrets and local configuration
 .env
 .env.*
@@ -46,9 +40,6 @@ logs/*
 *.tsv
 *.xls
 *.xlsx
-
-# Keep dependency metadata trackable even though spreadsheets are ignored.
-!requirements.txt
 
 # --- Web app (local-first React front end) ---
 # The blanket *.html rule above would hide the Vite entry point, so re-allow it.
@@ -79,8 +70,7 @@ web/**/*.sqlite*
 .playwright/
 *.local
 
-# Migration dry-run reports are regenerable via
-# `python scripts/migration_audit.py bridge`; do not commit them.
+# Local audit reports may contain financial data; do not commit them.
 reports/*.json
 
 

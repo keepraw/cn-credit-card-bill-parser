@@ -1,6 +1,6 @@
 # Golden Fixtures (Task A-3.4)
 
-Cross-pipeline regression baseline. Compares **normalized** outputs, never the
+Frozen historical regression baseline. TypeScript compares **normalized** outputs, never the
 native `Transaction` models directly (see A-3.2/A-3.3 audits).
 
 ## Layout
@@ -31,17 +31,17 @@ golden/
    business keys pair (`full` / `partial` / `unpaired`, always `merged: false`).
 4. **P2 fields are never compared** (`merchant`, `category`, `flags`, `summary`).
 
-## Regenerate (needs the original file with matching SHA-256)
+## TypeScript tooling
+
+The Python generator and runtime are retired. The committed `python.json`,
+`web.json`, `input.meta.json` and `diff.json` files remain immutable regression
+inputs. TypeScript validates and recomputes their comparisons with `npm test`.
+For a separately reviewed new Web snapshot, the TypeScript generator remains
+available and requires the original file with a matching SHA-256:
 
 ```bash
-# Python side
-.venv/Scripts/python scripts/generate_golden.py gen --input processed/<file> --out golden/<bank>/<stmt>
-
-# Web side (from web/)
-npm run golden:generate -- --input ../processed/<file> --out ../golden/<bank>/<stmt>
-
-# Diff
-.venv/Scripts/python scripts/generate_golden.py diff --dir golden/<bank>/<stmt>
+# From web/
+npm run golden:generate -- --input /path/to/local/statement --out /path/to/new/reference
 ```
 
 ## Batches

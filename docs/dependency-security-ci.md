@@ -23,12 +23,13 @@ no advisories are suppressed. CDN availability is now needed for fresh installs,
 and future releases require reviewing the maintainer's distribution and advisories.
 
 The single Validation workflow (`.github/workflows/ci.yml`) runs on pull requests,
-main pushes and explicit workflow dispatch. Its Web and Python jobs run in
-parallel with read-only repository permissions. They retain types, ESLint, Vitest
+main pushes and explicit workflow dispatch. Its Web job runs with read-only
+repository permissions. It retains types, ESLint, Vitest
 (including golden fixtures), one production build, the dependency audit,
-Chromium Playwright and Python pytest. Dependency caching and time limits remain.
+Chromium Playwright. The retired Python job and pytest dependency are removed.
+Dependency caching and time limits remain.
 
-The Deploy job requires both validation jobs to succeed, and only runs for a
+The Deploy job requires Web validation to succeed, and only runs for a
 push or dispatch on `main`. After every Web check succeeds, that same run uploads
 its `web/dist` as `github-pages`; Deploy consumes the artifact from the current
 workflow run, without reinstalling dependencies or rebuilding. PRs and dispatches
@@ -52,7 +53,6 @@ only after an authorized main push or an explicit main dispatch passes validatio
 Two existing browser tests attempted to persist edits to regenerated in-memory
 demo rows. They now import synthetic data and test persistence across reloads.
 The backup browser test now actually clears and restores the synthetic backup.
-The obsolete navigation wait for a Settings-only control is removed. The Python
-sample test generates its own synthetic HTML instead of depending on a missing,
-ignored local sample file. Private-statement acceptance tests remain optional;
+The obsolete navigation wait for a Settings-only control is removed.
+Private-statement acceptance tests remain optional;
 CI never requests or uploads real financial evidence.

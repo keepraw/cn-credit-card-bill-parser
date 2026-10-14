@@ -48,23 +48,8 @@ jobs:
           path: web/dist
           retention-days: 1
 
-  python:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: |
-            pyproject.toml
-            requirements.txt
-      - run: python -m pip install -e '.[dev]'
-      - run: python -m pytest -q
-
   deploy:
-    needs: [web, python]
+    needs: [web]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10
