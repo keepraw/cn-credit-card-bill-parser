@@ -33,6 +33,8 @@ export function parseArchiveFileName(entry: string): string | null {
 export interface FullBackupPreview {
   manifest: ArchiveManifest
   database: BackupPayload
+  backupVersion: 1 | 2
+  reviewNotesCount: number
   archivedCount: number
   missingCount: number
   warning: string | null
@@ -41,6 +43,15 @@ export interface FullBackupPreview {
 export function describeArchiveGap(missingCount: number): string | null {
   if (missingCount <= 0) return null
   return `${missingCount} 个历史账单没有原始文件，仅导出交易数据`
+}
+
+/** Human-readable note coverage for preview/restore messages. */
+export function describeNotesCoverage(database: BackupPayload): string | null {
+  if (database.version === 2) {
+    const count = database.reviewNotes.length
+    return count > 0 ? `含 ${count} 条独立复核备注` : 'V2 备份暂无独立复核备注'
+  }
+  return 'V1 备份不含独立复核备注（仅保留本地已有备注）'
 }
 
 /** Build the full-archive ZIP: database.json + manifest.json + available originals. */
@@ -193,14 +204,16 @@ async function prepareFullBackup(file: Blob): Promise<FullBackupPreview & { orig
   if (Object.entries(zip.files).some(([path, entry]) => !entry.dir && !consumed.has(path))) throw new Error('ZIP 包含清单外原始文件')
   const archivedCount = originals.length
   const missingCount = manifest.files.length - archivedCount
-  return { manifest, database, originals, archivedCount, missingCount, warning: describeArchiveGap(missingCount) }
+  const backupVersion = database.version
+  const reviewNotesCount = database.version === 2 ? database.reviewNotes.length : 0
+  return { manifest, database, backupVersion, reviewNotesCount, originals, archivedCount, missingCount, warning: describeArchiveGap(missingCount) }
 }
 
-/** Records, settings and evidence commit together or roll back together. */
-export async function restoreFullBackupZip(file: Blob): Promise<{ transactions: number; statements: number; files: number; warning: string | null }> {
-  const { database, originals, warning } = await prepareFullBackup(file)
+/** Records, settings, notes and evidence commit together or roll back together. */
+export async function restoreFullBackupZip(file: Blob): Promise<{ transactions: number; statements: number; files: number; notes: number; backupVersion: 1 | 2; warning: string | null }> {
+  const { database, backupVersion, reviewNotesCount, originals, warning } = await prepareFullBackup(file)
   let files = 0
-  await db.transaction('rw', [db.statements, db.transactions, db.imports, db.settings, db.attachments], async () => {
+  await db.transaction('rw', [db.statements, db.transactions, db.imports, db.settings, db.reviewNotes, db.attachments], async () => {
     await importBackup(database)
     for (const item of originals) {
       const existing = await db.attachments.get(item.sha256)
@@ -214,7 +227,7 @@ export async function restoreFullBackupZip(file: Blob): Promise<{ transactions: 
       files += 1
     }
   })
-  return { transactions: database.transactions.length, statements: database.statements.length, files, warning }
+  return { transactions: database.transactions.length, statements: database.statements.length, files, notes: reviewNotesCount, backupVersion, warning }
 }
 
 /** Preview verifies the same records, manifest and evidence as an actual restore. */

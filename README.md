@@ -119,12 +119,12 @@ IndexedDB data is isolated by browser profile and site origin:
 
 | Backup type | Includes | Excludes / caveats |
 | --- | --- | --- |
-| **JSON data backup** | Statements, transactions, import records, application settings | Original PDF/EML files and separately stored review notes |
-| **Full ZIP archive** | JSON database, manifest, and original files still available in IndexedDB | Original files already missing from browser storage; separately stored review notes |
+| **JSON data backup (V2)** | Statements, transactions, import records, independent review notes, application settings | Original PDF/EML files; historical V1 backups contain no review notes |
+| **Full ZIP archive (V2 database.json)** | V2 JSON database, manifest, and original files still available in IndexedDB | Original files already missing from browser storage; historical V1 archives contain no review notes |
 
-A full archive reports missing original documents in its manifest rather than inventing them. Both formats contain sensitive financial data and are **not encrypted by the application**. Protect downloaded backups accordingly.
+A full archive reports missing original documents in its manifest rather than inventing them. Both formats contain sensitive financial data and are **not encrypted by the application**. Protect downloaded backups accordingly. V2 exports preserve independent free-text review notes across devices; V1 files cannot restore notes that were never exported (V1 restores keep existing local notes unchanged).
 
-Backup restoration merges records by primary key; importing the same backup again does not create a new copy of the same records. Existing matching records retain their metadata; conflicting financial fields abort restoration instead of overwriting a transaction. Keep a separate backup before any restoration or migration. XLSX/CSV archives include transaction IDs, fingerprints and occurrence numbers for independent inspection; use JSON to restore the application state.
+Backup restoration merges records by primary key; importing the same backup again does not create a new copy of the same records. Existing matching records retain their metadata; conflicting financial fields or conflicting note content abort restoration instead of overwriting. Keep a separate backup before any restoration or migration. XLSX/CSV archives include transaction IDs, fingerprints and occurrence numbers for independent inspection; use JSON to restore the application state.
 
 ### Data deletion limitation
 
@@ -163,7 +163,7 @@ The repository includes golden fixtures for the six registered banks (`golden/RE
 - **Financial import safety:** Malformed money, conflicting currency tokens and invalid precision in a recognized bank transaction fail the complete parse. Historical adapters report excluded source rows. No stored history is repaired automatically.
 - **Currency and duplicate totals:** Dashboard amounts, trends and distributions include only CNY settlement rows; other settlement currencies are retained with an explicit exclusion warning, without FX conversion. Unresolved suspected duplicates remain included with a warning and bounded source comparisons in Review.
 - **Stored attachment lifecycle:** PR #13 fixes transactional clearing and evidence/result association. Evidence retention remains best effort under browser quota limits.
-- **Backup integrity:** PR #14 validates records and restores ZIP data/evidence atomically. Version-1 backups still exclude separately stored free-text review notes.
+- **Backup integrity:** PR #14 validates records and restores ZIP data/evidence atomically. V2 backups preserve independent free-text review notes with conflict rejection and atomic rollback; historical V1 backups remain readable but contain no review notes.
 - **Testing and dependencies:** Keep Web and browser checks mandatory, monitor dependency advisories, and extend large-dataset coverage as needed.
 
 This is a personal finance data tool. **Always compare imported results with official bank statements** before using the output for financial decisions.

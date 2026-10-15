@@ -100,7 +100,13 @@ export async function setReviewNote(transactionId: string, note: string): Promis
   await db.reviewNotes.put({ transactionId, note: note.trim(), updatedAt: new Date().toISOString() })
 }
 
-export interface BackupPayload {
+export interface ReviewNotePayload {
+  transactionId: string
+  note: string
+  updatedAt: string
+}
+
+export interface BackupPayloadV1 {
   format: 'credit-bill-manager-backup' | 'credit-card-data-backup'
   version: 1
   exportedAt: string
@@ -110,19 +116,40 @@ export interface BackupPayload {
   settings: unknown
 }
 
+export interface BackupPayloadV2 {
+  format: 'credit-bill-manager-backup' | 'credit-card-data-backup'
+  version: 2
+  exportedAt: string
+  statements: Statement[]
+  transactions: Transaction[]
+  imports: ImportRecord[]
+  reviewNotes: ReviewNotePayload[]
+  settings: unknown
+}
+
+export type BackupPayload = BackupPayloadV1 | BackupPayloadV2
+
 /** Lightweight data backup: transactions + statements + import metadata + settings. No raw files. */
 export async function exportBackup(): Promise<BackupPayload> {
   return exportDataBackup()
 }
 
-/** Preferred name going forward. Writes `credit-card-data.json`. Keeps the payload identical. */
+/** Preferred name going forward. Writes `credit-card-data.json`. V2 includes independent review notes. */
 export async function exportDataBackup(): Promise<BackupPayload> {
-  return db.transaction('r', db.statements, db.transactions, db.imports, db.settings, async () => {
-    const [statements, transactions, imports, settings] = await Promise.all([
+  return db.transaction('r', db.statements, db.transactions, db.imports, db.settings, db.reviewNotes, async () => {
+    const [statements, transactions, imports, settings, notes] = await Promise.all([
       db.statements.toArray(), db.transactions.toArray(), db.imports.toArray(), db.settings.get('app'),
+      db.reviewNotes.toArray(),
     ])
-    const payload: BackupPayload = { format: 'credit-card-data-backup', version: 1,
-      exportedAt: new Date().toISOString(), statements, transactions, imports, settings: settings?.value ?? null }
+    // Export every stored note (including orphans) so no recoverable user
+    // text is silently omitted. Orphans are never assumed to be demo data:
+    // demo filtering happens only via explicit isDemo transaction/import
+    // flags, never via note presence. Sorted for stable output.
+    const reviewNotes: ReviewNotePayload[] = [...notes]
+      .sort((a, b) => a.transactionId.localeCompare(b.transactionId))
+      .map((row) => ({ transactionId: row.transactionId, note: row.note, updatedAt: row.updatedAt }))
+    const payload: BackupPayloadV2 = { format: 'credit-card-data-backup', version: 2,
+      exportedAt: new Date().toISOString(), statements, transactions, imports, reviewNotes, settings: settings?.value ?? null }
     if (!validateBackup(payload)) throw new Error('账本包含无效记录，拒绝生成不可恢复的备份')
     return payload
   })
@@ -139,10 +166,34 @@ async function backupRows<T>(table: Table<T, string>, ids: string[]): Promise<Ar
   return rows
 }
 
-/** Matching primary keys keep current metadata; financial conflicts abort. */
+/** Matching primary keys keep current metadata; financial or note conflicts abort. */
 export async function importBackup(payload: BackupPayload): Promise<void> {
   if (!validateBackup(payload)) throw new Error('备份包含无效记录，拒绝恢复')
-  await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
+  // V1 restores never touch reviewNotes: existing local notes stay unchanged.
+  // V2 restores merge notes in the same atomic transaction as financial rows.
+  const incomingNotes: ReviewNotePayload[] = payload.version === 2 ? payload.reviewNotes : []
+  if (payload.version === 1) {
+    await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
+      await applyBackupPayload(payload, [])
+    })
+    return
+  }
+  await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, db.reviewNotes, async () => {
+    const storedNotes = await backupRows(db.reviewNotes, incomingNotes.map((row) => row.transactionId))
+    for (const [index, row] of incomingNotes.entries()) {
+      const current = storedNotes[index]
+      // Same transactionId with conflicting content rejects the entire
+      // restore. Never last-write-wins, never compare updatedAt to overwrite.
+      // Identical content preserves the existing row (idempotent repeat).
+      // Absence locally inserts the original content and timestamp.
+      // Absence in the payload never deletes an existing local note.
+      if (current && current.note !== row.note) throw new Error(`复核备注冲突，拒绝覆盖：${row.transactionId}`)
+    }
+    await applyBackupPayload(payload, storedNotes)
+  })
+}
+
+async function applyBackupPayload(payload: BackupPayload, storedNotes: Array<{ transactionId: string; note: string; updatedAt: string } | undefined>): Promise<void> {
     const [storedStatements, storedTransactions, storedImports] = await Promise.all([
       backupRows(db.statements, payload.statements.map((row) => row.id)),
       backupRows(db.transactions, payload.transactions.map((row) => row.id)),
@@ -188,9 +239,20 @@ export async function importBackup(payload: BackupPayload): Promise<void> {
       await db.statements.put({ ...current, transactionCount: transactions.length, reconciliation,
         status: current.status === 'imported' ? 'imported' : reconciliation.status === 'passed' ? 'reconciled' : 'needs_review' })
     }
+    // V2 notes: insert absent notes preserving original content/timestamps.
+    // Identical content is already a no-op; conflicting content already threw
+    // above before any write. Absence in the payload never deletes.
+    if (payload.version === 2) {
+      const incoming = payload.reviewNotes
+      const toAdd = incoming.filter((_row, index) => !storedNotes[index])
+      // Orphaned notes (no matching transaction in this payload or locally)
+      // are still inserted: they remain recoverable user text, never dropped.
+      for (let offset = 0; offset < toAdd.length; offset += 2000) {
+        await db.reviewNotes.bulkAdd(toAdd.slice(offset, offset + 2000))
+      }
+    }
     if (payload.transactions.some(row => row.isDemo) || payload.statements.some(row => row.isDemo) || payload.imports.some(row => row.isDemo)) await db.settings.delete(DEMO_PURGE_KEY)
     if (payload.settings) await db.settings.put({ key: 'app', value: payload.settings })
-  })
 }
 
 /** Remove only the fictional demo rows so they can be regenerated cleanly. */

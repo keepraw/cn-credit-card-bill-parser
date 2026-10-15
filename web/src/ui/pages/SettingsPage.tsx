@@ -115,7 +115,7 @@ export function SettingsPage() {
           </div>
           <div className="card-pad stack">
             <p className="subtle">
-              备份 JSON 用于恢复应用，不适合直接阅读。数据备份文件（credit-card-data.json）包含账单汇总、交易明细和复核状态，不含 PDF / EML / XLSX 原始文件或单独填写的复核备注，适合日常备份。恢复按主键合并，同标识的已有记录与用户编辑会保留；金融字段冲突时拒绝恢复。重复恢复不会产生重复数据。如需在外部查看分析，请使用下方的表格归档（XLSX）导出。
+              备份 JSON（V2）用于恢复应用，不适合直接阅读。数据备份文件（credit-card-data.json）包含账单汇总、交易明细、复核状态、独立复核备注、导入记录与应用设置，不含 PDF / EML / XLSX 原始文件，适合日常备份。历史 V1 备份不含独立复核备注，从 V1 恢复时本地已有备注会原样保留，但全新设备无法从 V1 找回未被导出的备注。恢复按主键合并，同标识的已有记录、用户编辑与相同内容的备注会保留；金融字段或备注内容冲突时拒绝整个恢复。重复恢复不会产生重复数据。备份文件为本机未加密文件，请妥善保管。如需在外部查看分析，请使用下方的表格归档（XLSX）导出。
             </p>
             <div className="row">
               <button
@@ -186,7 +186,7 @@ export function SettingsPage() {
           </div>
           <div className="card-pad stack">
             <p className="subtle">
-              完整归档仅包含当前浏览器实际可访问的原始文件。历史导入若缺少附件，manifest 会如实标记为 missing，不会伪造文件。
+              完整归档（ZIP 内 database.json 为 V2）包含账单、交易、复核备注与设置，以及当前浏览器实际可访问的原始文件。历史导入若缺少附件，manifest 会如实标记为 missing，不会伪造文件。历史 V1 压缩包仍可恢复，但其中的 database.json 不含独立复核备注。备份文件为本机未加密文件，并非加密云备份。
             </p>
             {status ? (
               <p className="subtle" data-testid="archive-status">

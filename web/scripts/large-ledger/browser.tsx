@@ -341,6 +341,29 @@ Object.assign(window, { benchmark: {
     return { state: api.state.transactions.find(row => row.id === id), stored: await db.transactions.get(id) }
   },
   note: async (id: string) => { await api.saveNote(id, '完全合成的已有备注，恢复不得覆盖'); await paint() },
+  customNote: async (id: string, text: string) => { await api.saveNote(id, text); await paint() },
+  seedNotes: async (denominator = 20) => {
+    // Realistic distribution: every Nth transaction gets an independent
+    // free-text note with Unicode/Chinese/punctuation/line-break variety.
+    // Skips index 0 so the fixed single-note probe for first.id is preserved.
+    const txs = await db.transactions.toArray()
+    const samples = [
+      '中文复核备注：与银行App对账一致，确认为退款。',
+      'Unicode café — naïve façade 🎉 “quotes” ‘single’ …',
+      'punctuation ,.;:!?\'()[]{}<>@#$%^&*-_=+\\/|`~',
+      'line\nbreaks\r\nand\ttabs',
+      '混合 Mixed 中文 and emoji ✅ 12345',
+    ]
+    const rows = []
+    for (let i = denominator; i < txs.length; i += denominator) {
+      const sample = samples[Math.floor(i / denominator) % samples.length]!
+      rows.push({ transactionId: txs[i]!.id, note: `${sample} #${i}`, updatedAt: new Date(Date.UTC(2026, 0, 1) + i * 1000).toISOString() })
+    }
+    for (let offset = 0; offset < rows.length; offset += 2000) await db.reviewNotes.bulkAdd(rows.slice(offset, offset + 2000))
+    await api.refresh()
+    await paint()
+    return { notes: rows.length }
+  },
   originals: async (name: string) => {
     const input = await file(name), { buffer, fileHash } = await hashLegacyFile(input)
     const record = (await db.imports.toArray()).find(row => row.fileHash === fileHash)!
@@ -389,14 +412,19 @@ Object.assign(window, { benchmark: {
       for (const row of expected[table]) if (rows.get(row.id) !== JSON.stringify(row)) counts[field]++
     }
     const clean = (row: object, attachment: boolean) => Object.fromEntries(Object.entries(row).filter(([key]) => !['__key', 'binaryHash', 'binaryBytes', 'data'].includes(key) && !(attachment && !existing && key === 'importedAt')))
-    const notes = existing ? extras.notes : []
+    // V2 restores recover independent notes into fresh profiles; V1 never
+    // exported notes, so fresh V1 restores must invent none while existing
+    // restores preserve local notes in both versions.
+    const isLegacyV1 = format.startsWith('legacy-')
+    const effectiveFormat = isLegacyV1 ? format.slice('legacy-'.length) : format
+    const notes = existing || !isLegacyV1 ? extras.notes : []
     const storedNotes = await verificationDb.table<import('../../src/db/db').ReviewNoteRow, string>('reviewNotes').toArray()
     if (notes.length !== storedNotes.length) counts.noteMismatches++
     for (const row of notes) {
       const got = storedNotes.find(note => note.transactionId === row.transactionId)
       if (!got || JSON.stringify(clean(row, false)) !== JSON.stringify(got)) counts.noteMismatches++
     }
-    const files = existing || format === 'zip' ? extras.attachments : []
+    const files = existing || effectiveFormat === 'zip' ? extras.attachments : []
     const storedFiles = verificationDb.tables.some(table => table.name === 'attachments') ? await verificationDb.table<import('../../src/db/db').AttachmentRow, string>('attachments').toArray() : []
     if (files.length !== storedFiles.length) counts.missingAttachments += Math.abs(files.length - storedFiles.length)
     for (const row of files) {

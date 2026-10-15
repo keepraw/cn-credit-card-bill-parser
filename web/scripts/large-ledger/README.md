@@ -41,18 +41,21 @@ persistence. Large migrations additionally seed full importer-generated objects
 into historical Dexie v1/v2 schemas, or the v3 index structure for controlled
 write/storage comparisons. This direct seed path is recorded separately.
 
-Backup mode exports actual JSON/ZIP downloads, checks newer local edits and
-notes survive restoring older exports, clears the synthetic ledger, restores
-into new profiles and repeats restoration. Every transaction field and the
+Backup mode exports actual V2 JSON/ZIP downloads (with a realistic distribution of
+independent free-text notes seeded every 20th transaction), checks newer local
+edits survive restoring older exports, verifies conflicting note content rejects
+without partial changes, clears the synthetic ledger, restores into new profiles
+and repeats restoration. Every transaction field, note content/timestamp and the
 statements/imports are compared in the browser. Original attachment metadata and
 SHA-256 bytes are checked, and a native 100k restore is forced to fail at the
-late attachment write to prove cross-store rollback. Legacy pretty JSON, old
-format identifiers, partial settings and nonstreaming STORE ZIPs are exercised.
-Version-1 backups have never included separate review notes; existing notes are
-checked for preservation, while fresh profiles expect no notes. A fresh ZIP
-restores the original bytes and contract metadata; its attachment `importedAt`
-is reconstructed by the existing version-1 restore contract. Existing restores
-and migrations require the stored timestamp to remain exact.
+late attachment write to prove cross-store rollback (transactions, notes and
+attachments all roll back). Legacy pretty JSON, old format identifiers, partial
+settings and nonstreaming STORE ZIPs are exercised. V2 fresh profiles recover
+all notes; legacy V1 payloads (stripped `reviewNotes`, `version: 1`) preserve
+existing notes while fresh V1 profiles invent none. A fresh ZIP restores the
+original bytes and contract metadata; its attachment `importedAt` is
+reconstructed by the existing restore contract. Existing restores and migrations
+require stored timestamps (including note `updatedAt`) to remain exact.
 
 Performance mode runs three independent XLSX imports, three page-ready samples,
 five read/refresh/filter/sort/edit samples and three actual JSON downloads. React
