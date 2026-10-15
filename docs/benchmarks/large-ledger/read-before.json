@@ -1,0 +1,176 @@
+{
+  "metadata": {
+    "date": "2026-10-14T16:36:39.624Z",
+    "mode": "read",
+    "seed": 1263684657,
+    "source": "/workspace/keepraw-ledger-large-baseline/web",
+    "commit": "37a603be23f3c27beddea3be9c6b97de7482089d",
+    "reusedProfileRoot": "/workspace/scratch/large-ledger-09jeS8",
+    "node": "v24.19.0",
+    "cpu": "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz",
+    "cpus": 5,
+    "memoryBytes": 18882699264,
+    "temporary": "/workspace/scratch/large-ledger-IY2pL9",
+    "sourceFiles": {
+      "app/AppStore.tsx": "de9bc90675fa41dddf8b009aadd134f27476fc48f076eaf93546962c0df942fc",
+      "db/db.ts": "001ebcfde22317148a3562dc96b62a777a9011de3ec88ad9eedcd7020c5fde3c",
+      "db/repository.ts": "debd374150a05cca33c2ec6cf4a84a6a30aab25206d03a4642ca7c4bb539495a",
+      "backup/archive.ts": "089fee838b4eaf19511beba170536da274026ad02b704c97daf0fbe90568b50f",
+      "backup/zipSafety.ts": "3943a35a347f4e96ca5f5e51bb5d5372eef5b1775a843a8ead4d6a26ca1163a5",
+      "ui/pages/TransactionsPage.tsx": "6ce84e71cb5916dd0689901891a68a751f10979dc191efca50772dd748114b14"
+    },
+    "origin": "http://127.0.0.1:38243",
+    "completedAt": "2026-10-14T16:38:25.960Z"
+  },
+  "cases": [
+    {
+      "count": 100000,
+      "profiles": [
+        {
+          "profile": "/workspace/scratch/large-ledger-09jeS8/performance-100000-0",
+          "repeat": 0,
+          "samples": [
+            {
+              "ms": 1651.699999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1589.800000000745,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1525.199999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1627.1000000014901,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1601.699999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1598.6000000014901,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1466.5999999977648,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            }
+          ]
+        },
+        {
+          "profile": "/workspace/scratch/large-ledger-09jeS8/performance-100000-1",
+          "repeat": 1,
+          "samples": [
+            {
+              "ms": 1647.5,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1563.0999999977648,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1537.699999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1532,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1448.7000000029802,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1650.7999999970198,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1581.5,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            }
+          ]
+        },
+        {
+          "profile": "/workspace/scratch/large-ledger-09jeS8/performance-100000-2",
+          "repeat": 2,
+          "samples": [
+            {
+              "ms": 1631.5999999977648,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1551.300000000745,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1583.5,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1518.6000000014901,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1523.199999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1636.199999999255,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            },
+            {
+              "ms": 1724.9000000022352,
+              "records": 100000,
+              "statements": 576,
+              "imports": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

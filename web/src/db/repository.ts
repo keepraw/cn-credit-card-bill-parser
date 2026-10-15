@@ -1,7 +1,11 @@
 import type { ExistingSnapshot, IngestResult } from '../core/ingest'
+import type { Table } from 'dexie'
 import type { ImportRecord, Statement, Transaction } from '../core/types'
 import { type AttachmentRow, db } from './db'
+
+const DEMO_PURGE_KEY = 'migration:memory-only-demo'
 import { validateBackup } from '../backup/validation'
+import { createJsonBlob } from '../backup/json'
 import { reconcileStatement } from '../core/reconcile'
 export { validateBackup } from '../backup/validation'
 
@@ -12,12 +16,12 @@ export interface Snapshot {
 }
 
 export async function readSnapshot(): Promise<Snapshot> {
-  const [statements, transactions, imports] = await Promise.all([
-    db.statements.toArray(),
-    db.transactions.toArray(),
-    db.imports.toArray(),
-  ])
-  return { statements, transactions, imports }
+  return db.transaction('r', db.statements, db.transactions, db.imports, async () => {
+    const [statements, transactions, imports] = await Promise.all([
+      db.statements.toArray(), db.transactions.toArray(), db.imports.toArray(),
+    ])
+    return { statements, transactions, imports }
+  })
 }
 
 export function toExistingSnapshot(snapshot: Snapshot): ExistingSnapshot {
@@ -26,7 +30,10 @@ export function toExistingSnapshot(snapshot: Snapshot): ExistingSnapshot {
 
 /** Persist a batch of ingest results in a single transaction. */
 export async function persistImportResults(results: IngestResult[]): Promise<void> {
-  await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
+  await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
+    if (results.some(result => result.record.isDemo || result.statement?.isDemo || result.transactions.some(row => row.isDemo))) {
+      await db.settings.delete(DEMO_PURGE_KEY)
+    }
     for (const result of results) {
       await db.imports.put(result.record)
       if (!result.statement) continue
@@ -44,7 +51,10 @@ export async function persistLegacyImport(plan: {
   statements: Statement[]
   inserted: Transaction[]
 }): Promise<void> {
-  await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
+  await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
+    if (plan.record.isDemo || plan.statements.some(row => row.isDemo) || plan.inserted.some(row => row.isDemo)) {
+      await db.settings.delete(DEMO_PURGE_KEY)
+    }
     await db.imports.put(plan.record)
     await db.statements.bulkPut(plan.statements)
     for (let offset = 0; offset < plan.inserted.length; offset += 2000) {
@@ -53,12 +63,28 @@ export async function persistLegacyImport(plan: {
   })
 }
 
+/** Merge against the latest committed row, never against a captured React snapshot. */
+export async function patchTransaction(patch: Partial<Transaction> & { id: string }): Promise<Transaction | undefined> {
+  const ownedPatch = structuredClone(patch)
+  return db.transaction('rw', db.transactions, db.settings, async () => {
+    const current = await db.transactions.get(ownedPatch.id)
+    if (!current) return undefined
+    const next = { ...current, ...ownedPatch }
+    await db.transactions.put(next)
+    if (next.isDemo) await db.settings.delete(DEMO_PURGE_KEY)
+    return next
+  })
+}
+
 export async function updateTransaction(transaction: Transaction): Promise<void> {
-  await db.transactions.put(transaction)
+  await patchTransaction(transaction)
 }
 
 export async function updateTransactions(transactions: Transaction[]): Promise<void> {
-  await db.transactions.bulkPut(transactions)
+  await db.transaction('rw', db.transactions, db.settings, async () => {
+    await db.transactions.bulkPut(transactions)
+    if (transactions.some(row => row.isDemo)) await db.settings.delete(DEMO_PURGE_KEY)
+  })
 }
 
 export async function getReviewNotes(): Promise<Record<string, string>> {
@@ -91,16 +117,26 @@ export async function exportBackup(): Promise<BackupPayload> {
 
 /** Preferred name going forward. Writes `credit-card-data.json`. Keeps the payload identical. */
 export async function exportDataBackup(): Promise<BackupPayload> {
-  const settings = await db.settings.get('app')
-  return {
-    format: 'credit-card-data-backup',
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    statements: await db.statements.toArray(),
-    transactions: await db.transactions.toArray(),
-    imports: await db.imports.toArray(),
-    settings: settings?.value ?? null,
-  }
+  return db.transaction('r', db.statements, db.transactions, db.imports, db.settings, async () => {
+    const [statements, transactions, imports, settings] = await Promise.all([
+      db.statements.toArray(), db.transactions.toArray(), db.imports.toArray(), db.settings.get('app'),
+    ])
+    const payload: BackupPayload = { format: 'credit-card-data-backup', version: 1,
+      exportedAt: new Date().toISOString(), statements, transactions, imports, settings: settings?.value ?? null }
+    if (!validateBackup(payload)) throw new Error('账本包含无效记录，拒绝生成不可恢复的备份')
+    return payload
+  })
+}
+
+export async function buildDataBackupBlob(): Promise<Blob> {
+  return createJsonBlob(await exportDataBackup())
+}
+
+async function backupRows<T>(table: Table<T, string>, ids: string[]): Promise<Array<T | undefined>> {
+  if (await table.count() === 0) return new Array<T | undefined>(ids.length).fill(undefined)
+  const rows: Array<T | undefined> = []
+  for (let offset = 0; offset < ids.length; offset += 2000) rows.push(...await table.bulkGet(ids.slice(offset, offset + 2000)))
+  return rows
 }
 
 /** Matching primary keys keep current metadata; financial conflicts abort. */
@@ -108,14 +144,14 @@ export async function importBackup(payload: BackupPayload): Promise<void> {
   if (!validateBackup(payload)) throw new Error('备份包含无效记录，拒绝恢复')
   await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
     const [storedStatements, storedTransactions, storedImports] = await Promise.all([
-      db.statements.bulkGet(payload.statements.map((row) => row.id)),
-      db.transactions.bulkGet(payload.transactions.map((row) => row.id)),
-      db.imports.bulkGet(payload.imports.map((row) => row.id)),
+      backupRows(db.statements, payload.statements.map((row) => row.id)),
+      backupRows(db.transactions, payload.transactions.map((row) => row.id)),
+      backupRows(db.imports, payload.imports.map((row) => row.id)),
     ])
     for (const [index, row] of payload.transactions.entries()) {
       const current = storedTransactions[index]
       if (current && ['statementId', 'bank', 'cardLast4', 'transactionDate', 'postingDate', 'description',
-        'transactionCurrency', 'transactionAmountMinor', 'settlementCurrency', 'settlementAmountMinor', 'type', 'direction']
+        'transactionCurrency', 'transactionAmountMinor', 'settlementCurrency', 'settlementAmountMinor', 'type', 'direction', 'fingerprint', 'occurrence']
         .some((key) => current[key as keyof Transaction] !== row[key as keyof Transaction])) {
         throw new Error(`交易标识冲突，拒绝覆盖：${row.id}`)
       }
@@ -130,9 +166,12 @@ export async function importBackup(payload: BackupPayload): Promise<void> {
     }
     await db.statements.bulkAdd(payload.statements.filter((_row, index) => !storedStatements[index]))
     const addedTransactions = payload.transactions.filter((_row, index) => !storedTransactions[index])
-    await db.transactions.bulkAdd(addedTransactions)
+    for (let offset = 0; offset < addedTransactions.length; offset += 2000) {
+      await db.transactions.bulkAdd(addedTransactions.slice(offset, offset + 2000))
+    }
     await db.imports.bulkAdd(payload.imports.filter((_row, index) => !storedImports[index]))
     const affected = [...new Set(addedTransactions.map((row) => row.statementId))]
+    const existingStatementIds = new Set(storedStatements.flatMap((row) => row ? [row.id] : []))
     const grouped = new Map<string, Transaction[]>()
     for (const row of await db.transactions.where('statementId').anyOf(affected).toArray()) {
       const rows = grouped.get(row.statementId) ?? []
@@ -142,10 +181,14 @@ export async function importBackup(payload: BackupPayload): Promise<void> {
     for (const current of await db.statements.bulkGet(affected)) {
       if (!current) continue
       const transactions = grouped.get(current.id) ?? []
+      // A complete restored statement already carries its original decisions
+      // and reconciliation. Only existing/partial statements need rebuilding.
+      if (!existingStatementIds.has(current.id) && current.transactionCount === transactions.length) continue
       const reconciliation = reconcileStatement({ summary: current.summary, transactions })
       await db.statements.put({ ...current, transactionCount: transactions.length, reconciliation,
         status: current.status === 'imported' ? 'imported' : reconciliation.status === 'passed' ? 'reconciled' : 'needs_review' })
     }
+    if (payload.transactions.some(row => row.isDemo) || payload.statements.some(row => row.isDemo) || payload.imports.some(row => row.isDemo)) await db.settings.delete(DEMO_PURGE_KEY)
     if (payload.settings) await db.settings.put({ key: 'app', value: payload.settings })
   })
 }
@@ -173,11 +216,17 @@ export async function clearDemoData(): Promise<void> {
  * rows, review notes, attachments and backups are untouched.
  */
 export async function purgeDemoRows(): Promise<void> {
-  await db.transaction('rw', db.statements, db.transactions, db.imports, async () => {
+  await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
     await db.statements.filter((row) => row.isDemo === true).delete()
     await db.transactions.filter((row) => row.isDemo === true).delete()
     await db.imports.filter((row) => row.isDemo === true).delete()
+    await db.settings.put({ key: DEMO_PURGE_KEY, value: true })
   })
+}
+
+/** Only scan old ledgers once. Importing persisted demo rows invalidates the marker atomically. */
+export async function ensureDemoRowsPurged(): Promise<void> {
+  if ((await db.settings.get(DEMO_PURGE_KEY))?.value !== true) await purgeDemoRows()
 }
 
 export async function clearAllData(options: { includeDemo: boolean }): Promise<void> {

@@ -1,0 +1,4016 @@
+{
+  "metadata": {
+    "date": "2026-10-14T14:48:12.393Z",
+    "mode": "backup",
+    "seed": 1263684657,
+    "source": "/workspace/keepraw-ledger-large-ledger/web",
+    "commit": "37a603be23f3c27beddea3be9c6b97de7482089d",
+    "node": "v24.19.0",
+    "cpu": "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz",
+    "cpus": 5,
+    "memoryBytes": 18882699264,
+    "temporary": "/workspace/scratch/large-ledger-haBBD5",
+    "sourceFiles": {
+      "app/AppStore.tsx": "fcc5a4cf3beee6cb7f7dab6cc3618f4dda100b5fa75bce76311c7f31fd2f9487",
+      "db/db.ts": "001ebcfde22317148a3562dc96b62a777a9011de3ec88ad9eedcd7020c5fde3c",
+      "db/repository.ts": "8a1086ea51d470bb3e285d7e875aef457a36925f22db1e0d2b31ed471238450c",
+      "backup/json.ts": "25e0302aa465ecee75fe953dfbb2ba2e5dbb1fcff22782ad5a7ca1eb09f2a17a",
+      "backup/archive.ts": "38d94eb540bde04ba727bd2fb57e28cda61b4b4f39cca358bb1bf22db7108f7c",
+      "backup/zipSafety.ts": "2b9dcb30da05010a0883dac878973dded14a4cfd99f40a36b1d1264c7013f03a",
+      "ui/pages/TransactionsPage.tsx": "6ce84e71cb5916dd0689901891a68a751f10979dc191efca50772dd748114b14"
+    },
+    "origin": "http://127.0.0.1:39509",
+    "completedAt": "2026-10-14T15:00:40.965Z"
+  },
+  "cases": [
+    {
+      "count": 18000,
+      "import": {
+        "previewMs": 3020.5,
+        "confirmMs": 6578.800000000745,
+        "totalMs": 9782,
+        "record": {
+          "status": "imported",
+          "transactionCount": 18000
+        },
+        "valid": 18000,
+        "anomalies": 0,
+        "longTasks": [
+          {
+            "startTime": 2063.199999999255,
+            "duration": 2900
+          },
+          {
+            "startTime": 4965.5,
+            "duration": 206
+          },
+          {
+            "startTime": 5246.199999999255,
+            "duration": 88
+          },
+          {
+            "startTime": 5691.300000000745,
+            "duration": 71
+          },
+          {
+            "startTime": 6444.300000000745,
+            "duration": 80
+          },
+          {
+            "startTime": 6693.800000000745,
+            "duration": 113
+          },
+          {
+            "startTime": 6818.300000000745,
+            "duration": 58
+          },
+          {
+            "startTime": 7492,
+            "duration": 159
+          },
+          {
+            "startTime": 8038.89999999851,
+            "duration": 503
+          },
+          {
+            "startTime": 8590.89999999851,
+            "duration": 131
+          },
+          {
+            "startTime": 9180.800000000745,
+            "duration": 126
+          },
+          {
+            "startTime": 9815.300000000745,
+            "duration": 252
+          },
+          {
+            "startTime": 10482.199999999255,
+            "duration": 85
+          },
+          {
+            "startTime": 11465.5,
+            "duration": 75
+          },
+          {
+            "startTime": 11541.89999999851,
+            "duration": 145
+          }
+        ]
+      },
+      "checks": [
+        {
+          "context": "existing",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "existing",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "clear-json",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-json-0",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-json-1",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-json-2",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-zip-0",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-zip-1",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-zip-2",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "legacy-json",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "legacy-zip",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        }
+      ],
+      "restore": [
+        {
+          "context": "existing-edits-notes-originals",
+          "name": "18000.json",
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单。",
+          "ms": 1572.6000000014901
+        },
+        {
+          "context": "existing-edits-notes-originals",
+          "name": "18000.zip",
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单、0 个原始文件。",
+          "ms": 1718.4000000022352
+        },
+        {
+          "context": "export-clear-restore",
+          "kind": "json",
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单。",
+          "ms": 8369
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "json",
+          "repeat": 0,
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单。",
+          "ms": 6215.10000000149
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "json",
+          "repeat": 1,
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单。",
+          "ms": 1865.5
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "json",
+          "repeat": 2,
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单。",
+          "ms": 2041.5999999977648
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "zip",
+          "repeat": 0,
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单、1 个原始文件。",
+          "ms": 7132.10000000149
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "zip",
+          "repeat": 1,
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单、0 个原始文件。",
+          "ms": 2174.400000002235
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "zip",
+          "repeat": 2,
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单、0 个原始文件。",
+          "ms": 2089
+        },
+        {
+          "context": "legacy-v1",
+          "kind": "json",
+          "bytes": 22500046,
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单。",
+          "ms": 6379.5
+        },
+        {
+          "context": "legacy-v1",
+          "kind": "zip",
+          "bytes": 28091547,
+          "ok": true,
+          "message": "已恢复 18000 笔交易、576 份账单、1 个原始文件。",
+          "ms": 6576.199999999255
+        }
+      ],
+      "memoryProfiles": [
+        {
+          "label": "source",
+          "peakChromiumRssBytes": 1082859520,
+          "peakNodeRssBytes": 744644608,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:48:22.977Z",
+              "bytes": 409260032
+            },
+            {
+              "at": "2026-10-14T14:48:23.329Z",
+              "bytes": 435376128
+            },
+            {
+              "at": "2026-10-14T14:48:23.674Z",
+              "bytes": 450306048
+            },
+            {
+              "at": "2026-10-14T14:48:23.985Z",
+              "bytes": 483758080
+            },
+            {
+              "at": "2026-10-14T14:48:24.295Z",
+              "bytes": 499740672
+            },
+            {
+              "at": "2026-10-14T14:48:24.665Z",
+              "bytes": 520290304
+            },
+            {
+              "at": "2026-10-14T14:48:24.947Z",
+              "bytes": 562266112
+            },
+            {
+              "at": "2026-10-14T14:48:25.252Z",
+              "bytes": 607264768
+            },
+            {
+              "at": "2026-10-14T14:48:25.563Z",
+              "bytes": 651264000
+            },
+            {
+              "at": "2026-10-14T14:48:26.430Z",
+              "bytes": 660545536
+            },
+            {
+              "at": "2026-10-14T14:48:26.702Z",
+              "bytes": 674197504
+            },
+            {
+              "at": "2026-10-14T14:48:26.982Z",
+              "bytes": 678793216
+            },
+            {
+              "at": "2026-10-14T14:48:27.265Z",
+              "bytes": 682397696
+            },
+            {
+              "at": "2026-10-14T14:48:27.544Z",
+              "bytes": 720879616
+            },
+            {
+              "at": "2026-10-14T14:48:27.814Z",
+              "bytes": 746192896
+            },
+            {
+              "at": "2026-10-14T14:48:28.085Z",
+              "bytes": 754528256
+            },
+            {
+              "at": "2026-10-14T14:48:28.366Z",
+              "bytes": 762654720
+            },
+            {
+              "at": "2026-10-14T14:48:28.961Z",
+              "bytes": 766328832
+            },
+            {
+              "at": "2026-10-14T14:48:29.541Z",
+              "bytes": 766701568
+            },
+            {
+              "at": "2026-10-14T14:48:36.318Z",
+              "bytes": 782573568
+            },
+            {
+              "at": "2026-10-14T14:48:36.854Z",
+              "bytes": 816680960
+            },
+            {
+              "at": "2026-10-14T14:48:37.691Z",
+              "bytes": 880558080
+            },
+            {
+              "at": "2026-10-14T14:48:37.976Z",
+              "bytes": 933474304
+            },
+            {
+              "at": "2026-10-14T14:48:38.253Z",
+              "bytes": 957698048
+            },
+            {
+              "at": "2026-10-14T14:48:38.532Z",
+              "bytes": 1027735552
+            },
+            {
+              "at": "2026-10-14T14:48:38.803Z",
+              "bytes": 1062952960
+            },
+            {
+              "at": "2026-10-14T14:48:41.308Z",
+              "bytes": 1075523584
+            },
+            {
+              "at": "2026-10-14T14:48:46.918Z",
+              "bytes": 1075896320
+            },
+            {
+              "at": "2026-10-14T14:48:47.792Z",
+              "bytes": 1076350976
+            },
+            {
+              "at": "2026-10-14T14:48:48.355Z",
+              "bytes": 1081544704
+            },
+            {
+              "at": "2026-10-14T14:48:49.192Z",
+              "bytes": 1081954304
+            },
+            {
+              "at": "2026-10-14T14:48:50.590Z",
+              "bytes": 1082859520
+            }
+          ]
+        },
+        {
+          "label": "fresh-json",
+          "peakChromiumRssBytes": 1172111360,
+          "peakNodeRssBytes": 748314624,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:48:55.065Z",
+              "bytes": 409714688
+            },
+            {
+              "at": "2026-10-14T14:48:55.350Z",
+              "bytes": 444215296
+            },
+            {
+              "at": "2026-10-14T14:48:55.631Z",
+              "bytes": 491634688
+            },
+            {
+              "at": "2026-10-14T14:48:55.907Z",
+              "bytes": 594227200
+            },
+            {
+              "at": "2026-10-14T14:48:56.185Z",
+              "bytes": 642564096
+            },
+            {
+              "at": "2026-10-14T14:48:57.576Z",
+              "bytes": 644931584
+            },
+            {
+              "at": "2026-10-14T14:48:58.136Z",
+              "bytes": 647716864
+            },
+            {
+              "at": "2026-10-14T14:48:58.417Z",
+              "bytes": 649461760
+            },
+            {
+              "at": "2026-10-14T14:48:58.980Z",
+              "bytes": 653156352
+            },
+            {
+              "at": "2026-10-14T14:48:59.540Z",
+              "bytes": 657321984
+            },
+            {
+              "at": "2026-10-14T14:49:00.108Z",
+              "bytes": 658690048
+            },
+            {
+              "at": "2026-10-14T14:49:00.397Z",
+              "bytes": 658735104
+            },
+            {
+              "at": "2026-10-14T14:49:00.670Z",
+              "bytes": 658825216
+            },
+            {
+              "at": "2026-10-14T14:49:01.254Z",
+              "bytes": 678133760
+            },
+            {
+              "at": "2026-10-14T14:49:02.357Z",
+              "bytes": 746450944
+            },
+            {
+              "at": "2026-10-14T14:49:03.180Z",
+              "bytes": 805126144
+            },
+            {
+              "at": "2026-10-14T14:49:03.741Z",
+              "bytes": 816795648
+            },
+            {
+              "at": "2026-10-14T14:49:04.022Z",
+              "bytes": 826368000
+            },
+            {
+              "at": "2026-10-14T14:49:04.299Z",
+              "bytes": 839749632
+            },
+            {
+              "at": "2026-10-14T14:49:05.177Z",
+              "bytes": 865746944
+            },
+            {
+              "at": "2026-10-14T14:49:05.449Z",
+              "bytes": 873213952
+            },
+            {
+              "at": "2026-10-14T14:49:05.733Z",
+              "bytes": 887001088
+            },
+            {
+              "at": "2026-10-14T14:49:06.040Z",
+              "bytes": 922173440
+            },
+            {
+              "at": "2026-10-14T14:49:06.361Z",
+              "bytes": 974409728
+            },
+            {
+              "at": "2026-10-14T14:49:06.678Z",
+              "bytes": 980692992
+            },
+            {
+              "at": "2026-10-14T14:49:06.970Z",
+              "bytes": 980992000
+            },
+            {
+              "at": "2026-10-14T14:49:07.252Z",
+              "bytes": 997883904
+            },
+            {
+              "at": "2026-10-14T14:49:07.543Z",
+              "bytes": 1002192896
+            },
+            {
+              "at": "2026-10-14T14:49:07.829Z",
+              "bytes": 1018458112
+            },
+            {
+              "at": "2026-10-14T14:49:08.117Z",
+              "bytes": 1044197376
+            },
+            {
+              "at": "2026-10-14T14:49:08.400Z",
+              "bytes": 1056976896
+            },
+            {
+              "at": "2026-10-14T14:49:08.681Z",
+              "bytes": 1111449600
+            },
+            {
+              "at": "2026-10-14T14:49:08.966Z",
+              "bytes": 1132007424
+            },
+            {
+              "at": "2026-10-14T14:49:09.243Z",
+              "bytes": 1172111360
+            }
+          ]
+        },
+        {
+          "label": "fresh-zip",
+          "peakChromiumRssBytes": 1013514240,
+          "peakNodeRssBytes": 750018560,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:49:10.096Z",
+              "bytes": 405086208
+            },
+            {
+              "at": "2026-10-14T14:49:10.412Z",
+              "bytes": 440078336
+            },
+            {
+              "at": "2026-10-14T14:49:10.732Z",
+              "bytes": 483471360
+            },
+            {
+              "at": "2026-10-14T14:49:11.021Z",
+              "bytes": 504029184
+            },
+            {
+              "at": "2026-10-14T14:49:11.303Z",
+              "bytes": 560611328
+            },
+            {
+              "at": "2026-10-14T14:49:11.588Z",
+              "bytes": 653295616
+            },
+            {
+              "at": "2026-10-14T14:49:11.867Z",
+              "bytes": 679358464
+            },
+            {
+              "at": "2026-10-14T14:49:15.990Z",
+              "bytes": 686563328
+            },
+            {
+              "at": "2026-10-14T14:49:17.103Z",
+              "bytes": 688009216
+            },
+            {
+              "at": "2026-10-14T14:49:17.431Z",
+              "bytes": 701808640
+            },
+            {
+              "at": "2026-10-14T14:49:17.703Z",
+              "bytes": 718610432
+            },
+            {
+              "at": "2026-10-14T14:49:18.819Z",
+              "bytes": 733806592
+            },
+            {
+              "at": "2026-10-14T14:49:19.091Z",
+              "bytes": 813658112
+            },
+            {
+              "at": "2026-10-14T14:49:19.359Z",
+              "bytes": 840163328
+            },
+            {
+              "at": "2026-10-14T14:49:19.953Z",
+              "bytes": 869646336
+            },
+            {
+              "at": "2026-10-14T14:49:20.797Z",
+              "bytes": 870891520
+            },
+            {
+              "at": "2026-10-14T14:49:21.073Z",
+              "bytes": 882139136
+            },
+            {
+              "at": "2026-10-14T14:49:21.348Z",
+              "bytes": 898330624
+            },
+            {
+              "at": "2026-10-14T14:49:21.621Z",
+              "bytes": 921923584
+            },
+            {
+              "at": "2026-10-14T14:49:21.897Z",
+              "bytes": 944656384
+            },
+            {
+              "at": "2026-10-14T14:49:22.184Z",
+              "bytes": 980910080
+            },
+            {
+              "at": "2026-10-14T14:49:25.255Z",
+              "bytes": 990498816
+            },
+            {
+              "at": "2026-10-14T14:49:25.537Z",
+              "bytes": 1013514240
+            }
+          ]
+        },
+        {
+          "label": "legacy-json",
+          "peakChromiumRssBytes": 747241472,
+          "peakNodeRssBytes": 841703424,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:49:27.578Z",
+              "bytes": 407949312
+            },
+            {
+              "at": "2026-10-14T14:49:27.881Z",
+              "bytes": 442335232
+            },
+            {
+              "at": "2026-10-14T14:49:28.184Z",
+              "bytes": 485007360
+            },
+            {
+              "at": "2026-10-14T14:49:28.462Z",
+              "bytes": 549826560
+            },
+            {
+              "at": "2026-10-14T14:49:28.734Z",
+              "bytes": 680243200
+            },
+            {
+              "at": "2026-10-14T14:49:35.058Z",
+              "bytes": 711991296
+            },
+            {
+              "at": "2026-10-14T14:49:35.342Z",
+              "bytes": 747241472
+            }
+          ]
+        },
+        {
+          "label": "legacy-zip",
+          "peakChromiumRssBytes": 768770048,
+          "peakNodeRssBytes": 842358784,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:49:36.777Z",
+              "bytes": 405254144
+            },
+            {
+              "at": "2026-10-14T14:49:37.070Z",
+              "bytes": 443727872
+            },
+            {
+              "at": "2026-10-14T14:49:37.344Z",
+              "bytes": 498548736
+            },
+            {
+              "at": "2026-10-14T14:49:37.634Z",
+              "bytes": 578322432
+            },
+            {
+              "at": "2026-10-14T14:49:37.905Z",
+              "bytes": 710311936
+            },
+            {
+              "at": "2026-10-14T14:49:41.846Z",
+              "bytes": 715464704
+            },
+            {
+              "at": "2026-10-14T14:49:42.163Z",
+              "bytes": 717090816
+            },
+            {
+              "at": "2026-10-14T14:49:42.737Z",
+              "bytes": 719101952
+            },
+            {
+              "at": "2026-10-14T14:49:43.021Z",
+              "bytes": 739237888
+            },
+            {
+              "at": "2026-10-14T14:49:43.313Z",
+              "bytes": 747958272
+            },
+            {
+              "at": "2026-10-14T14:49:43.586Z",
+              "bytes": 757739520
+            },
+            {
+              "at": "2026-10-14T14:49:44.824Z",
+              "bytes": 768770048
+            }
+          ]
+        }
+      ],
+      "json": {
+        "bytes": 17686511,
+        "ms": 721.6999999992549,
+        "sha256": "11ed9e5f95b92a929c7dc515fb6212c907a96948389e976010338d803130238a"
+      },
+      "zip": {
+        "bytes": 23278060,
+        "ms": 895,
+        "sha256": "3593f14125e9ad532c5b1db4e3f833cca37694e34f8a3eddbd4a1f6d8e6670db"
+      },
+      "contract": {
+        "version": 1,
+        "notesExported": false,
+        "existingNotesPreserved": true,
+        "freshZipAttachmentTimestampReconstructed": true
+      }
+    },
+    {
+      "count": 36000,
+      "import": {
+        "previewMs": 4977,
+        "confirmMs": 14518.300000000745,
+        "totalMs": 19830,
+        "record": {
+          "status": "imported",
+          "transactionCount": 36000
+        },
+        "valid": 36000,
+        "anomalies": 0,
+        "longTasks": [
+          {
+            "startTime": 1035.7000000029802,
+            "duration": 4892
+          },
+          {
+            "startTime": 5930,
+            "duration": 410
+          },
+          {
+            "startTime": 6420,
+            "duration": 160
+          },
+          {
+            "startTime": 6826.900000002235,
+            "duration": 116
+          },
+          {
+            "startTime": 7252.5,
+            "duration": 66
+          },
+          {
+            "startTime": 7795.5,
+            "duration": 225
+          },
+          {
+            "startTime": 8348.20000000298,
+            "duration": 78
+          },
+          {
+            "startTime": 9159.400000002235,
+            "duration": 161
+          },
+          {
+            "startTime": 10141.70000000298,
+            "duration": 156
+          },
+          {
+            "startTime": 10750.20000000298,
+            "duration": 164
+          },
+          {
+            "startTime": 11698.900000002235,
+            "duration": 233
+          },
+          {
+            "startTime": 12367.800000000745,
+            "duration": 190
+          },
+          {
+            "startTime": 13146.70000000298,
+            "duration": 106
+          },
+          {
+            "startTime": 13821.60000000149,
+            "duration": 196
+          },
+          {
+            "startTime": 14663.60000000149,
+            "duration": 171
+          },
+          {
+            "startTime": 15445,
+            "duration": 164
+          },
+          {
+            "startTime": 16267,
+            "duration": 104
+          },
+          {
+            "startTime": 17101.20000000298,
+            "duration": 95
+          },
+          {
+            "startTime": 18064.10000000149,
+            "duration": 98
+          },
+          {
+            "startTime": 18709.20000000298,
+            "duration": 105
+          },
+          {
+            "startTime": 20095.800000000745,
+            "duration": 344
+          },
+          {
+            "startTime": 20445.60000000149,
+            "duration": 267
+          },
+          {
+            "startTime": 20712.900000002235,
+            "duration": 66
+          }
+        ]
+      },
+      "checks": [
+        {
+          "context": "existing",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "existing",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "clear-json",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-json-0",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-json-1",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-json-2",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-zip-0",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-zip-1",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-zip-2",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "legacy-json",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "legacy-zip",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        }
+      ],
+      "restore": [
+        {
+          "context": "existing-edits-notes-originals",
+          "name": "36000.json",
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单。",
+          "ms": 3790.10000000149
+        },
+        {
+          "context": "existing-edits-notes-originals",
+          "name": "36000.zip",
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单、0 个原始文件。",
+          "ms": 4886.60000000149
+        },
+        {
+          "context": "export-clear-restore",
+          "kind": "json",
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单。",
+          "ms": 15319.800000000745
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "json",
+          "repeat": 0,
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单。",
+          "ms": 12854.199999999255
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "json",
+          "repeat": 1,
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单。",
+          "ms": 3616.10000000149
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "json",
+          "repeat": 2,
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单。",
+          "ms": 2877.800000000745
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "zip",
+          "repeat": 0,
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单、1 个原始文件。",
+          "ms": 15833.699999999255
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "zip",
+          "repeat": 1,
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单、0 个原始文件。",
+          "ms": 3915.800000000745
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "zip",
+          "repeat": 2,
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单、0 个原始文件。",
+          "ms": 4268.800000000745
+        },
+        {
+          "context": "legacy-v1",
+          "kind": "json",
+          "bytes": 43566808,
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单。",
+          "ms": 13283.10000000149
+        },
+        {
+          "context": "legacy-v1",
+          "kind": "zip",
+          "bytes": 54791110,
+          "ok": true,
+          "message": "已恢复 36000 笔交易、576 份账单、1 个原始文件。",
+          "ms": 18667.800000000745
+        }
+      ],
+      "memoryProfiles": [
+        {
+          "label": "source",
+          "peakChromiumRssBytes": 1884667904,
+          "peakNodeRssBytes": 856211456,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:49:50.012Z",
+              "bytes": 409812992
+            },
+            {
+              "at": "2026-10-14T14:49:50.287Z",
+              "bytes": 446132224
+            },
+            {
+              "at": "2026-10-14T14:49:50.571Z",
+              "bytes": 489893888
+            },
+            {
+              "at": "2026-10-14T14:49:50.848Z",
+              "bytes": 557068288
+            },
+            {
+              "at": "2026-10-14T14:49:51.153Z",
+              "bytes": 642007040
+            },
+            {
+              "at": "2026-10-14T14:49:51.433Z",
+              "bytes": 741081088
+            },
+            {
+              "at": "2026-10-14T14:49:52.578Z",
+              "bytes": 748933120
+            },
+            {
+              "at": "2026-10-14T14:49:52.861Z",
+              "bytes": 789491712
+            },
+            {
+              "at": "2026-10-14T14:49:53.142Z",
+              "bytes": 795951104
+            },
+            {
+              "at": "2026-10-14T14:49:53.418Z",
+              "bytes": 818057216
+            },
+            {
+              "at": "2026-10-14T14:49:53.692Z",
+              "bytes": 824123392
+            },
+            {
+              "at": "2026-10-14T14:49:53.966Z",
+              "bytes": 830758912
+            },
+            {
+              "at": "2026-10-14T14:49:54.259Z",
+              "bytes": 833503232
+            },
+            {
+              "at": "2026-10-14T14:49:54.533Z",
+              "bytes": 836374528
+            },
+            {
+              "at": "2026-10-14T14:49:54.817Z",
+              "bytes": 840073216
+            },
+            {
+              "at": "2026-10-14T14:49:55.089Z",
+              "bytes": 845328384
+            },
+            {
+              "at": "2026-10-14T14:49:55.383Z",
+              "bytes": 868016128
+            },
+            {
+              "at": "2026-10-14T14:49:55.698Z",
+              "bytes": 896176128
+            },
+            {
+              "at": "2026-10-14T14:49:55.978Z",
+              "bytes": 899469312
+            },
+            {
+              "at": "2026-10-14T14:49:56.263Z",
+              "bytes": 913121280
+            },
+            {
+              "at": "2026-10-14T14:49:56.545Z",
+              "bytes": 925196288
+            },
+            {
+              "at": "2026-10-14T14:49:58.551Z",
+              "bytes": 930410496
+            },
+            {
+              "at": "2026-10-14T14:50:00.913Z",
+              "bytes": 931860480
+            },
+            {
+              "at": "2026-10-14T14:50:01.191Z",
+              "bytes": 933556224
+            },
+            {
+              "at": "2026-10-14T14:50:02.047Z",
+              "bytes": 936796160
+            },
+            {
+              "at": "2026-10-14T14:50:02.624Z",
+              "bytes": 943185920
+            },
+            {
+              "at": "2026-10-14T14:50:03.514Z",
+              "bytes": 943554560
+            },
+            {
+              "at": "2026-10-14T14:50:13.751Z",
+              "bytes": 968445952
+            },
+            {
+              "at": "2026-10-14T14:50:15.767Z",
+              "bytes": 1001148416
+            },
+            {
+              "at": "2026-10-14T14:50:16.044Z",
+              "bytes": 1020833792
+            },
+            {
+              "at": "2026-10-14T14:50:16.335Z",
+              "bytes": 1044819968
+            },
+            {
+              "at": "2026-10-14T14:50:17.185Z",
+              "bytes": 1088303104
+            },
+            {
+              "at": "2026-10-14T14:50:17.514Z",
+              "bytes": 1174994944
+            },
+            {
+              "at": "2026-10-14T14:50:19.484Z",
+              "bytes": 1179820032
+            },
+            {
+              "at": "2026-10-14T14:50:19.765Z",
+              "bytes": 1238032384
+            },
+            {
+              "at": "2026-10-14T14:50:20.038Z",
+              "bytes": 1274003456
+            },
+            {
+              "at": "2026-10-14T14:50:20.899Z",
+              "bytes": 1282490368
+            },
+            {
+              "at": "2026-10-14T14:50:21.182Z",
+              "bytes": 1294393344
+            },
+            {
+              "at": "2026-10-14T14:50:21.459Z",
+              "bytes": 1308430336
+            },
+            {
+              "at": "2026-10-14T14:50:21.752Z",
+              "bytes": 1324220416
+            },
+            {
+              "at": "2026-10-14T14:50:22.065Z",
+              "bytes": 1362526208
+            },
+            {
+              "at": "2026-10-14T14:50:24.564Z",
+              "bytes": 1384488960
+            },
+            {
+              "at": "2026-10-14T14:50:24.841Z",
+              "bytes": 1494978560
+            },
+            {
+              "at": "2026-10-14T14:50:25.119Z",
+              "bytes": 1596956672
+            },
+            {
+              "at": "2026-10-14T14:50:25.679Z",
+              "bytes": 1610219520
+            },
+            {
+              "at": "2026-10-14T14:50:25.958Z",
+              "bytes": 1617588224
+            },
+            {
+              "at": "2026-10-14T14:50:26.241Z",
+              "bytes": 1627926528
+            },
+            {
+              "at": "2026-10-14T14:50:26.521Z",
+              "bytes": 1639833600
+            },
+            {
+              "at": "2026-10-14T14:50:26.893Z",
+              "bytes": 1655476224
+            },
+            {
+              "at": "2026-10-14T14:50:27.228Z",
+              "bytes": 1663057920
+            },
+            {
+              "at": "2026-10-14T14:50:27.551Z",
+              "bytes": 1689075712
+            },
+            {
+              "at": "2026-10-14T14:50:27.855Z",
+              "bytes": 1702105088
+            },
+            {
+              "at": "2026-10-14T14:50:28.613Z",
+              "bytes": 1743396864
+            },
+            {
+              "at": "2026-10-14T14:50:28.889Z",
+              "bytes": 1759322112
+            },
+            {
+              "at": "2026-10-14T14:50:29.182Z",
+              "bytes": 1783345152
+            },
+            {
+              "at": "2026-10-14T14:50:29.756Z",
+              "bytes": 1815416832
+            },
+            {
+              "at": "2026-10-14T14:50:30.027Z",
+              "bytes": 1844170752
+            },
+            {
+              "at": "2026-10-14T14:50:30.366Z",
+              "bytes": 1884667904
+            }
+          ]
+        },
+        {
+          "label": "fresh-json",
+          "peakChromiumRssBytes": 1335365632,
+          "peakNodeRssBytes": 861442048,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:50:52.641Z",
+              "bytes": 409976832
+            },
+            {
+              "at": "2026-10-14T14:50:52.923Z",
+              "bytes": 431357952
+            },
+            {
+              "at": "2026-10-14T14:50:53.203Z",
+              "bytes": 485343232
+            },
+            {
+              "at": "2026-10-14T14:50:53.479Z",
+              "bytes": 535822336
+            },
+            {
+              "at": "2026-10-14T14:50:53.782Z",
+              "bytes": 635387904
+            },
+            {
+              "at": "2026-10-14T14:50:54.061Z",
+              "bytes": 703807488
+            },
+            {
+              "at": "2026-10-14T14:50:54.333Z",
+              "bytes": 711532544
+            },
+            {
+              "at": "2026-10-14T14:50:54.622Z",
+              "bytes": 712204288
+            },
+            {
+              "at": "2026-10-14T14:50:54.905Z",
+              "bytes": 722968576
+            },
+            {
+              "at": "2026-10-14T14:50:55.796Z",
+              "bytes": 724692992
+            },
+            {
+              "at": "2026-10-14T14:50:56.648Z",
+              "bytes": 726052864
+            },
+            {
+              "at": "2026-10-14T14:50:56.925Z",
+              "bytes": 730083328
+            },
+            {
+              "at": "2026-10-14T14:50:57.202Z",
+              "bytes": 730177536
+            },
+            {
+              "at": "2026-10-14T14:50:57.486Z",
+              "bytes": 733634560
+            },
+            {
+              "at": "2026-10-14T14:50:58.390Z",
+              "bytes": 739037184
+            },
+            {
+              "at": "2026-10-14T14:51:03.936Z",
+              "bytes": 749015040
+            },
+            {
+              "at": "2026-10-14T14:51:04.276Z",
+              "bytes": 758931456
+            },
+            {
+              "at": "2026-10-14T14:51:04.551Z",
+              "bytes": 770289664
+            },
+            {
+              "at": "2026-10-14T14:51:04.833Z",
+              "bytes": 782053376
+            },
+            {
+              "at": "2026-10-14T14:51:05.115Z",
+              "bytes": 807936000
+            },
+            {
+              "at": "2026-10-14T14:51:05.393Z",
+              "bytes": 818905088
+            },
+            {
+              "at": "2026-10-14T14:51:05.704Z",
+              "bytes": 853069824
+            },
+            {
+              "at": "2026-10-14T14:51:06.844Z",
+              "bytes": 871202816
+            },
+            {
+              "at": "2026-10-14T14:51:07.549Z",
+              "bytes": 913891328
+            },
+            {
+              "at": "2026-10-14T14:51:08.944Z",
+              "bytes": 977518592
+            },
+            {
+              "at": "2026-10-14T14:51:09.215Z",
+              "bytes": 1011277824
+            },
+            {
+              "at": "2026-10-14T14:51:09.486Z",
+              "bytes": 1012592640
+            },
+            {
+              "at": "2026-10-14T14:51:09.758Z",
+              "bytes": 1017708544
+            },
+            {
+              "at": "2026-10-14T14:51:13.060Z",
+              "bytes": 1041006592
+            },
+            {
+              "at": "2026-10-14T14:51:13.362Z",
+              "bytes": 1060044800
+            },
+            {
+              "at": "2026-10-14T14:51:13.652Z",
+              "bytes": 1091936256
+            },
+            {
+              "at": "2026-10-14T14:51:15.949Z",
+              "bytes": 1099870208
+            },
+            {
+              "at": "2026-10-14T14:51:16.221Z",
+              "bytes": 1123328000
+            },
+            {
+              "at": "2026-10-14T14:51:16.510Z",
+              "bytes": 1150459904
+            },
+            {
+              "at": "2026-10-14T14:51:16.805Z",
+              "bytes": 1165123584
+            },
+            {
+              "at": "2026-10-14T14:51:17.105Z",
+              "bytes": 1223270400
+            },
+            {
+              "at": "2026-10-14T14:51:17.410Z",
+              "bytes": 1271971840
+            },
+            {
+              "at": "2026-10-14T14:51:17.696Z",
+              "bytes": 1299050496
+            },
+            {
+              "at": "2026-10-14T14:51:17.972Z",
+              "bytes": 1335365632
+            }
+          ]
+        },
+        {
+          "label": "fresh-zip",
+          "peakChromiumRssBytes": 1409032192,
+          "peakNodeRssBytes": 862097408,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:51:18.948Z",
+              "bytes": 411090944
+            },
+            {
+              "at": "2026-10-14T14:51:19.243Z",
+              "bytes": 446054400
+            },
+            {
+              "at": "2026-10-14T14:51:19.555Z",
+              "bytes": 486825984
+            },
+            {
+              "at": "2026-10-14T14:51:19.839Z",
+              "bytes": 549851136
+            },
+            {
+              "at": "2026-10-14T14:51:20.128Z",
+              "bytes": 646479872
+            },
+            {
+              "at": "2026-10-14T14:51:20.430Z",
+              "bytes": 678563840
+            },
+            {
+              "at": "2026-10-14T14:51:20.761Z",
+              "bytes": 778383360
+            },
+            {
+              "at": "2026-10-14T14:51:21.972Z",
+              "bytes": 783388672
+            },
+            {
+              "at": "2026-10-14T14:51:22.257Z",
+              "bytes": 795164672
+            },
+            {
+              "at": "2026-10-14T14:51:22.849Z",
+              "bytes": 795885568
+            },
+            {
+              "at": "2026-10-14T14:51:24.474Z",
+              "bytes": 800681984
+            },
+            {
+              "at": "2026-10-14T14:51:31.663Z",
+              "bytes": 800808960
+            },
+            {
+              "at": "2026-10-14T14:51:32.234Z",
+              "bytes": 803229696
+            },
+            {
+              "at": "2026-10-14T14:51:32.818Z",
+              "bytes": 805855232
+            },
+            {
+              "at": "2026-10-14T14:51:33.395Z",
+              "bytes": 818388992
+            },
+            {
+              "at": "2026-10-14T14:51:33.672Z",
+              "bytes": 839725056
+            },
+            {
+              "at": "2026-10-14T14:51:33.952Z",
+              "bytes": 861270016
+            },
+            {
+              "at": "2026-10-14T14:51:36.205Z",
+              "bytes": 935800832
+            },
+            {
+              "at": "2026-10-14T14:51:36.484Z",
+              "bytes": 992669696
+            },
+            {
+              "at": "2026-10-14T14:51:37.603Z",
+              "bytes": 1003634688
+            },
+            {
+              "at": "2026-10-14T14:51:37.884Z",
+              "bytes": 1109852160
+            },
+            {
+              "at": "2026-10-14T14:51:38.449Z",
+              "bytes": 1123651584
+            },
+            {
+              "at": "2026-10-14T14:51:38.752Z",
+              "bytes": 1127948288
+            },
+            {
+              "at": "2026-10-14T14:51:39.061Z",
+              "bytes": 1135747072
+            },
+            {
+              "at": "2026-10-14T14:51:39.368Z",
+              "bytes": 1144446976
+            },
+            {
+              "at": "2026-10-14T14:51:39.663Z",
+              "bytes": 1153024000
+            },
+            {
+              "at": "2026-10-14T14:51:39.956Z",
+              "bytes": 1171587072
+            },
+            {
+              "at": "2026-10-14T14:51:43.144Z",
+              "bytes": 1217118208
+            },
+            {
+              "at": "2026-10-14T14:51:43.438Z",
+              "bytes": 1306578944
+            },
+            {
+              "at": "2026-10-14T14:51:43.738Z",
+              "bytes": 1408839680
+            },
+            {
+              "at": "2026-10-14T14:51:44.029Z",
+              "bytes": 1409032192
+            }
+          ]
+        },
+        {
+          "label": "legacy-json",
+          "peakChromiumRssBytes": 886280192,
+          "peakNodeRssBytes": 1011499008,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:51:53.662Z",
+              "bytes": 411570176
+            },
+            {
+              "at": "2026-10-14T14:51:53.980Z",
+              "bytes": 438554624
+            },
+            {
+              "at": "2026-10-14T14:51:54.282Z",
+              "bytes": 466526208
+            },
+            {
+              "at": "2026-10-14T14:51:54.605Z",
+              "bytes": 499408896
+            },
+            {
+              "at": "2026-10-14T14:51:54.908Z",
+              "bytes": 560148480
+            },
+            {
+              "at": "2026-10-14T14:51:55.194Z",
+              "bytes": 602107904
+            },
+            {
+              "at": "2026-10-14T14:51:55.499Z",
+              "bytes": 750383104
+            },
+            {
+              "at": "2026-10-14T14:52:05.183Z",
+              "bytes": 752218112
+            },
+            {
+              "at": "2026-10-14T14:52:05.768Z",
+              "bytes": 752234496
+            },
+            {
+              "at": "2026-10-14T14:52:06.343Z",
+              "bytes": 769269760
+            },
+            {
+              "at": "2026-10-14T14:52:06.631Z",
+              "bytes": 780288000
+            },
+            {
+              "at": "2026-10-14T14:52:06.911Z",
+              "bytes": 792961024
+            },
+            {
+              "at": "2026-10-14T14:52:07.194Z",
+              "bytes": 817709056
+            },
+            {
+              "at": "2026-10-14T14:52:07.474Z",
+              "bytes": 831311872
+            },
+            {
+              "at": "2026-10-14T14:52:07.778Z",
+              "bytes": 876617728
+            },
+            {
+              "at": "2026-10-14T14:52:08.920Z",
+              "bytes": 886280192
+            }
+          ]
+        },
+        {
+          "label": "legacy-zip",
+          "peakChromiumRssBytes": 953925632,
+          "peakNodeRssBytes": 1012809728,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:52:10.518Z",
+              "bytes": 410570752
+            },
+            {
+              "at": "2026-10-14T14:52:10.829Z",
+              "bytes": 452714496
+            },
+            {
+              "at": "2026-10-14T14:52:11.140Z",
+              "bytes": 489590784
+            },
+            {
+              "at": "2026-10-14T14:52:11.473Z",
+              "bytes": 535142400
+            },
+            {
+              "at": "2026-10-14T14:52:11.790Z",
+              "bytes": 581746688
+            },
+            {
+              "at": "2026-10-14T14:52:12.097Z",
+              "bytes": 610250752
+            },
+            {
+              "at": "2026-10-14T14:52:12.376Z",
+              "bytes": 694124544
+            },
+            {
+              "at": "2026-10-14T14:52:12.658Z",
+              "bytes": 758833152
+            },
+            {
+              "at": "2026-10-14T14:52:13.098Z",
+              "bytes": 776679424
+            },
+            {
+              "at": "2026-10-14T14:52:13.503Z",
+              "bytes": 776773632
+            },
+            {
+              "at": "2026-10-14T14:52:13.828Z",
+              "bytes": 820187136
+            },
+            {
+              "at": "2026-10-14T14:52:14.880Z",
+              "bytes": 821063680
+            },
+            {
+              "at": "2026-10-14T14:52:15.567Z",
+              "bytes": 823382016
+            },
+            {
+              "at": "2026-10-14T14:52:16.428Z",
+              "bytes": 825769984
+            },
+            {
+              "at": "2026-10-14T14:52:30.368Z",
+              "bytes": 828264448
+            },
+            {
+              "at": "2026-10-14T14:52:30.668Z",
+              "bytes": 848187392
+            },
+            {
+              "at": "2026-10-14T14:52:30.944Z",
+              "bytes": 856735744
+            },
+            {
+              "at": "2026-10-14T14:52:31.244Z",
+              "bytes": 953925632
+            }
+          ]
+        }
+      ],
+      "json": {
+        "bytes": 34388633,
+        "ms": 1496.300000000745,
+        "sha256": "338db61ada5bdbb9e4cc9977c169c3dd9735985dcbfb80e05ae68c6d28b7ed53"
+      },
+      "zip": {
+        "bytes": 45612983,
+        "ms": 2145.800000000745,
+        "sha256": "626d6b81ff918c4fe6f41935b1fb2520a3b47d5617ab2393b8f63c53ffac28ce"
+      },
+      "contract": {
+        "version": 1,
+        "notesExported": false,
+        "existingNotesPreserved": true,
+        "freshZipAttachmentTimestampReconstructed": true
+      }
+    },
+    {
+      "count": 100000,
+      "import": {
+        "previewMs": 13099.89999999851,
+        "confirmMs": 32432,
+        "totalMs": 46133.699999999255,
+        "record": {
+          "status": "imported",
+          "transactionCount": 100000
+        },
+        "valid": 100000,
+        "anomalies": 0,
+        "longTasks": [
+          {
+            "startTime": 1054.1000000014901,
+            "duration": 52
+          },
+          {
+            "startTime": 1141.300000000745,
+            "duration": 12947
+          },
+          {
+            "startTime": 14091,
+            "duration": 1144
+          },
+          {
+            "startTime": 15313.199999999255,
+            "duration": 108
+          },
+          {
+            "startTime": 15750,
+            "duration": 96
+          },
+          {
+            "startTime": 16193.800000000745,
+            "duration": 85
+          },
+          {
+            "startTime": 16684.10000000149,
+            "duration": 105
+          },
+          {
+            "startTime": 17160.699999999255,
+            "duration": 93
+          },
+          {
+            "startTime": 17599,
+            "duration": 129
+          },
+          {
+            "startTime": 18096.900000002235,
+            "duration": 128
+          },
+          {
+            "startTime": 18628,
+            "duration": 121
+          },
+          {
+            "startTime": 19185.10000000149,
+            "duration": 121
+          },
+          {
+            "startTime": 19721.400000002235,
+            "duration": 115
+          },
+          {
+            "startTime": 20263.60000000149,
+            "duration": 90
+          },
+          {
+            "startTime": 20815,
+            "duration": 132
+          },
+          {
+            "startTime": 21387.400000002235,
+            "duration": 135
+          },
+          {
+            "startTime": 21937.900000002235,
+            "duration": 99
+          },
+          {
+            "startTime": 22481.10000000149,
+            "duration": 90
+          },
+          {
+            "startTime": 22933.300000000745,
+            "duration": 79
+          },
+          {
+            "startTime": 23507.699999999255,
+            "duration": 78
+          },
+          {
+            "startTime": 24048.800000000745,
+            "duration": 78
+          },
+          {
+            "startTime": 24588,
+            "duration": 88
+          },
+          {
+            "startTime": 25141.5,
+            "duration": 84
+          },
+          {
+            "startTime": 25659.800000000745,
+            "duration": 70
+          },
+          {
+            "startTime": 26264.5,
+            "duration": 72
+          },
+          {
+            "startTime": 27008.699999999255,
+            "duration": 82
+          },
+          {
+            "startTime": 27593.199999999255,
+            "duration": 83
+          },
+          {
+            "startTime": 28194.400000002235,
+            "duration": 77
+          },
+          {
+            "startTime": 28759,
+            "duration": 76
+          },
+          {
+            "startTime": 29423.10000000149,
+            "duration": 75
+          },
+          {
+            "startTime": 30114.5,
+            "duration": 75
+          },
+          {
+            "startTime": 30696.5,
+            "duration": 141
+          },
+          {
+            "startTime": 31394.199999999255,
+            "duration": 141
+          },
+          {
+            "startTime": 31969.60000000149,
+            "duration": 78
+          },
+          {
+            "startTime": 32595.5,
+            "duration": 148
+          },
+          {
+            "startTime": 33194.800000000745,
+            "duration": 74
+          },
+          {
+            "startTime": 33781.699999999255,
+            "duration": 73
+          },
+          {
+            "startTime": 34389.60000000149,
+            "duration": 70
+          },
+          {
+            "startTime": 34987.199999999255,
+            "duration": 86
+          },
+          {
+            "startTime": 35590.900000002235,
+            "duration": 72
+          },
+          {
+            "startTime": 36202.60000000149,
+            "duration": 73
+          },
+          {
+            "startTime": 36848.199999999255,
+            "duration": 88
+          },
+          {
+            "startTime": 37441.300000000745,
+            "duration": 69
+          },
+          {
+            "startTime": 38034.60000000149,
+            "duration": 78
+          },
+          {
+            "startTime": 38649.900000002235,
+            "duration": 69
+          },
+          {
+            "startTime": 39225.800000000745,
+            "duration": 78
+          },
+          {
+            "startTime": 39816,
+            "duration": 75
+          },
+          {
+            "startTime": 40411.199999999255,
+            "duration": 70
+          },
+          {
+            "startTime": 40997.60000000149,
+            "duration": 78
+          },
+          {
+            "startTime": 41599.60000000149,
+            "duration": 76
+          },
+          {
+            "startTime": 42198.60000000149,
+            "duration": 75
+          },
+          {
+            "startTime": 42823.199999999255,
+            "duration": 114
+          },
+          {
+            "startTime": 43431.900000002235,
+            "duration": 112
+          },
+          {
+            "startTime": 45971.10000000149,
+            "duration": 547
+          },
+          {
+            "startTime": 46519.900000002235,
+            "duration": 562
+          }
+        ]
+      },
+      "checks": [
+        {
+          "context": "existing",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "existing",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "clear-json",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-json-0",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-json-1",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-json-2",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-zip-0",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-zip-1",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "fresh-zip-2",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "legacy-json",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        },
+        {
+          "context": "legacy-zip",
+          "transactionCountMismatches": 0,
+          "idMismatches": 0,
+          "amountMismatches": 0,
+          "currencyMismatches": 0,
+          "duplicateRelationshipMismatches": 0,
+          "missingStatements": 0,
+          "missingAttachments": 0,
+          "lostReviewStates": 0,
+          "otherTransactionMismatches": 0,
+          "statementMismatches": 0,
+          "importMismatches": 0,
+          "noteMismatches": 0,
+          "attachmentMismatches": 0
+        }
+      ],
+      "restore": [
+        {
+          "context": "existing-edits-notes-originals",
+          "name": "100000.json",
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单。",
+          "ms": 10970.89999999851
+        },
+        {
+          "context": "existing-edits-notes-originals",
+          "name": "100000.zip",
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单、0 个原始文件。",
+          "ms": 13069.400000002235
+        },
+        {
+          "context": "export-clear-restore",
+          "kind": "json",
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单。",
+          "ms": 40115.300000000745
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "json",
+          "repeat": 0,
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单。",
+          "ms": 46409.29999999702
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "json",
+          "repeat": 1,
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单。",
+          "ms": 9937
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "json",
+          "repeat": 2,
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单。",
+          "ms": 9066.60000000149
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "zip",
+          "repeat": 0,
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单、1 个原始文件。",
+          "ms": 51708.20000000298
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "zip",
+          "repeat": 1,
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单、0 个原始文件。",
+          "ms": 9805
+        },
+        {
+          "context": "fresh-profile",
+          "kind": "zip",
+          "repeat": 2,
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单、0 个原始文件。",
+          "ms": 9800.20000000298
+        },
+        {
+          "context": "legacy-v1",
+          "kind": "json",
+          "bytes": 118548189,
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单。",
+          "ms": 40129.699999999255
+        },
+        {
+          "context": "legacy-v1",
+          "kind": "zip",
+          "bytes": 149798320,
+          "ok": true,
+          "message": "已恢复 100000 笔交易、576 份账单、1 个原始文件。",
+          "ms": 40629.400000002235
+        }
+      ],
+      "memoryProfiles": [
+        {
+          "label": "source",
+          "peakChromiumRssBytes": 2938183680,
+          "peakNodeRssBytes": 1252450304,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:52:46.539Z",
+              "bytes": 409538560
+            },
+            {
+              "at": "2026-10-14T14:52:46.837Z",
+              "bytes": 451198976
+            },
+            {
+              "at": "2026-10-14T14:52:47.117Z",
+              "bytes": 498782208
+            },
+            {
+              "at": "2026-10-14T14:52:47.416Z",
+              "bytes": 565878784
+            },
+            {
+              "at": "2026-10-14T14:52:47.706Z",
+              "bytes": 680005632
+            },
+            {
+              "at": "2026-10-14T14:52:47.980Z",
+              "bytes": 762073088
+            },
+            {
+              "at": "2026-10-14T14:52:48.253Z",
+              "bytes": 806543360
+            },
+            {
+              "at": "2026-10-14T14:52:48.535Z",
+              "bytes": 862748672
+            },
+            {
+              "at": "2026-10-14T14:52:48.813Z",
+              "bytes": 915173376
+            },
+            {
+              "at": "2026-10-14T14:52:49.096Z",
+              "bytes": 1088331776
+            },
+            {
+              "at": "2026-10-14T14:52:55.960Z",
+              "bytes": 1092501504
+            },
+            {
+              "at": "2026-10-14T14:52:56.236Z",
+              "bytes": 1148383232
+            },
+            {
+              "at": "2026-10-14T14:52:56.514Z",
+              "bytes": 1166094336
+            },
+            {
+              "at": "2026-10-14T14:52:56.787Z",
+              "bytes": 1172213760
+            },
+            {
+              "at": "2026-10-14T14:52:57.069Z",
+              "bytes": 1172328448
+            },
+            {
+              "at": "2026-10-14T14:52:57.355Z",
+              "bytes": 1173110784
+            },
+            {
+              "at": "2026-10-14T14:52:57.635Z",
+              "bytes": 1175179264
+            },
+            {
+              "at": "2026-10-14T14:52:57.907Z",
+              "bytes": 1188392960
+            },
+            {
+              "at": "2026-10-14T14:52:58.187Z",
+              "bytes": 1195364352
+            },
+            {
+              "at": "2026-10-14T14:52:58.478Z",
+              "bytes": 1201217536
+            },
+            {
+              "at": "2026-10-14T14:52:58.756Z",
+              "bytes": 1209196544
+            },
+            {
+              "at": "2026-10-14T14:52:59.056Z",
+              "bytes": 1217089536
+            },
+            {
+              "at": "2026-10-14T14:52:59.330Z",
+              "bytes": 1237188608
+            },
+            {
+              "at": "2026-10-14T14:52:59.612Z",
+              "bytes": 1289687040
+            },
+            {
+              "at": "2026-10-14T14:52:59.891Z",
+              "bytes": 1308045312
+            },
+            {
+              "at": "2026-10-14T14:53:00.170Z",
+              "bytes": 1342144512
+            },
+            {
+              "at": "2026-10-14T14:53:00.448Z",
+              "bytes": 1354956800
+            },
+            {
+              "at": "2026-10-14T14:53:00.726Z",
+              "bytes": 1366810624
+            },
+            {
+              "at": "2026-10-14T14:53:00.999Z",
+              "bytes": 1385730048
+            },
+            {
+              "at": "2026-10-14T14:53:01.283Z",
+              "bytes": 1396555776
+            },
+            {
+              "at": "2026-10-14T14:53:01.571Z",
+              "bytes": 1420304384
+            },
+            {
+              "at": "2026-10-14T14:53:01.867Z",
+              "bytes": 1433288704
+            },
+            {
+              "at": "2026-10-14T14:53:02.149Z",
+              "bytes": 1434771456
+            },
+            {
+              "at": "2026-10-14T14:53:02.425Z",
+              "bytes": 1437114368
+            },
+            {
+              "at": "2026-10-14T14:53:42.690Z",
+              "bytes": 1447133184
+            },
+            {
+              "at": "2026-10-14T14:53:42.993Z",
+              "bytes": 1469480960
+            },
+            {
+              "at": "2026-10-14T14:53:43.298Z",
+              "bytes": 1488486400
+            },
+            {
+              "at": "2026-10-14T14:53:43.577Z",
+              "bytes": 1593475072
+            },
+            {
+              "at": "2026-10-14T14:53:44.730Z",
+              "bytes": 1602449408
+            },
+            {
+              "at": "2026-10-14T14:53:45.049Z",
+              "bytes": 1620402176
+            },
+            {
+              "at": "2026-10-14T14:53:45.346Z",
+              "bytes": 1634508800
+            },
+            {
+              "at": "2026-10-14T14:53:45.643Z",
+              "bytes": 1643909120
+            },
+            {
+              "at": "2026-10-14T14:53:46.013Z",
+              "bytes": 1661173760
+            },
+            {
+              "at": "2026-10-14T14:53:46.330Z",
+              "bytes": 1669611520
+            },
+            {
+              "at": "2026-10-14T14:53:46.606Z",
+              "bytes": 1682653184
+            },
+            {
+              "at": "2026-10-14T14:53:46.884Z",
+              "bytes": 1700360192
+            },
+            {
+              "at": "2026-10-14T14:53:47.437Z",
+              "bytes": 1724702720
+            },
+            {
+              "at": "2026-10-14T14:53:47.723Z",
+              "bytes": 1757253632
+            },
+            {
+              "at": "2026-10-14T14:53:48.277Z",
+              "bytes": 1771765760
+            },
+            {
+              "at": "2026-10-14T14:53:48.554Z",
+              "bytes": 1796530176
+            },
+            {
+              "at": "2026-10-14T14:53:48.834Z",
+              "bytes": 1821515776
+            },
+            {
+              "at": "2026-10-14T14:53:49.115Z",
+              "bytes": 1842487296
+            },
+            {
+              "at": "2026-10-14T14:53:49.387Z",
+              "bytes": 1858703360
+            },
+            {
+              "at": "2026-10-14T14:53:49.659Z",
+              "bytes": 1875496960
+            },
+            {
+              "at": "2026-10-14T14:53:49.936Z",
+              "bytes": 1894948864
+            },
+            {
+              "at": "2026-10-14T14:53:50.212Z",
+              "bytes": 1943658496
+            },
+            {
+              "at": "2026-10-14T14:53:50.498Z",
+              "bytes": 1981460480
+            },
+            {
+              "at": "2026-10-14T14:53:50.794Z",
+              "bytes": 2096676864
+            },
+            {
+              "at": "2026-10-14T14:53:51.095Z",
+              "bytes": 2135281664
+            },
+            {
+              "at": "2026-10-14T14:53:59.193Z",
+              "bytes": 2176024576
+            },
+            {
+              "at": "2026-10-14T14:53:59.496Z",
+              "bytes": 2191237120
+            },
+            {
+              "at": "2026-10-14T14:53:59.780Z",
+              "bytes": 2192052224
+            },
+            {
+              "at": "2026-10-14T14:54:00.072Z",
+              "bytes": 2253406208
+            },
+            {
+              "at": "2026-10-14T14:54:00.351Z",
+              "bytes": 2253643776
+            },
+            {
+              "at": "2026-10-14T14:54:00.627Z",
+              "bytes": 2255745024
+            },
+            {
+              "at": "2026-10-14T14:54:01.198Z",
+              "bytes": 2256232448
+            },
+            {
+              "at": "2026-10-14T14:54:01.498Z",
+              "bytes": 2270580736
+            },
+            {
+              "at": "2026-10-14T14:54:01.793Z",
+              "bytes": 2279649280
+            },
+            {
+              "at": "2026-10-14T14:54:02.101Z",
+              "bytes": 2287345664
+            },
+            {
+              "at": "2026-10-14T14:54:02.400Z",
+              "bytes": 2317819904
+            },
+            {
+              "at": "2026-10-14T14:54:02.684Z",
+              "bytes": 2329378816
+            },
+            {
+              "at": "2026-10-14T14:54:02.970Z",
+              "bytes": 2337673216
+            },
+            {
+              "at": "2026-10-14T14:54:03.289Z",
+              "bytes": 2354208768
+            },
+            {
+              "at": "2026-10-14T14:54:03.580Z",
+              "bytes": 2357592064
+            },
+            {
+              "at": "2026-10-14T14:54:13.902Z",
+              "bytes": 2490507264
+            },
+            {
+              "at": "2026-10-14T14:54:14.186Z",
+              "bytes": 2501607424
+            },
+            {
+              "at": "2026-10-14T14:54:14.461Z",
+              "bytes": 2537803776
+            },
+            {
+              "at": "2026-10-14T14:54:14.738Z",
+              "bytes": 2588192768
+            },
+            {
+              "at": "2026-10-14T14:54:15.034Z",
+              "bytes": 2640625664
+            },
+            {
+              "at": "2026-10-14T14:54:15.321Z",
+              "bytes": 2680418304
+            },
+            {
+              "at": "2026-10-14T14:54:15.615Z",
+              "bytes": 2720264192
+            },
+            {
+              "at": "2026-10-14T14:54:15.919Z",
+              "bytes": 2770595840
+            },
+            {
+              "at": "2026-10-14T14:54:16.218Z",
+              "bytes": 2816831488
+            },
+            {
+              "at": "2026-10-14T14:54:16.522Z",
+              "bytes": 2881560576
+            },
+            {
+              "at": "2026-10-14T14:54:16.807Z",
+              "bytes": 2938183680
+            }
+          ]
+        },
+        {
+          "label": "fresh-json",
+          "peakChromiumRssBytes": 2916982784,
+          "peakNodeRssBytes": 1253105664,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:55:30.736Z",
+              "bytes": 410509312
+            },
+            {
+              "at": "2026-10-14T14:55:31.028Z",
+              "bytes": 452390912
+            },
+            {
+              "at": "2026-10-14T14:55:31.320Z",
+              "bytes": 497324032
+            },
+            {
+              "at": "2026-10-14T14:55:31.604Z",
+              "bytes": 560119808
+            },
+            {
+              "at": "2026-10-14T14:55:31.888Z",
+              "bytes": 618270720
+            },
+            {
+              "at": "2026-10-14T14:55:32.185Z",
+              "bytes": 789893120
+            },
+            {
+              "at": "2026-10-14T14:55:32.477Z",
+              "bytes": 1012981760
+            },
+            {
+              "at": "2026-10-14T14:55:33.628Z",
+              "bytes": 1058021376
+            },
+            {
+              "at": "2026-10-14T14:55:33.919Z",
+              "bytes": 1058328576
+            },
+            {
+              "at": "2026-10-14T14:55:34.220Z",
+              "bytes": 1062846464
+            },
+            {
+              "at": "2026-10-14T14:55:34.800Z",
+              "bytes": 1073397760
+            },
+            {
+              "at": "2026-10-14T14:55:35.093Z",
+              "bytes": 1075585024
+            },
+            {
+              "at": "2026-10-14T14:55:35.690Z",
+              "bytes": 1076195328
+            },
+            {
+              "at": "2026-10-14T14:55:36.022Z",
+              "bytes": 1082732544
+            },
+            {
+              "at": "2026-10-14T14:55:43.102Z",
+              "bytes": 1083387904
+            },
+            {
+              "at": "2026-10-14T14:55:43.419Z",
+              "bytes": 1086414848
+            },
+            {
+              "at": "2026-10-14T14:55:44.009Z",
+              "bytes": 1088450560
+            },
+            {
+              "at": "2026-10-14T14:55:44.874Z",
+              "bytes": 1090805760
+            },
+            {
+              "at": "2026-10-14T14:55:45.494Z",
+              "bytes": 1090883584
+            },
+            {
+              "at": "2026-10-14T14:55:46.106Z",
+              "bytes": 1091178496
+            },
+            {
+              "at": "2026-10-14T14:55:46.574Z",
+              "bytes": 1096531968
+            },
+            {
+              "at": "2026-10-14T14:55:47.502Z",
+              "bytes": 1098641408
+            },
+            {
+              "at": "2026-10-14T14:55:49.039Z",
+              "bytes": 1098813440
+            },
+            {
+              "at": "2026-10-14T14:55:49.323Z",
+              "bytes": 1100005376
+            },
+            {
+              "at": "2026-10-14T14:55:49.604Z",
+              "bytes": 1102225408
+            },
+            {
+              "at": "2026-10-14T14:55:50.238Z",
+              "bytes": 1105211392
+            },
+            {
+              "at": "2026-10-14T14:55:50.835Z",
+              "bytes": 1106182144
+            },
+            {
+              "at": "2026-10-14T14:55:51.428Z",
+              "bytes": 1106632704
+            },
+            {
+              "at": "2026-10-14T14:55:52.081Z",
+              "bytes": 1109348352
+            },
+            {
+              "at": "2026-10-14T14:55:52.385Z",
+              "bytes": 1110810624
+            },
+            {
+              "at": "2026-10-14T14:55:52.674Z",
+              "bytes": 1113776128
+            },
+            {
+              "at": "2026-10-14T14:55:53.275Z",
+              "bytes": 1119961088
+            },
+            {
+              "at": "2026-10-14T14:55:54.725Z",
+              "bytes": 1120931840
+            },
+            {
+              "at": "2026-10-14T14:55:55.320Z",
+              "bytes": 1124929536
+            },
+            {
+              "at": "2026-10-14T14:55:56.174Z",
+              "bytes": 1129533440
+            },
+            {
+              "at": "2026-10-14T14:55:56.750Z",
+              "bytes": 1133690880
+            },
+            {
+              "at": "2026-10-14T14:55:58.817Z",
+              "bytes": 1135398912
+            },
+            {
+              "at": "2026-10-14T14:55:59.733Z",
+              "bytes": 1137217536
+            },
+            {
+              "at": "2026-10-14T14:56:00.655Z",
+              "bytes": 1142665216
+            },
+            {
+              "at": "2026-10-14T14:56:04.030Z",
+              "bytes": 1144983552
+            },
+            {
+              "at": "2026-10-14T14:56:04.921Z",
+              "bytes": 1146085376
+            },
+            {
+              "at": "2026-10-14T14:56:05.513Z",
+              "bytes": 1150603264
+            },
+            {
+              "at": "2026-10-14T14:56:06.142Z",
+              "bytes": 1154142208
+            },
+            {
+              "at": "2026-10-14T14:56:07.271Z",
+              "bytes": 1155244032
+            },
+            {
+              "at": "2026-10-14T14:56:08.732Z",
+              "bytes": 1167044608
+            },
+            {
+              "at": "2026-10-14T14:56:09.023Z",
+              "bytes": 1172836352
+            },
+            {
+              "at": "2026-10-14T14:56:09.312Z",
+              "bytes": 1180676096
+            },
+            {
+              "at": "2026-10-14T14:56:09.670Z",
+              "bytes": 1189277696
+            },
+            {
+              "at": "2026-10-14T14:56:10.010Z",
+              "bytes": 1192022016
+            },
+            {
+              "at": "2026-10-14T14:56:10.301Z",
+              "bytes": 1204121600
+            },
+            {
+              "at": "2026-10-14T14:56:10.586Z",
+              "bytes": 1213657088
+            },
+            {
+              "at": "2026-10-14T14:56:10.892Z",
+              "bytes": 1231876096
+            },
+            {
+              "at": "2026-10-14T14:56:17.960Z",
+              "bytes": 1258504192
+            },
+            {
+              "at": "2026-10-14T14:56:18.807Z",
+              "bytes": 1344786432
+            },
+            {
+              "at": "2026-10-14T14:56:19.091Z",
+              "bytes": 1440440320
+            },
+            {
+              "at": "2026-10-14T14:56:19.380Z",
+              "bytes": 1446875136
+            },
+            {
+              "at": "2026-10-14T14:56:19.668Z",
+              "bytes": 1463140352
+            },
+            {
+              "at": "2026-10-14T14:56:19.955Z",
+              "bytes": 1533624320
+            },
+            {
+              "at": "2026-10-14T14:56:23.063Z",
+              "bytes": 1620672512
+            },
+            {
+              "at": "2026-10-14T14:56:23.360Z",
+              "bytes": 1846075392
+            },
+            {
+              "at": "2026-10-14T14:56:33.652Z",
+              "bytes": 2001850368
+            },
+            {
+              "at": "2026-10-14T14:56:34.227Z",
+              "bytes": 2002116608
+            },
+            {
+              "at": "2026-10-14T14:56:34.511Z",
+              "bytes": 2033197056
+            },
+            {
+              "at": "2026-10-14T14:56:34.789Z",
+              "bytes": 2067558400
+            },
+            {
+              "at": "2026-10-14T14:56:35.065Z",
+              "bytes": 2104303616
+            },
+            {
+              "at": "2026-10-14T14:56:35.380Z",
+              "bytes": 2146439168
+            },
+            {
+              "at": "2026-10-14T14:56:35.655Z",
+              "bytes": 2199560192
+            },
+            {
+              "at": "2026-10-14T14:56:35.935Z",
+              "bytes": 2236678144
+            },
+            {
+              "at": "2026-10-14T14:56:36.496Z",
+              "bytes": 2282090496
+            },
+            {
+              "at": "2026-10-14T14:56:36.773Z",
+              "bytes": 2373300224
+            },
+            {
+              "at": "2026-10-14T14:56:37.050Z",
+              "bytes": 2650501120
+            },
+            {
+              "at": "2026-10-14T14:56:40.213Z",
+              "bytes": 2663075840
+            },
+            {
+              "at": "2026-10-14T14:56:40.498Z",
+              "bytes": 2676224000
+            },
+            {
+              "at": "2026-10-14T14:56:40.778Z",
+              "bytes": 2716295168
+            },
+            {
+              "at": "2026-10-14T14:56:41.067Z",
+              "bytes": 2738049024
+            },
+            {
+              "at": "2026-10-14T14:56:41.353Z",
+              "bytes": 2755469312
+            },
+            {
+              "at": "2026-10-14T14:56:41.650Z",
+              "bytes": 2784440320
+            },
+            {
+              "at": "2026-10-14T14:56:41.941Z",
+              "bytes": 2824634368
+            },
+            {
+              "at": "2026-10-14T14:56:42.232Z",
+              "bytes": 2847080448
+            },
+            {
+              "at": "2026-10-14T14:56:42.512Z",
+              "bytes": 2872426496
+            },
+            {
+              "at": "2026-10-14T14:56:42.805Z",
+              "bytes": 2914680832
+            },
+            {
+              "at": "2026-10-14T14:56:43.112Z",
+              "bytes": 2916982784
+            }
+          ]
+        },
+        {
+          "label": "fresh-zip",
+          "peakChromiumRssBytes": 2673549312,
+          "peakNodeRssBytes": 663465984,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:56:50.152Z",
+              "bytes": 413151232
+            },
+            {
+              "at": "2026-10-14T14:56:50.437Z",
+              "bytes": 452296704
+            },
+            {
+              "at": "2026-10-14T14:56:50.751Z",
+              "bytes": 500805632
+            },
+            {
+              "at": "2026-10-14T14:56:51.035Z",
+              "bytes": 569122816
+            },
+            {
+              "at": "2026-10-14T14:56:51.318Z",
+              "bytes": 633446400
+            },
+            {
+              "at": "2026-10-14T14:56:51.598Z",
+              "bytes": 770715648
+            },
+            {
+              "at": "2026-10-14T14:56:51.877Z",
+              "bytes": 914341888
+            },
+            {
+              "at": "2026-10-14T14:56:52.441Z",
+              "bytes": 1059020800
+            },
+            {
+              "at": "2026-10-14T14:56:52.731Z",
+              "bytes": 1059401728
+            },
+            {
+              "at": "2026-10-14T14:56:53.008Z",
+              "bytes": 1108475904
+            },
+            {
+              "at": "2026-10-14T14:56:53.297Z",
+              "bytes": 1205460992
+            },
+            {
+              "at": "2026-10-14T14:56:53.582Z",
+              "bytes": 1214746624
+            },
+            {
+              "at": "2026-10-14T14:56:53.859Z",
+              "bytes": 1252540416
+            },
+            {
+              "at": "2026-10-14T14:56:54.136Z",
+              "bytes": 1252831232
+            },
+            {
+              "at": "2026-10-14T14:56:54.444Z",
+              "bytes": 1264726016
+            },
+            {
+              "at": "2026-10-14T14:56:55.629Z",
+              "bytes": 1265217536
+            },
+            {
+              "at": "2026-10-14T14:56:58.550Z",
+              "bytes": 1269800960
+            },
+            {
+              "at": "2026-10-14T14:56:59.452Z",
+              "bytes": 1270603776
+            },
+            {
+              "at": "2026-10-14T14:56:59.748Z",
+              "bytes": 1275691008
+            },
+            {
+              "at": "2026-10-14T14:57:00.650Z",
+              "bytes": 1278033920
+            },
+            {
+              "at": "2026-10-14T14:57:01.231Z",
+              "bytes": 1283670016
+            },
+            {
+              "at": "2026-10-14T14:57:01.536Z",
+              "bytes": 1283801088
+            },
+            {
+              "at": "2026-10-14T14:57:02.127Z",
+              "bytes": 1289310208
+            },
+            {
+              "at": "2026-10-14T14:57:03.600Z",
+              "bytes": 1291235328
+            },
+            {
+              "at": "2026-10-14T14:57:04.170Z",
+              "bytes": 1294020608
+            },
+            {
+              "at": "2026-10-14T14:57:04.449Z",
+              "bytes": 1294200832
+            },
+            {
+              "at": "2026-10-14T14:57:05.035Z",
+              "bytes": 1296551936
+            },
+            {
+              "at": "2026-10-14T14:57:05.599Z",
+              "bytes": 1298173952
+            },
+            {
+              "at": "2026-10-14T14:57:06.167Z",
+              "bytes": 1300172800
+            },
+            {
+              "at": "2026-10-14T14:57:06.735Z",
+              "bytes": 1301700608
+            },
+            {
+              "at": "2026-10-14T14:57:07.894Z",
+              "bytes": 1304784896
+            },
+            {
+              "at": "2026-10-14T14:57:08.190Z",
+              "bytes": 1304961024
+            },
+            {
+              "at": "2026-10-14T14:57:08.485Z",
+              "bytes": 1306120192
+            },
+            {
+              "at": "2026-10-14T14:57:09.072Z",
+              "bytes": 1309691904
+            },
+            {
+              "at": "2026-10-14T14:57:09.369Z",
+              "bytes": 1311649792
+            },
+            {
+              "at": "2026-10-14T14:57:09.664Z",
+              "bytes": 1313558528
+            },
+            {
+              "at": "2026-10-14T14:57:10.237Z",
+              "bytes": 1317494784
+            },
+            {
+              "at": "2026-10-14T14:57:10.829Z",
+              "bytes": 1325137920
+            },
+            {
+              "at": "2026-10-14T14:57:13.212Z",
+              "bytes": 1325805568
+            },
+            {
+              "at": "2026-10-14T14:57:13.504Z",
+              "bytes": 1326489600
+            },
+            {
+              "at": "2026-10-14T14:57:13.804Z",
+              "bytes": 1327251456
+            },
+            {
+              "at": "2026-10-14T14:57:14.129Z",
+              "bytes": 1328644096
+            },
+            {
+              "at": "2026-10-14T14:57:14.438Z",
+              "bytes": 1332146176
+            },
+            {
+              "at": "2026-10-14T14:57:14.735Z",
+              "bytes": 1332363264
+            },
+            {
+              "at": "2026-10-14T14:57:15.028Z",
+              "bytes": 1335029760
+            },
+            {
+              "at": "2026-10-14T14:57:15.315Z",
+              "bytes": 1337319424
+            },
+            {
+              "at": "2026-10-14T14:57:15.599Z",
+              "bytes": 1339015168
+            },
+            {
+              "at": "2026-10-14T14:57:15.890Z",
+              "bytes": 1340280832
+            },
+            {
+              "at": "2026-10-14T14:57:16.501Z",
+              "bytes": 1343307776
+            },
+            {
+              "at": "2026-10-14T14:57:17.093Z",
+              "bytes": 1343578112
+            },
+            {
+              "at": "2026-10-14T14:57:18.019Z",
+              "bytes": 1346846720
+            },
+            {
+              "at": "2026-10-14T14:57:18.603Z",
+              "bytes": 1347420160
+            },
+            {
+              "at": "2026-10-14T14:57:19.187Z",
+              "bytes": 1350524928
+            },
+            {
+              "at": "2026-10-14T14:57:19.751Z",
+              "bytes": 1352486912
+            },
+            {
+              "at": "2026-10-14T14:57:21.252Z",
+              "bytes": 1355014144
+            },
+            {
+              "at": "2026-10-14T14:57:21.545Z",
+              "bytes": 1363898368
+            },
+            {
+              "at": "2026-10-14T14:57:21.828Z",
+              "bytes": 1373605888
+            },
+            {
+              "at": "2026-10-14T14:57:22.115Z",
+              "bytes": 1385123840
+            },
+            {
+              "at": "2026-10-14T14:58:33.431Z",
+              "bytes": 1426255872
+            },
+            {
+              "at": "2026-10-14T14:58:33.718Z",
+              "bytes": 1468665856
+            },
+            {
+              "at": "2026-10-14T14:58:34.011Z",
+              "bytes": 1529708544
+            },
+            {
+              "at": "2026-10-14T14:58:34.295Z",
+              "bytes": 1682587648
+            },
+            {
+              "at": "2026-10-14T14:58:34.583Z",
+              "bytes": 1797849088
+            },
+            {
+              "at": "2026-10-14T14:58:34.863Z",
+              "bytes": 1891565568
+            },
+            {
+              "at": "2026-10-14T14:58:35.171Z",
+              "bytes": 2072875008
+            },
+            {
+              "at": "2026-10-14T14:58:36.020Z",
+              "bytes": 2138222592
+            },
+            {
+              "at": "2026-10-14T14:58:36.295Z",
+              "bytes": 2162495488
+            },
+            {
+              "at": "2026-10-14T14:58:36.574Z",
+              "bytes": 2167140352
+            },
+            {
+              "at": "2026-10-14T14:58:36.863Z",
+              "bytes": 2202595328
+            },
+            {
+              "at": "2026-10-14T14:58:37.139Z",
+              "bytes": 2202767360
+            },
+            {
+              "at": "2026-10-14T14:58:49.280Z",
+              "bytes": 2248650752
+            },
+            {
+              "at": "2026-10-14T14:58:49.861Z",
+              "bytes": 2285887488
+            },
+            {
+              "at": "2026-10-14T14:58:50.137Z",
+              "bytes": 2341482496
+            },
+            {
+              "at": "2026-10-14T14:58:50.694Z",
+              "bytes": 2346057728
+            },
+            {
+              "at": "2026-10-14T14:58:50.971Z",
+              "bytes": 2380451840
+            },
+            {
+              "at": "2026-10-14T14:58:51.271Z",
+              "bytes": 2380611584
+            },
+            {
+              "at": "2026-10-14T14:58:51.563Z",
+              "bytes": 2381336576
+            },
+            {
+              "at": "2026-10-14T14:58:51.889Z",
+              "bytes": 2386059264
+            },
+            {
+              "at": "2026-10-14T14:58:52.208Z",
+              "bytes": 2395856896
+            },
+            {
+              "at": "2026-10-14T14:58:52.508Z",
+              "bytes": 2404347904
+            },
+            {
+              "at": "2026-10-14T14:58:52.804Z",
+              "bytes": 2413899776
+            },
+            {
+              "at": "2026-10-14T14:58:53.112Z",
+              "bytes": 2446024704
+            },
+            {
+              "at": "2026-10-14T14:58:53.428Z",
+              "bytes": 2457288704
+            },
+            {
+              "at": "2026-10-14T14:58:53.735Z",
+              "bytes": 2464526336
+            },
+            {
+              "at": "2026-10-14T14:58:54.028Z",
+              "bytes": 2478022656
+            },
+            {
+              "at": "2026-10-14T14:58:54.316Z",
+              "bytes": 2510471168
+            },
+            {
+              "at": "2026-10-14T14:58:54.604Z",
+              "bytes": 2523037696
+            },
+            {
+              "at": "2026-10-14T14:58:54.893Z",
+              "bytes": 2540560384
+            },
+            {
+              "at": "2026-10-14T14:58:55.186Z",
+              "bytes": 2571124736
+            },
+            {
+              "at": "2026-10-14T14:58:55.468Z",
+              "bytes": 2585153536
+            },
+            {
+              "at": "2026-10-14T14:58:55.749Z",
+              "bytes": 2651385856
+            },
+            {
+              "at": "2026-10-14T14:58:56.353Z",
+              "bytes": 2673549312
+            }
+          ]
+        },
+        {
+          "label": "legacy-json",
+          "peakChromiumRssBytes": 1579868160,
+          "peakNodeRssBytes": 1364627456,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:59:06.604Z",
+              "bytes": 407605248
+            },
+            {
+              "at": "2026-10-14T14:59:06.908Z",
+              "bytes": 455479296
+            },
+            {
+              "at": "2026-10-14T14:59:07.212Z",
+              "bytes": 501284864
+            },
+            {
+              "at": "2026-10-14T14:59:07.523Z",
+              "bytes": 565309440
+            },
+            {
+              "at": "2026-10-14T14:59:07.822Z",
+              "bytes": 625098752
+            },
+            {
+              "at": "2026-10-14T14:59:08.112Z",
+              "bytes": 739373056
+            },
+            {
+              "at": "2026-10-14T14:59:08.612Z",
+              "bytes": 952672256
+            },
+            {
+              "at": "2026-10-14T14:59:08.909Z",
+              "bytes": 1113636864
+            },
+            {
+              "at": "2026-10-14T14:59:09.215Z",
+              "bytes": 1113915392
+            },
+            {
+              "at": "2026-10-14T14:59:09.513Z",
+              "bytes": 1113939968
+            },
+            {
+              "at": "2026-10-14T14:59:10.119Z",
+              "bytes": 1156493312
+            },
+            {
+              "at": "2026-10-14T14:59:10.430Z",
+              "bytes": 1161273344
+            },
+            {
+              "at": "2026-10-14T14:59:10.744Z",
+              "bytes": 1161580544
+            },
+            {
+              "at": "2026-10-14T14:59:11.075Z",
+              "bytes": 1167712256
+            },
+            {
+              "at": "2026-10-14T14:59:11.411Z",
+              "bytes": 1170538496
+            },
+            {
+              "at": "2026-10-14T14:59:11.705Z",
+              "bytes": 1175429120
+            },
+            {
+              "at": "2026-10-14T14:59:11.997Z",
+              "bytes": 1178312704
+            },
+            {
+              "at": "2026-10-14T14:59:18.023Z",
+              "bytes": 1179418624
+            },
+            {
+              "at": "2026-10-14T14:59:18.690Z",
+              "bytes": 1184145408
+            },
+            {
+              "at": "2026-10-14T14:59:19.020Z",
+              "bytes": 1184890880
+            },
+            {
+              "at": "2026-10-14T14:59:19.649Z",
+              "bytes": 1187971072
+            },
+            {
+              "at": "2026-10-14T14:59:20.263Z",
+              "bytes": 1189011456
+            },
+            {
+              "at": "2026-10-14T14:59:20.586Z",
+              "bytes": 1190928384
+            },
+            {
+              "at": "2026-10-14T14:59:20.901Z",
+              "bytes": 1192734720
+            },
+            {
+              "at": "2026-10-14T14:59:21.215Z",
+              "bytes": 1194176512
+            },
+            {
+              "at": "2026-10-14T14:59:22.443Z",
+              "bytes": 1197625344
+            },
+            {
+              "at": "2026-10-14T14:59:23.080Z",
+              "bytes": 1205092352
+            },
+            {
+              "at": "2026-10-14T14:59:24.329Z",
+              "bytes": 1208778752
+            },
+            {
+              "at": "2026-10-14T14:59:24.961Z",
+              "bytes": 1211838464
+            },
+            {
+              "at": "2026-10-14T14:59:25.940Z",
+              "bytes": 1213460480
+            },
+            {
+              "at": "2026-10-14T14:59:26.269Z",
+              "bytes": 1213845504
+            },
+            {
+              "at": "2026-10-14T14:59:26.906Z",
+              "bytes": 1216876544
+            },
+            {
+              "at": "2026-10-14T14:59:27.842Z",
+              "bytes": 1222672384
+            },
+            {
+              "at": "2026-10-14T14:59:28.438Z",
+              "bytes": 1223061504
+            },
+            {
+              "at": "2026-10-14T14:59:28.735Z",
+              "bytes": 1224253440
+            },
+            {
+              "at": "2026-10-14T14:59:29.030Z",
+              "bytes": 1225064448
+            },
+            {
+              "at": "2026-10-14T14:59:29.335Z",
+              "bytes": 1232945152
+            },
+            {
+              "at": "2026-10-14T14:59:30.568Z",
+              "bytes": 1233559552
+            },
+            {
+              "at": "2026-10-14T14:59:30.872Z",
+              "bytes": 1234219008
+            },
+            {
+              "at": "2026-10-14T14:59:31.805Z",
+              "bytes": 1234915328
+            },
+            {
+              "at": "2026-10-14T14:59:32.101Z",
+              "bytes": 1238814720
+            },
+            {
+              "at": "2026-10-14T14:59:33.065Z",
+              "bytes": 1241628672
+            },
+            {
+              "at": "2026-10-14T14:59:34.268Z",
+              "bytes": 1247625216
+            },
+            {
+              "at": "2026-10-14T14:59:35.567Z",
+              "bytes": 1248468992
+            },
+            {
+              "at": "2026-10-14T14:59:35.882Z",
+              "bytes": 1248477184
+            },
+            {
+              "at": "2026-10-14T14:59:36.195Z",
+              "bytes": 1248620544
+            },
+            {
+              "at": "2026-10-14T14:59:36.519Z",
+              "bytes": 1250488320
+            },
+            {
+              "at": "2026-10-14T14:59:36.824Z",
+              "bytes": 1252589568
+            },
+            {
+              "at": "2026-10-14T14:59:39.321Z",
+              "bytes": 1253322752
+            },
+            {
+              "at": "2026-10-14T14:59:39.966Z",
+              "bytes": 1268543488
+            },
+            {
+              "at": "2026-10-14T14:59:40.296Z",
+              "bytes": 1276215296
+            },
+            {
+              "at": "2026-10-14T14:59:40.609Z",
+              "bytes": 1285021696
+            },
+            {
+              "at": "2026-10-14T14:59:40.911Z",
+              "bytes": 1294876672
+            },
+            {
+              "at": "2026-10-14T14:59:41.213Z",
+              "bytes": 1309577216
+            },
+            {
+              "at": "2026-10-14T14:59:48.539Z",
+              "bytes": 1385988096
+            },
+            {
+              "at": "2026-10-14T14:59:48.878Z",
+              "bytes": 1455136768
+            },
+            {
+              "at": "2026-10-14T14:59:49.181Z",
+              "bytes": 1579868160
+            }
+          ]
+        },
+        {
+          "label": "legacy-zip",
+          "peakChromiumRssBytes": 1749798912,
+          "peakNodeRssBytes": 1384288256,
+          "peakSamples": [
+            {
+              "at": "2026-10-14T14:59:52.940Z",
+              "bytes": 411844608
+            },
+            {
+              "at": "2026-10-14T14:59:53.256Z",
+              "bytes": 439799808
+            },
+            {
+              "at": "2026-10-14T14:59:53.559Z",
+              "bytes": 481333248
+            },
+            {
+              "at": "2026-10-14T14:59:53.874Z",
+              "bytes": 523145216
+            },
+            {
+              "at": "2026-10-14T14:59:54.173Z",
+              "bytes": 604921856
+            },
+            {
+              "at": "2026-10-14T14:59:54.469Z",
+              "bytes": 661241856
+            },
+            {
+              "at": "2026-10-14T14:59:54.770Z",
+              "bytes": 892813312
+            },
+            {
+              "at": "2026-10-14T14:59:55.064Z",
+              "bytes": 989954048
+            },
+            {
+              "at": "2026-10-14T14:59:55.647Z",
+              "bytes": 1215819776
+            },
+            {
+              "at": "2026-10-14T14:59:56.873Z",
+              "bytes": 1239629824
+            },
+            {
+              "at": "2026-10-14T14:59:57.200Z",
+              "bytes": 1339265024
+            },
+            {
+              "at": "2026-10-14T14:59:57.567Z",
+              "bytes": 1340559360
+            },
+            {
+              "at": "2026-10-14T14:59:57.882Z",
+              "bytes": 1345458176
+            },
+            {
+              "at": "2026-10-14T14:59:58.183Z",
+              "bytes": 1378312192
+            },
+            {
+              "at": "2026-10-14T14:59:58.808Z",
+              "bytes": 1384796160
+            },
+            {
+              "at": "2026-10-14T15:00:03.156Z",
+              "bytes": 1387102208
+            },
+            {
+              "at": "2026-10-14T15:00:04.460Z",
+              "bytes": 1389400064
+            },
+            {
+              "at": "2026-10-14T15:00:04.782Z",
+              "bytes": 1392709632
+            },
+            {
+              "at": "2026-10-14T15:00:05.124Z",
+              "bytes": 1393078272
+            },
+            {
+              "at": "2026-10-14T15:00:05.752Z",
+              "bytes": 1397530624
+            },
+            {
+              "at": "2026-10-14T15:00:06.054Z",
+              "bytes": 1398886400
+            },
+            {
+              "at": "2026-10-14T15:00:06.686Z",
+              "bytes": 1401438208
+            },
+            {
+              "at": "2026-10-14T15:00:07.088Z",
+              "bytes": 1403670528
+            },
+            {
+              "at": "2026-10-14T15:00:07.434Z",
+              "bytes": 1410711552
+            },
+            {
+              "at": "2026-10-14T15:00:08.173Z",
+              "bytes": 1410883584
+            },
+            {
+              "at": "2026-10-14T15:00:08.928Z",
+              "bytes": 1411440640
+            },
+            {
+              "at": "2026-10-14T15:00:09.262Z",
+              "bytes": 1414791168
+            },
+            {
+              "at": "2026-10-14T15:00:09.920Z",
+              "bytes": 1417940992
+            },
+            {
+              "at": "2026-10-14T15:00:10.239Z",
+              "bytes": 1418534912
+            },
+            {
+              "at": "2026-10-14T15:00:10.885Z",
+              "bytes": 1419608064
+            },
+            {
+              "at": "2026-10-14T15:00:11.248Z",
+              "bytes": 1421479936
+            },
+            {
+              "at": "2026-10-14T15:00:11.877Z",
+              "bytes": 1423753216
+            },
+            {
+              "at": "2026-10-14T15:00:12.225Z",
+              "bytes": 1425006592
+            },
+            {
+              "at": "2026-10-14T15:00:12.585Z",
+              "bytes": 1426198528
+            },
+            {
+              "at": "2026-10-14T15:00:12.932Z",
+              "bytes": 1432518656
+            },
+            {
+              "at": "2026-10-14T15:00:14.205Z",
+              "bytes": 1433739264
+            },
+            {
+              "at": "2026-10-14T15:00:14.539Z",
+              "bytes": 1435000832
+            },
+            {
+              "at": "2026-10-14T15:00:14.852Z",
+              "bytes": 1436254208
+            },
+            {
+              "at": "2026-10-14T15:00:15.170Z",
+              "bytes": 1442312192
+            },
+            {
+              "at": "2026-10-14T15:00:15.814Z",
+              "bytes": 1447854080
+            },
+            {
+              "at": "2026-10-14T15:00:16.453Z",
+              "bytes": 1448128512
+            },
+            {
+              "at": "2026-10-14T15:00:16.806Z",
+              "bytes": 1450749952
+            },
+            {
+              "at": "2026-10-14T15:00:18.434Z",
+              "bytes": 1455538176
+            },
+            {
+              "at": "2026-10-14T15:00:20.021Z",
+              "bytes": 1456111616
+            },
+            {
+              "at": "2026-10-14T15:00:20.650Z",
+              "bytes": 1458167808
+            },
+            {
+              "at": "2026-10-14T15:00:21.302Z",
+              "bytes": 1459134464
+            },
+            {
+              "at": "2026-10-14T15:00:21.619Z",
+              "bytes": 1461444608
+            },
+            {
+              "at": "2026-10-14T15:00:21.940Z",
+              "bytes": 1463697408
+            },
+            {
+              "at": "2026-10-14T15:00:22.567Z",
+              "bytes": 1470070784
+            },
+            {
+              "at": "2026-10-14T15:00:23.184Z",
+              "bytes": 1470160896
+            },
+            {
+              "at": "2026-10-14T15:00:25.566Z",
+              "bytes": 1471078400
+            },
+            {
+              "at": "2026-10-14T15:00:26.175Z",
+              "bytes": 1483444224
+            },
+            {
+              "at": "2026-10-14T15:00:26.480Z",
+              "bytes": 1493389312
+            },
+            {
+              "at": "2026-10-14T15:00:26.776Z",
+              "bytes": 1505148928
+            },
+            {
+              "at": "2026-10-14T15:00:27.073Z",
+              "bytes": 1516998656
+            },
+            {
+              "at": "2026-10-14T15:00:27.373Z",
+              "bytes": 1543000064
+            },
+            {
+              "at": "2026-10-14T15:00:27.689Z",
+              "bytes": 1553551360
+            },
+            {
+              "at": "2026-10-14T15:00:27.998Z",
+              "bytes": 1563373568
+            },
+            {
+              "at": "2026-10-14T15:00:28.322Z",
+              "bytes": 1579200512
+            },
+            {
+              "at": "2026-10-14T15:00:28.636Z",
+              "bytes": 1587064832
+            },
+            {
+              "at": "2026-10-14T15:00:36.452Z",
+              "bytes": 1626079232
+            },
+            {
+              "at": "2026-10-14T15:00:37.154Z",
+              "bytes": 1684787200
+            },
+            {
+              "at": "2026-10-14T15:00:37.450Z",
+              "bytes": 1716244480
+            },
+            {
+              "at": "2026-10-14T15:00:37.749Z",
+              "bytes": 1749798912
+            }
+          ]
+        }
+      ],
+      "json": {
+        "bytes": 93851253,
+        "ms": 4159.89999999851,
+        "sha256": "d4973e4af2d47c3bf4488e54bfad3dbadbd7b19ee6d25a779b3ebb3538303115"
+      },
+      "zip": {
+        "bytes": 125101432,
+        "ms": 8641.900000002235,
+        "sha256": "01453336887c5d1f5b8ccb436b9af9ea27e03aa06ae5a6a47bf1e6809653ceba"
+      },
+      "lateRollback": {
+        "failed": {
+          "ok": false,
+          "message": "恢复失败：synthetic late quota error\n QuotaExceededError: synthetic late quota error",
+          "ms": 34264.099999997765
+        },
+        "counts": {
+          "statements": 0,
+          "transactions": 0,
+          "imports": 0,
+          "settings": 1,
+          "reviewNotes": 0,
+          "attachments": 0
+        }
+      },
+      "contract": {
+        "version": 1,
+        "notesExported": false,
+        "existingNotesPreserved": true,
+        "freshZipAttachmentTimestampReconstructed": true
+      }
+    }
+  ]
+}

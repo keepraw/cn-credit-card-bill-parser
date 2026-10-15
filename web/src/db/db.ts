@@ -73,6 +73,16 @@ export class BillDatabase extends Dexie {
       reviewNotes: 'transactionId',
       attachments: 'fileHash, importId, importedAt',
     })
+    // v3 removes unused secondary indexes only. Dexie's versionchange
+    // transaction preserves every store, primary key and stored object.
+    this.version(3).stores({
+      statements: 'id',
+      transactions: 'id, statementId',
+      imports: 'id',
+      settings: 'key',
+      reviewNotes: 'transactionId',
+      attachments: 'fileHash',
+    })
   }
 }
 

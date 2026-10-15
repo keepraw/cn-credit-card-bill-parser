@@ -6,8 +6,11 @@ export const MAX_BACKUP_RECORDS = 1_000_000
 type Row = Record<string, unknown>
 const object = (value: unknown): value is Row => !!value && typeof value === 'object' && !Array.isArray(value)
 const text = (value: unknown): value is string => typeof value === 'string'
+// Reject control characters without allocating a character array for every ID.
+// eslint-disable-next-line no-control-regex
+const INVALID_IDENTIFIER = /[\s\x00-\x1f\x7f]/
 const identifier = (value: unknown): value is string => text(value) && value.length > 0 && value.length <= 256 &&
-  !/\s/.test(value) && !Array.from(value).some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
+  !INVALID_IDENTIFIER.test(value)
 const integer = (value: unknown): value is number => Number.isSafeInteger(value)
 const nonnegative = (value: unknown): value is number => integer(value) && value >= 0
 const minor = (value: unknown) => value === null || integer(value)

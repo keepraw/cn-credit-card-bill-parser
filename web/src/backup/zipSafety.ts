@@ -1,20 +1,26 @@
 import type JSZip from 'jszip'
 
-export const MAX_ARCHIVE_BYTES = 128 * 1024 * 1024
+// One budget for both export and restore. 100k v1 ledgers fit in 128 MiB
+// JSON; the archive also needs space for bounded original evidence.
+export const MAX_ARCHIVE_BYTES = 256 * 1024 * 1024
 export const MAX_EXPANDED_BYTES = 256 * 1024 * 1024
 export const MAX_ENTRY_BYTES = 64 * 1024 * 1024
-export const MAX_JSON_BYTES = 32 * 1024 * 1024
+export const MAX_JSON_BYTES = 128 * 1024 * 1024
 export const MAX_ZIP_ENTRIES = 20_000
 
-export async function readArchiveBytes(file: Blob): Promise<ArrayBuffer> {
-  if (file.size > MAX_ARCHIVE_BYTES) throw new Error('备份压缩包过大')
+export async function readBlobBytes(file: Blob, limit: number, message: string): Promise<ArrayBuffer> {
+  if (file.size > limit) throw new Error(message)
   if (typeof file.arrayBuffer === 'function') return file.arrayBuffer()
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(reader.result as ArrayBuffer)
-    reader.onerror = () => reject(new Error('无法读取备份压缩包'))
+    reader.onerror = () => reject(new Error('无法读取备份文件'))
     reader.readAsArrayBuffer(file)
   })
+}
+
+export async function readArchiveBytes(file: Blob): Promise<ArrayBuffer> {
+  return readBlobBytes(file, MAX_ARCHIVE_BYTES, '备份压缩包过大')
 }
 
 /** Inspect the standard ZIP directory before JSZip can normalize duplicate paths. */
@@ -61,17 +67,22 @@ export function readZipEntry(entry: JSZip.JSZipObject, limit: number, budget: { 
   return new Promise((resolve, reject) => {
     const chunks: Uint8Array[] = []
     let size = 0
+    let stopped = false
     const stream = (entry as StreamingEntry).internalStream('uint8array')
     stream.on('data', (chunk) => {
+      if (stopped) return
       size += chunk.byteLength
       budget.remaining -= chunk.byteLength
       if (size > limit || budget.remaining < 0) {
+        stopped = true
         stream.pause()
+        chunks.length = 0
         reject(new Error('ZIP 解压内容过大'))
         return
       }
       chunks.push(chunk)
     }).on('error', reject).on('end', () => {
+      if (stopped) return
       const result = new Uint8Array(size)
       let offset = 0
       for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.byteLength }
