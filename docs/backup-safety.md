@@ -65,3 +65,10 @@ version should explicitly include notes with transaction references, support
 version-1 readers during migration, and define note conflict handling. Until
 then, version-1 exports do not back up free-text notes; the Settings UI states
 this limitation.
+
+### Follow-up data-protection task (not solved in this change)
+
+V1 自由文本复核备注无法跨设备恢复是已知限制，不得描述为已经解决：
+
+- 现状：`reviewNotes` 独立存储，不在 V1 JSON 或 ZIP 的恢复载荷内；本轮仅保证已有 notes 在恢复旧备份时不丢失，全新 profile 无法从 V1 找回未被导出的 notes；ZIP 附件 `importedAt` 在全新恢复时按旧合同重建，已有恢复与升级仍要求时间戳完全不变。
+- 后续需要独立任务设计明确版本的备注备份合同（交易引用、版本迁移、冲突处理与旧版读取兼容），并在 Settings UI 与发布说明中保持提示；在该合同落地前，任何“备份完整”的表述均不含自由文本备注。
