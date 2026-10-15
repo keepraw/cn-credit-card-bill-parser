@@ -1,17 +1,18 @@
 {
   "date": "2026-10-14",
   "reviewDate": "2026-10-15",
-  "recommendation": "NO",
-  "blockingItems": [
-    "100k readSnapshot single-read micro-benchmark not demonstrated as no-regression: mixed-workload median +11.1% (1,589.3 -> 1,765.9 ms, n=5+5, U=5, p~0.14), isolated median +2.7% (1,583.5 -> 1,626.7 ms, n=21+21, U=192, p~0.48); ranges fully overlap and one After profile (1,478.5 ms) is faster than all Before profiles. Narrow scope block only; system-level workflow read cost is down (startup 2->1 reads, edit 1->0 reads)."
-  ],
+  "finalHead": "rebase onto origin/main 2b75468 (PR #26 merged)",
+  "recommendation": "YES",
+  "status": "Ready for Review; do NOT auto-merge",
+  "blockingItems": [],
+  "acceptedUncertainty": "100k readSnapshot single-read medians (mixed +11.1%, 1,589.3 -> 1,765.9 ms, n=5+5, p~0.14; isolated +2.7%, 1,583.5 -> 1,626.7 ms, n=21+21, p~0.48) are recorded as documented, engineering-accepted measurement uncertainty. Neither a stable systematic regression nor strict non-inferiority is proven; ranges fully overlap and one After profile (1,478.5 ms) is faster than all Before profiles. Raw negatives are retained in the optimization report. No production read-path change was made to chase this micro-benchmark.",
   "commands": {
-    "npm run typecheck": "PASS (2026-10-15 re-checked on fix branch)",
-    "npm run lint": "PASS (0 errors; 2 pre-existing console warnings, 2026-10-15 re-checked)",
-    "npm test": "PASS (563 passed; 6 conditional real-fixture skips, per 2026-10-14 full run; 2026-10-15 re-ran largeBackupSafety + ledgerState + databaseUpgrade: 17 passed)",
-    "npm run build": "PASS (per 2026-10-14 full run)",
-    "npm run test:e2e": "PASS (23 passed; 2 conditional real-statement skips, per 2026-10-14 full run)",
-    "npm audit --audit-level=high": "PASS (0 vulnerabilities, per 2026-10-14 full run)"
+    "npm run typecheck": "PASS (final HEAD, rebased onto 2b75468)",
+    "npm run lint": "PASS (0 errors; 2 pre-existing generate-golden console warnings; final HEAD)",
+    "npm test": "PASS with Windows-only checkout caveat: targeted 161 passed (ledgerState, databaseUpgrade, largeBackupSafety, backupSafety, financialIntegrity, identityIntegrity, migration) on final HEAD; full Windows run shows 555 passed outside committedGolden plus 6 committedGolden hash mismatches caused solely by CRLF worktree checkout (committed LF blobs verify 6/6 against baselines; golden/ untouched by this branch; ubuntu CI uses LF). One ledgerState Unicode case timed out once under full-parallel load and passes in isolation.",
+    "npm run build": "PASS (final HEAD)",
+    "npm run test:e2e": "PASS (23 passed; 2 conditional real-statement skips; final HEAD, after installing headless-shell chromium on Windows)",
+    "npm audit --audit-level=high": "PASS (0 vulnerabilities; final HEAD)"
   },
   "ciPolicy": "Unchanged: Validation workflow runs typecheck/lint/Vitest/build/audit/Chromium Playwright only; 100k synthetic large-ledger suite stays a separate manual command (LEDGER_MODE=backup/performance/migration/index/read) and is not added to every CI run.",
   "financialAndBackupSourceHashesMatchFinal": true,
@@ -20,11 +21,11 @@
   "fixture": "All data synthetic; seed 1263684657",
   "integrityChecks": 143,
   "allIntegrityMismatchCounters": 0,
-  "nativeReadExperiment": "Not adopted: 21 paired samples per method, 2.5% median advantage, all snapshots equal.",
+  "nativeReadExperiment": "Not adopted: 21 paired samples per method, 2.5% median advantage, all snapshots equal. Production keeps single readonly transaction with full fields; no extra cache.",
   "readSnapshotReview": {
     "productionReadPathChanged": false,
     "method": "Post-hoc statistical review of existing consistent Chromium samples (same seed/machine/browser/dataset; mixed n=5, isolated 3 profiles x7, native 21 pairs); no new 100k Chromium run on Windows, no production code change to chase the micro-benchmark.",
-    "conclusion": "No stable systematic regression demonstrated; variance dominates (After SD 4.2x isolated, 2.5x mixed). Raw table reads improved 6.5% with v3. No simple reliable optimization preserving single-readonly-transaction consistency; native getAll +2.5% rejected. See optimization report 2026-10-15 addendum for raw samples, per-profile medians, overlap, and workflow-level tradeoff."
+    "conclusion": "No stable systematic regression demonstrated; variance dominates (After SD 4.2x isolated, 2.5x mixed). Raw table reads improved 6.5% with v3. No simple reliable optimization preserving single-readonly-transaction consistency; native getAll +2.5% rejected. See optimization report 2026-10-15 addendum and final acceptance section for raw samples, per-profile medians, overlap, and workflow-level tradeoff."
   },
-  "v1ReviewNotes": "NOT SOLVED. Separate free-text reviewNotes were never in V1 exports; this run only verifies existing notes are preserved on restore. Fresh profiles cannot recover non-exported notes from V1. Follow-up versioned notes backup contract required; see backup-safety.md."
+  "v1ReviewNotes": "NOT SOLVED. Separate free-text reviewNotes were never in V1 exports; this run only verifies existing notes are preserved on restore. Fresh profiles cannot recover non-exported notes from V1. Follow-up versioned notes backup contract required as a separate task; see docs/backup-safety.md follow-up section."
 }
