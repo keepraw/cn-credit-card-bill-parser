@@ -183,6 +183,74 @@ describe('V2 ZIP export and fresh restore', () => {
   })
 })
 
+describe('long review notes', () => {
+  it('round-trips existing notes exceeding 10,000 characters exactly via JSON', async () => {
+    await persistImportResults(buildDemoDataset())
+    const txs = await db.transactions.toArray()
+    // Notes stored before any input limit existed must export and restore with
+    // byte-exact content: no truncation and no silent omission.
+    const justOverOldLimit = 'y'.repeat(10_001)
+    const mixedUnicode = '备注ab🎉—'.repeat(8_000)
+    const atNewLimit = 'z'.repeat(MAX_NOTE_CHARS)
+    expect(justOverOldLimit.length).toBe(10_001)
+    expect(mixedUnicode.length).toBe(56_000)
+    expect(atNewLimit.length).toBe(MAX_NOTE_CHARS)
+    const fixtures = [
+      { transactionId: txs[0]!.id, note: justOverOldLimit, updatedAt: '2026-06-01T00:00:00.000Z' },
+      { transactionId: txs[1]!.id, note: mixedUnicode, updatedAt: '2026-06-02T00:00:00.000Z' },
+      { transactionId: txs[2]!.id, note: atNewLimit, updatedAt: '2026-06-03T00:00:00.000Z' },
+    ]
+    for (const row of fixtures) await db.reviewNotes.put(row)
+    const payload = await exportDataBackup()
+    if (payload.version !== 2) throw new Error('expected V2')
+    expect(payload.reviewNotes.length).toBe(fixtures.length)
+    expect(validateBackup(payload)).toBe(true)
+    await db.delete()
+    await db.open()
+    await importBackup(payload)
+    expect(await db.reviewNotes.count()).toBe(fixtures.length)
+    for (const row of fixtures) expect(await db.reviewNotes.get(row.transactionId)).toEqual(row)
+  })
+
+  it('round-trips a long note exactly via ZIP', async () => {
+    await persistImportResults(buildDemoDataset())
+    const txs = await db.transactions.toArray()
+    const longNote = '长备注🎉ab—'.repeat(7_000)
+    expect(longNote.length).toBeGreaterThan(10_000)
+    await db.reviewNotes.put({ transactionId: txs[0]!.id, note: longNote, updatedAt: '2026-06-04T00:00:00.000Z' })
+    const { blob } = await buildFullBackupZip()
+    expect((await previewFullBackupZip(blob)).reviewNotesCount).toBe(1)
+    await db.delete()
+    await db.open()
+    const result = await restoreFullBackupZip(blob)
+    expect(result.backupVersion).toBe(2)
+    expect(result.notes).toBe(1)
+    expect(await db.reviewNotes.get(txs[0]!.id)).toEqual({
+      transactionId: txs[0]!.id, note: longNote, updatedAt: '2026-06-04T00:00:00.000Z',
+    })
+  })
+
+  it('rejects notes beyond the per-note bound loudly instead of truncating them', async () => {
+    await persistImportResults(buildDemoDataset())
+    const txId = (await db.transactions.toArray())[0]!.id
+    const overLimit = `q${'x'.repeat(MAX_NOTE_CHARS)}`
+    expect(overLimit.length).toBe(MAX_NOTE_CHARS + 1)
+    await db.reviewNotes.put({ transactionId: txId, note: overLimit, updatedAt: new Date().toISOString() })
+    // Export refuses to generate an unrestorable backup rather than silently
+    // dropping the over-long note.
+    await expect(exportDataBackup()).rejects.toThrow()
+    await db.reviewNotes.delete(txId)
+    const payload = await exportDataBackup()
+    if (payload.version !== 2) throw new Error('expected V2')
+    const bad = { ...payload, reviewNotes: [{ transactionId: txId, note: overLimit, updatedAt: new Date().toISOString() }] }
+    expect(validateBackup(bad)).toBe(false)
+    const count = await db.transactions.count()
+    await expect(importBackup(bad as BackupPayload)).rejects.toThrow()
+    expect(await db.transactions.count()).toBe(count)
+    expect(await db.reviewNotes.count()).toBe(0)
+  })
+})
+
 describe('note conflict handling', () => {
   it('rejects conflicting note content without partial changes', async () => {
     await seedLedgerWithNotes(3)
@@ -374,15 +442,23 @@ describe('atomicity and failure injection', () => {
     expect(payload.reviewNotes.length).toBeGreaterThan(2000)
     await db.delete()
     await db.open()
+    // Bind the real implementation before spying: the first batch must execute
+    // genuine IndexedDB writes inside the restore transaction, with failure
+    // injected only on the second batch, so the test proves a late failure
+    // rolls back already-executed writes rather than short-circuiting them.
+    const originalBulkAdd = db.reviewNotes.bulkAdd.bind(db.reviewNotes)
     let calls = 0
-    const fail = vi.spyOn(db.reviewNotes, 'bulkAdd').mockImplementation(((items: never, ...rest: never[]) => {
+    const fail = vi.spyOn(db.reviewNotes, 'bulkAdd').mockImplementation((...args: Parameters<typeof originalBulkAdd>) => {
       calls += 1
       if (calls === 2) throw new Error('synthetic late batch failure')
-      return (db.reviewNotes.bulkAdd as (...callArgs: never[]) => Promise<string>)(items, ...rest)
-    }) as typeof db.reviewNotes.bulkAdd)
+      return originalBulkAdd(...args)
+    })
     await expect(importBackup(payload)).rejects.toThrow('synthetic late batch failure')
+    expect(calls).toBeGreaterThanOrEqual(2)
     fail.mockRestore()
     expect(await db.transactions.count()).toBe(0)
+    expect(await db.statements.count()).toBe(0)
+    expect(await db.imports.count()).toBe(0)
     expect(await db.reviewNotes.count()).toBe(0)
   })
 

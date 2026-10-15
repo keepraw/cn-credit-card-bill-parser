@@ -5,7 +5,15 @@ import type { BackupPayload } from '../db/repository'
 export const MAX_BACKUP_RECORDS = 1_000_000
 /** Free-text review notes are independent rows keyed by transactionId. */
 export const MAX_REVIEW_NOTES = 1_000_000
-export const MAX_NOTE_CHARS = 10_000
+/**
+ * Per-note character bound. 100,000 characters keep a single note's transient
+ * JSON encoding well under 1 MiB (worst case fully `\uXXXX`-escaped), while
+ * accommodating any realistic review note including pasted content. Aggregate
+ * memory stays bounded by the 128 MiB JSON budget, the total-record budget and
+ * the JSON complexity budgets; over-long notes are rejected loudly at
+ * export/restore time, never truncated or silently omitted.
+ */
+export const MAX_NOTE_CHARS = 100_000
 type Row = Record<string, unknown>
 const object = (value: unknown): value is Row => !!value && typeof value === 'object' && !Array.isArray(value)
 const text = (value: unknown): value is string => typeof value === 'string'
@@ -89,8 +97,9 @@ function reviewNote(value: unknown): value is Row {
   if (!identifier(value.transactionId)) return false
   if (typeof value.note !== 'string') return false
   // Preserve exact user text (including Unicode, punctuation and line breaks).
-  // Reject empty/whitespace-only notes and unbounded blobs; stored notes are
-  // always trimmed non-empty text, but restore preserves the exported bytes.
+  // Reject empty/whitespace-only notes and notes beyond MAX_NOTE_CHARS; stored
+  // notes are always trimmed non-empty text, but restore preserves the exported
+  // bytes.
   if (value.note.length === 0 || value.note.length > MAX_NOTE_CHARS) return false
   if (value.note.trim().length === 0) return false
   if (!timestamp(value.updatedAt)) return false

@@ -32,9 +32,10 @@ semantics, plus independent `reviewNotes`:
 - Each note preserves `transactionId`, exact `note` content (Unicode, Chinese,
   punctuation, line breaks, non-ASCII) and `updatedAt`.
 - Validation: `transactionId` uses the same nonempty identifier rules as other
-  IDs; `note` must be a non-empty, non-whitespace-only string up to 10,000
-  characters; `updatedAt` must be a valid ISO timestamp; `transactionId`s must
-  be unique.
+  IDs; `note` must be a non-empty, non-whitespace-only string of at most 100,000
+  characters (new input is capped at the same bound; previously stored notes up
+  to the bound export exactly with no truncation or omission); `updatedAt` must
+  be a valid ISO timestamp; `transactionId`s must be unique.
 - Reference policy: orphaned notes (no matching transaction in the payload)
   are valid and preserved. Exports include every stored note including orphans
   and never assume orphans belong to demo data. Restores insert orphans as
@@ -98,7 +99,8 @@ Existing PR #27 protections are unchanged: input-size limits, JSON complexity
 budgets, ZIP entry validation, path safety, expansion limits and SHA-256
 verification. Resource budgets were not weakened for V2; notes count toward the
 existing 1,000,000 total-record budget (statements + transactions + imports +
-reviewNotes) plus the 10,000-character per-note bound. The existing byte,
+reviewNotes) plus the 100,000-character per-note bound (a single note's transient
+JSON encoding stays well under 1 MiB). The existing byte,
 entry-count and JSON complexity limits apply identically to V2.
 
 Limits: 256 MiB archive input/output, 256 MiB expanded content, 64 MiB per
