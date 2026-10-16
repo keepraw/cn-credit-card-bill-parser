@@ -86,13 +86,27 @@ async function exported(page, kind, name) {
   assets.set(name, bytes)
   return { bytes: bytes.length, ms, sha256: hash(bytes) }
 }
+async function allRows(page, table) {
+  // The probe pages at 2000 rows; 100k ledgers with distributed notes exceed
+  // one page, so collect every page for exact comparison.
+  const out = []
+  let after = null
+  for (;;) {
+    const batch = await call(page, 'rows', table, after)
+    if (!batch.length) break
+    out.push(...batch)
+    if (batch.length < 2000) break
+    after = batch[batch.length - 1].__key
+  }
+  return out
+}
 async function backupCase(count) {
   log(`BACKUP ${count}`)
   const workbookName = `python-${count}.xlsx`, fixture = makeWorkbook(makeRows(count)); assets.set(workbookName, fixture)
   const source = await launch(`source-${count}`), entry = { count, import: await call(source.page, 'normalImport', workbookName), checks: [], restore: [], memoryProfiles: [] }
   const first = (await call(source.page, 'rows', 'transactions', null))[0]
-  await call(source.page, 'edit', first.id, '旅行', 'confirmed'); await call(source.page, 'note', first.id); await call(source.page, 'originals', workbookName)
-  const extras = { notes: await call(source.page, 'rows', 'reviewNotes', null), attachments: await call(source.page, 'rows', 'attachments', null) }
+  await call(source.page, 'edit', first.id, '旅行', 'confirmed'); await call(source.page, 'note', first.id); await call(source.page, 'seedNotes', 20); await call(source.page, 'originals', workbookName)
+  const extras = { notes: await allRows(source.page, 'reviewNotes'), attachments: await allRows(source.page, 'attachments') }
   assert.equal((await call(source.page, 'counts')).transactions, count)
   entry.json = await exported(source.page, 'json', `${count}.json`); entry.zip = await exported(source.page, 'zip', `${count}.zip`)
   log(`EXPORT ${count}: JSON=${entry.json.bytes} ZIP=${entry.zip.bytes}`)
@@ -115,7 +129,7 @@ async function backupCase(count) {
     if (kind === 'zip' && count === 100000 && profileRepeat === 0) {
       const failed = await call(target.page, 'attachmentFailure', `${count}.zip`); assert.equal(failed.ok, false)
       const state = await call(target.page, 'counts')
-      for (const table of ['transactions', 'statements', 'imports', 'attachments']) assert.equal(state[table], 0, 'late error must roll back')
+      for (const table of ['transactions', 'statements', 'imports', 'attachments', 'reviewNotes']) assert.equal(state[table], 0, 'late error must roll back')
       entry.lateRollback = { failed, counts: state }; log('100k native late-attachment rollback passed')
     }
     for (let repeat = 0; repeat < 3; repeat++) {
@@ -124,11 +138,24 @@ async function backupCase(count) {
       entry.checks.push({ context: `fresh-${kind}-${profileRepeat}-${repeat}`, ...await verified(target.page, `${count}.json`, extras, kind) })
       log(`RESTORE ${count} ${kind} profile ${profileRepeat} repeat ${repeat}: ${restored.ms.toFixed(1)}ms`)
     }
+    // Nonempty destination: conflicting note content must reject without partial changes.
+    if (kind === 'json' && profileRepeat === 0) {
+      const conflictId = first.id
+      await call(target.page, 'customNote', conflictId, 'local conflicting note — must survive')
+      const conflicted = await call(target.page, 'restoreFile', `${count}.${kind}`); assert.equal(conflicted.ok, false)
+      entry.restore.push({ context: 'nonempty-note-conflict', kind, ...conflicted })
+      const afterState = await call(target.page, 'counts')
+      assert.equal(afterState.transactions, count)
+      const preserved = await allRows(target.page, 'reviewNotes')
+      assert.ok(preserved.some(row => row.transactionId === conflictId && row.note === 'local conflicting note — must survive'))
+      log(`CONFLICT ${count} ${kind}: rejection preserved nonempty destination`)
+    }
     await target.context.close(); entry.memoryProfiles.push({ label: `fresh-${kind}-${profileRepeat}`, ...target.memory })
     }
   }
   const legacyPayload = JSON.parse(assets.get(`${count}.json`).toString('utf8'))
   legacyPayload.format = 'credit-bill-manager-backup'; legacyPayload.settings = { demoMode: false, theme: 'dark' }
+  legacyPayload.version = 1; delete legacyPayload.reviewNotes
   const legacyText = JSON.stringify(legacyPayload, null, 2); assets.set(`${count}-legacy.json`, Buffer.from(legacyText))
   const currentZip = await JSZip.loadAsync(assets.get(`${count}.zip`)), legacyZip = new JSZip()
   for (const [name, file] of Object.entries(currentZip.files)) if (!file.dir) legacyZip.file(name, name === 'database.json' ? legacyText : await file.async('uint8array'))
@@ -137,10 +164,10 @@ async function backupCase(count) {
     const target = await launch(`legacy-${kind}-${count}`)
     const restored = await call(target.page, 'restoreFile', `${count}-legacy.${kind}`); assert.equal(restored.ok, true, restored.message)
     entry.restore.push({ context: 'legacy-v1', kind, bytes: assets.get(`${count}-legacy.${kind}`).length, ...restored })
-    entry.checks.push({ context: `legacy-${kind}`, ...await verified(target.page, `${count}.json`, extras, kind) })
+    entry.checks.push({ context: `legacy-${kind}`, ...await verified(target.page, `${count}.json`, extras, `legacy-${kind}`) })
     await target.context.close(); entry.memoryProfiles.push({ label: `legacy-${kind}`, ...target.memory })
   }
-  entry.contract = { version: 1, notesExported: false, existingNotesPreserved: true, freshZipAttachmentTimestampReconstructed: true }
+  entry.contract = { version: 2, notesExported: true, existingNotesPreserved: true, freshZipAttachmentTimestampReconstructed: true, orphanPolicy: 'preserve-all-notes-including-orphans' }
   result.cases.push(entry); await save(); log(`PASS BACKUP ${count}`)
   for (const key of [...assets.keys()]) if (key.startsWith(String(count)) || key === workbookName) assets.delete(key)
 }

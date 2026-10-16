@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { db } from '../src/db/db'
-import { exportDataBackup, importBackup, persistImportResults, persistLegacyImport, readSnapshot, setReviewNote } from '../src/db/repository'
+import { exportDataBackup, importBackup, persistImportResults, persistLegacyImport, readSnapshot, setReviewNote, validateBackup } from '../src/db/repository'
 import { ingestParsedStatement } from '../src/core/ingest'
 import { inferTransactionType } from '../src/core/classify'
 import { auditMigrationRows } from '../src/core/migrationAudit'
@@ -110,19 +110,29 @@ describe('real import plans and IndexedDB cross-source integrity', () => {
     expect(await readSnapshot()).toEqual(before)
     expect(auditMigrationRows([{ ...existing, description: '另一家合成商户' }], snapshot.transactions).reviewCandidates).toBe(1)
   })
-  it('round-trips new historical provenance through version-1 JSON without claiming note backup', async () => {
+  it('round-trips new historical provenance through version-2 JSON with exact note recovery', async () => {
     await storeLegacy(workbook('消费 合成商户', 2))
     await storeNative('消费 合成商户', { transactionCurrency: 'USD', transactionAmountMinor: 1800 })
     const original = await readSnapshot()
-    await setReviewNote(original.transactions[0]!.id, 'Synthetic note excluded from v1')
+    await setReviewNote(original.transactions[0]!.id, 'Synthetic note included in v2')
     const backup = await exportDataBackup()
-    expect(backup).not.toHaveProperty('reviewNotes')
+    if (backup.version !== 2) throw new Error('expected V2')
+    expect(backup.reviewNotes).toHaveLength(1)
+    expect(backup.reviewNotes[0]).toMatchObject({ transactionId: original.transactions[0]!.id, note: 'Synthetic note included in v2' })
     await db.delete(); await db.open()
     await importBackup(JSON.parse(JSON.stringify(backup)))
     expect(await db.transactions.toArray()).toEqual(original.transactions)
-    expect(await db.reviewNotes.count()).toBe(0)
+    expect(await db.reviewNotes.count()).toBe(1)
+    expect((await db.reviewNotes.get(original.transactions[0]!.id))?.note).toBe('Synthetic note included in v2')
     await importBackup(backup)
     expect(await db.transactions.count()).toBe(3)
+    // Historical V1 payloads carry no notes: fresh V1 restores invent none.
+    const v1 = { ...JSON.parse(JSON.stringify(backup)), version: 1 } as Record<string, unknown>
+    delete v1.reviewNotes
+    expect(validateBackup(v1)).toBe(true)
+    await db.delete(); await db.open()
+    await importBackup(v1 as never)
+    expect(await db.reviewNotes.count()).toBe(0)
   })
   it('runs the TypeScript audit CLI on synthetic XLSX/JSON without writing either source', async () => {
     await storeNative('消费 合成商户', { type: 'installment_payment' })

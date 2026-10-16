@@ -4,6 +4,7 @@ import { formatMinor } from '../../core/money'
 import { buildDuplicateReviewDetails } from '../../core/migrationAudit'
 import { reconcileStatement } from '../../core/reconcile'
 import { REVIEW_FLAG_LABELS, bankName, type Statement, type Transaction } from '../../core/types'
+import { MAX_NOTE_CHARS } from '../../backup/validation'
 import {
   Badge,
   DemoBadge,
@@ -293,6 +294,9 @@ export function ReviewPage() {
               style={{ flex: 1 }}
               placeholder="例如：与银行 App 对账一致，确认为退款"
               value={draftNote}
+              // Cap new input at the validated backup bound; previously stored
+              // longer notes remain fully backable up to the same bound.
+              maxLength={MAX_NOTE_CHARS}
               onChange={(event) => setDraftNote(event.target.value)}
             />
             <button

@@ -10,14 +10,14 @@ import { buildFullBackupZip, restoreFullBackupZip } from '../src/backup/archive'
 beforeEach(async () => { await db.delete(); await db.open(); vi.restoreAllMocks() })
 const decode = (text: string) => parseJsonBytes(new TextEncoder().encode(text).buffer)
 
-it('encodes exactly the same v1 values and all audit fields in compact bounded chunks', async () => {
+it('encodes exactly the same v2 values and all audit fields in compact bounded chunks', async () => {
   await persistImportResults(buildDemoDataset())
   const payload = await exportDataBackup()
   const blob = createJsonBlob(payload)
   expect(await readJsonBackup(blob)).toEqual(payload)
   expect(blob.size).toBe(new TextEncoder().encode(JSON.stringify(payload)).length)
   expect(() => createJsonBlob(payload, 32)).toThrow('过大')
-  expect(await readJsonBackup(await buildDataBackupBlob())).toMatchObject({ version: 1, transactions: payload.transactions })
+  expect(await readJsonBackup(await buildDataBackupBlob())).toMatchObject({ version: 2, transactions: payload.transactions })
 })
 
 it('accepts old pretty JSON, old format name and partial settings', async () => {

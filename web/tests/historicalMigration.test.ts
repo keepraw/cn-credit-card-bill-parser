@@ -52,7 +52,7 @@ describe('TypeScript-only historical migration and recovery', () => {
     await persistLegacyImport(repeated)
     const backup = JSON.parse(JSON.stringify(await exportDataBackup()))
     expect(backup.format).toBe('credit-card-data-backup')
-    expect(backup.version).toBe(1)
+    expect(backup.version).toBe(2)
     expect(validateBackup(backup)).toBe(true)
 
     await db.delete()

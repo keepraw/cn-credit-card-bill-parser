@@ -3,6 +3,17 @@ import { parseDateInput } from '../core/dates'
 import type { BackupPayload } from '../db/repository'
 
 export const MAX_BACKUP_RECORDS = 1_000_000
+/** Free-text review notes are independent rows keyed by transactionId. */
+export const MAX_REVIEW_NOTES = 1_000_000
+/**
+ * Per-note character bound. 100,000 characters keep a single note's transient
+ * JSON encoding well under 1 MiB (worst case fully `\uXXXX`-escaped), while
+ * accommodating any realistic review note including pasted content. Aggregate
+ * memory stays bounded by the 128 MiB JSON budget, the total-record budget and
+ * the JSON complexity budgets; over-long notes are rejected loudly at
+ * export/restore time, never truncated or silently omitted.
+ */
+export const MAX_NOTE_CHARS = 100_000
 type Row = Record<string, unknown>
 const object = (value: unknown): value is Row => !!value && typeof value === 'object' && !Array.isArray(value)
 const text = (value: unknown): value is string => typeof value === 'string'
@@ -81,15 +92,56 @@ function unique(rows: Row[]): boolean {
   return new Set(rows.map((row) => row.id)).size === rows.length
 }
 
-/** Validate version-1 records without changing their financial meaning. */
+function reviewNote(value: unknown): value is Row {
+  if (!object(value)) return false
+  if (!identifier(value.transactionId)) return false
+  if (typeof value.note !== 'string') return false
+  // Preserve exact user text (including Unicode, punctuation and line breaks).
+  // Reject empty/whitespace-only notes and notes beyond MAX_NOTE_CHARS; stored
+  // notes are always trimmed non-empty text, but restore preserves the exported
+  // bytes.
+  if (value.note.length === 0 || value.note.length > MAX_NOTE_CHARS) return false
+  if (value.note.trim().length === 0) return false
+  if (!timestamp(value.updatedAt)) return false
+  return true
+}
+
+function uniqueNotes(rows: Row[]): boolean {
+  return new Set(rows.map((row) => row.transactionId)).size === rows.length
+}
+
+/**
+ * Validate the versioned backup contract without changing financial meaning.
+ *
+ * - V1 (`version: 1`): legacy payload without `reviewNotes`. Missing notes can
+ *   never be reconstructed; V1 restores must leave local notes untouched.
+ * - V2 (`version: 2`): same financial records plus independent `reviewNotes`
+ *   (`transactionId`, exact `note` content, `updatedAt`). Orphaned notes (no
+ *   matching transaction in the payload) are valid and must be preserved;
+ *   exports never silently omit stored notes and restores never delete notes
+ *   merely because they are absent from the incoming payload.
+ */
 export function validateBackup(value: unknown): value is BackupPayload {
   if (!object(value) || !oneOf(value.format, ['credit-bill-manager-backup', 'credit-card-data-backup']) ||
-    value.version !== 1 || !timestamp(value.exportedAt) || !settings(value.settings)) return false
+    !timestamp(value.exportedAt) || !settings(value.settings)) return false
+  if (value.version !== 1 && value.version !== 2) return false
   const { statements, transactions, imports } = value
   if (!Array.isArray(statements) || !Array.isArray(transactions) || !Array.isArray(imports) ||
-    statements.length + transactions.length + imports.length > MAX_BACKUP_RECORDS ||
     !statements.every(statement) || !transactions.every(transaction) || !imports.every(importRecord) ||
     !unique(statements) || !unique(transactions) || !unique(imports)) return false
+  if (value.version === 1) {
+    // V1 never contained independent notes. A V1 payload carrying notes is
+    // malformed: reject rather than silently ignoring recoverable user text.
+    if ('reviewNotes' in value) return false
+    if (statements.length + transactions.length + imports.length > MAX_BACKUP_RECORDS) return false
+  } else {
+    const reviewNotes = (value as { reviewNotes?: unknown }).reviewNotes
+    if (!Array.isArray(reviewNotes)) return false
+    if (!reviewNotes.every(reviewNote)) return false
+    if (!uniqueNotes(reviewNotes as Row[])) return false
+    if (reviewNotes.length > MAX_REVIEW_NOTES) return false
+    if (statements.length + transactions.length + imports.length + reviewNotes.length > MAX_BACKUP_RECORDS) return false
+  }
   const statementIds = new Set(statements.map((row) => row.id))
   const importIds = new Set(imports.map((row) => row.id))
   return transactions.every((row) => statementIds.has(row.statementId)) && imports.every((row) =>

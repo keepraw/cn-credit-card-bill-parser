@@ -351,14 +351,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (file.name.toLowerCase().endsWith('.zip')) {
           const result = await restoreFullBackupZip(file)
           await reload()
-          const base = `已恢复 ${result.transactions} 笔交易、${result.statements} 份账单、${result.files} 个原始文件。`
+          const notesPart = result.backupVersion === 2
+            ? `、${result.notes} 条复核备注`
+            : '。V1 备份不含独立复核备注，本地已有备注已保留'
+          const base = result.backupVersion === 2
+            ? `已恢复 ${result.transactions} 笔交易、${result.statements} 份账单${notesPart}、${result.files} 个原始文件。`
+            : `已恢复 ${result.transactions} 笔交易、${result.statements} 份账单、${result.files} 个原始文件${notesPart}。`
           return { ok: true, message: result.warning ? `${base}${result.warning}。` : base }
         }
         const payload = await readJsonBackup(file)
         if (!validateBackup(payload)) return { ok: false, message: '文件格式不正确，不是本应用导出的备份。' }
         await importBackup(payload)
         await reload()
-        return { ok: true, message: `已恢复 ${payload.transactions.length} 笔交易、${payload.statements.length} 份账单。` }
+        if (payload.version === 2) {
+          return { ok: true, message: `已恢复 ${payload.transactions.length} 笔交易、${payload.statements.length} 份账单、${payload.reviewNotes.length} 条复核备注。` }
+        }
+        return { ok: true, message: `已恢复 ${payload.transactions.length} 笔交易、${payload.statements.length} 份账单。V1 备份不含独立复核备注，本地已有备注已保留。` }
       } catch (error) {
         return { ok: false, message: `恢复失败：${describeError(error)}` }
       }

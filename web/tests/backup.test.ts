@@ -104,10 +104,11 @@ describe('JSON data backup', () => {
     await seedDemoWithOneAttachment()
     const payload = await exportDataBackup()
     expect(payload.format).toBe('credit-card-data-backup')
-    expect(payload.version).toBe(1)
+    expect(payload.version).toBe(2)
     expect(payload.transactions.length).toBeGreaterThan(0)
     expect(payload.statements.length).toBeGreaterThan(0)
     expect(payload.imports.length).toBeGreaterThan(0)
+    if (payload.version === 2) expect(Array.isArray(payload.reviewNotes)).toBe(true)
     // Lightweight: no Blob or evidence bytes leak into the JSON.
     expect(JSON.stringify(payload)).not.toContain('evidence:')
     expect(validateBackup(payload)).toBe(true)
@@ -121,6 +122,20 @@ describe('JSON data backup', () => {
       statements: [],
       transactions: [],
       imports: [],
+      settings: null,
+    }
+    expect(validateBackup(payload)).toBe(true)
+  })
+
+  it('accepts an empty V2 payload with explicit reviewNotes', () => {
+    const payload = {
+      format: 'credit-card-data-backup',
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      statements: [],
+      transactions: [],
+      imports: [],
+      reviewNotes: [],
       settings: null,
     }
     expect(validateBackup(payload)).toBe(true)

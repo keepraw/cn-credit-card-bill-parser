@@ -111,7 +111,9 @@ for (const format of MIGRATION_FORMATS) {
       await restoredPage.goto('/#/settings')
       expect((await snapshot(restoredPage)).transactions).toEqual([])
       await restoredPage.locator('input[type="file"][accept*=".json"]').setInputFiles(backupPath)
-      await expect(restoredPage.getByText('已恢复 72 笔交易、6 份账单。')).toBeVisible()
+      // V2 restores report the recovered review-note count; match the stable
+      // financial prefix rather than the full message string.
+      await expect(restoredPage.getByText(/已恢复 72 笔交易、6 份账单/)).toBeVisible()
       await restoredPage.reload()
       const restored = await snapshot(restoredPage)
       expect(restored.transactions).toEqual(before.transactions)
@@ -121,7 +123,9 @@ for (const format of MIGRATION_FORMATS) {
       expect(duplicateRelationships(restored.transactions)).toEqual(relationships)
       // Repeated restore and later import preserve all IDs and occurrences.
       await restoredPage.locator('input[type="file"][accept*=".json"]').setInputFiles(backupPath)
-      await expect(restoredPage.getByText('已恢复 72 笔交易、6 份账单。')).toBeVisible()
+      // V2 restores report the recovered review-note count; match the stable
+      // financial prefix rather than the full message string.
+      await expect(restoredPage.getByText(/已恢复 72 笔交易、6 份账单/)).toBeVisible()
       await restoredPage.goto('/#/import')
       await restoredPage.getByTestId('legacy-file-input').setInputFiles(upload)
       await expect(restoredPage.getByText('该文件此前已导入，确认后不会产生重复交易。')).toBeVisible()
