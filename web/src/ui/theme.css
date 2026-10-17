@@ -310,6 +310,10 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
 }
 
+.dashboard-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+}
+
 .stack {
   display: flex;
   flex-direction: column;
@@ -584,21 +588,59 @@ table.data tbody tr:last-child td {
 
 /* ---------------- charts ---------------- */
 
+.chart-panel {
+  min-width: 0;
+}
+
+.chart-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.chart-range {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-selectors {
+  flex: 0 1 auto;
+}
+
+.bar-chart-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.bar-chart-scroll:focus-visible,
+.card-list-scroll:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
 .bar-chart {
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  height: 168px;
+  width: max-content;
+  min-width: 100%;
+  height: 190px;
   padding-top: var(--space-4);
 }
 
 .bar-col {
-  flex: 1;
+  flex: 0 0 max-content;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  min-width: 0;
+  min-width: 104px;
   height: 100%;
   justify-content: flex-end;
 }
@@ -629,18 +671,44 @@ table.data tbody tr:last-child td {
   white-space: nowrap;
 }
 
+.bar-caption {
+  color: var(--danger);
+}
+
 .bar-value {
   font-size: 11px;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .hbar {
   display: grid;
-  grid-template-columns: 96px 1fr auto;
-  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1.2fr) minmax(28px, 1fr) auto;
+  gap: var(--space-2);
   align-items: center;
   padding: 6px 0;
+}
+
+.hbar-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.hbar-value {
+  text-align: right;
+}
+
+.card-count {
+  margin-bottom: var(--space-2);
+}
+
+.card-list-scroll {
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: var(--space-1);
 }
 
 .hbar-track {
@@ -833,6 +901,7 @@ table.data tbody tr:last-child td {
     font-size: 20px;
   }
   .hbar {
-    grid-template-columns: 72px 1fr auto;
+    grid-template-columns: minmax(0, 1.1fr) minmax(24px, 0.8fr) auto;
+    gap: var(--space-2);
   }
 }

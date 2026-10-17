@@ -67,6 +67,22 @@ test.describe('Dashboard', () => {
     await select.selectOption({ index: 1 })
     await expect(page.locator('.stat-value').first()).not.toHaveText(before ?? '')
   })
+
+  test('keeps the dashboard within phone, tablet and desktop viewport widths', async ({ page }) => {
+    await goto(page, 'dashboard')
+    for (const width of [360, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(page.locator('.bar-chart-scroll')).toBeVisible()
+      const layout = await page.evaluate(() => ({
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        chartViewportWidth: document.querySelector('.bar-chart-scroll')?.clientWidth ?? 0,
+        chartContentWidth: document.querySelector('.bar-chart-scroll')?.scrollWidth ?? 0,
+      }))
+      expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth)
+      expect(layout.chartContentWidth).toBeGreaterThanOrEqual(layout.chartViewportWidth)
+    }
+  })
 })
 
 test.describe('Transactions', () => {
