@@ -9,6 +9,15 @@ import { createJsonBlob } from '../backup/json'
 import { reconcileStatement } from '../core/reconcile'
 export { validateBackup } from '../backup/validation'
 
+function demoImportHashesWithoutRealReferences(
+  imports: readonly Pick<ImportRecord, 'fileHash' | 'isDemo'>[],
+): string[] {
+  const realHashes = new Set(imports.filter((row) => row.isDemo !== true).map((row) => row.fileHash))
+  return [...new Set(imports
+    .filter((row) => row.isDemo === true && !realHashes.has(row.fileHash))
+    .map((row) => row.fileHash))]
+}
+
 export interface Snapshot {
   statements: Statement[]
   transactions: Transaction[]
@@ -257,31 +266,41 @@ async function applyBackupPayload(payload: BackupPayload, storedNotes: Array<{ t
 
 /** Remove only the fictional demo rows so they can be regenerated cleanly. */
 export async function clearDemoData(): Promise<void> {
-  // NOTE: `isDemo` is a boolean index; `where('isDemo').equals(1)` never
-  // matches it (IndexedDB keys are strictly typed), so deletion uses an
-  // explicit boolean filter instead of a numeric comparison.
   await db.transaction('rw', [db.statements, db.transactions, db.imports, db.reviewNotes, db.attachments], async () => {
     const demoTransactions = await db.transactions.filter((row) => row.isDemo === true).primaryKeys()
-    const demoImports = await db.imports.filter((row) => row.isDemo === true).toArray()
-    const realHashes = new Set((await db.imports.filter((row) => row.isDemo !== true).toArray()).map((row) => row.fileHash))
+    const imports = await db.imports.toArray()
+    const demoImportIds = imports.filter((row) => row.isDemo === true).map((row) => row.id)
+    const demoHashes = demoImportHashesWithoutRealReferences(imports)
     await db.statements.filter((row) => row.isDemo === true).delete()
-    await db.transactions.filter((row) => row.isDemo === true).delete()
-    await db.imports.filter((row) => row.isDemo === true).delete()
+    await db.transactions.bulkDelete(demoTransactions)
+    await db.imports.bulkDelete(demoImportIds)
     await db.reviewNotes.bulkDelete(demoTransactions)
-    await db.attachments.bulkDelete(demoImports.map((row) => row.fileHash).filter((hash) => !realHashes.has(hash)))
+    await db.attachments.bulkDelete(demoHashes)
   })
 }
 
 /**
  * Migration cleanup for databases written by older versions that persisted
- * demo rows into the production tables. Removes fictional rows only; real
- * rows, review notes, attachments and backups are untouched.
+ * demo rows into the production tables. Removes explicit demo rows and only
+ * linked notes/evidence whose demo provenance is still present.
  */
 export async function purgeDemoRows(): Promise<void> {
-  await db.transaction('rw', db.statements, db.transactions, db.imports, db.settings, async () => {
+  await db.transaction('rw', [
+    db.statements, db.transactions, db.imports, db.reviewNotes, db.attachments, db.settings,
+  ], async () => {
+    const demoTransactionIds = await db.transactions.filter((row) => row.isDemo === true).primaryKeys()
+    const imports = await db.imports.toArray()
+    const demoImportIds = imports.filter((row) => row.isDemo === true).map((row) => row.id)
+    const demoAttachmentHashes = demoImportHashesWithoutRealReferences(imports)
+
     await db.statements.filter((row) => row.isDemo === true).delete()
-    await db.transactions.filter((row) => row.isDemo === true).delete()
-    await db.imports.filter((row) => row.isDemo === true).delete()
+    await db.transactions.bulkDelete(demoTransactionIds)
+    await db.imports.bulkDelete(demoImportIds)
+    await db.reviewNotes.bulkDelete(demoTransactionIds)
+    await db.attachments.bulkDelete(demoAttachmentHashes)
+
+    // Keep the legacy once-only protocol. A failed earlier operation aborts
+    // this transaction before the marker can be committed.
     await db.settings.put({ key: DEMO_PURGE_KEY, value: true })
   })
 }
