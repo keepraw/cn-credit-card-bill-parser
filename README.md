@@ -126,11 +126,13 @@ A full archive reports missing original documents in its manifest rather than in
 
 Backup restoration merges records by primary key; importing the same backup again does not create a new copy of the same records. Existing matching records retain their metadata; conflicting financial fields or conflicting note content abort restoration instead of overwriting. Keep a separate backup before any restoration or migration. XLSX/CSV archives include transaction IDs, fingerprints and occurrence numbers for independent inspection; use JSON to restore the application state.
 
-### Data deletion limitation
+### Data deletion and browser storage limitations
 
-**Known issue:** The current **Clear Real Data** operation clears real statement, transaction, and import rows, but does **not** also remove all stored original-file attachments or review notes. Therefore, it must **not** be treated as secure erasure of private information.
+**Clear Real Data** removes statements, transactions, and imports not explicitly marked `isDemo: true`; records without that marker are treated as real. It also removes review notes and original-file attachments without a reliable link to surviving demo data, including orphans. Notes for surviving demo transactions remain, as do attachments referenced by surviving demo imports, including a file hash shared with a real import. Settings are retained. The cleanup runs in one IndexedDB transaction and rolls back if it fails.
 
-For local cleanup, back up anything you need first, then use **Clear All Data** to remove ledger rows and attachments, or clear the site's browser storage. Application settings may remain after the in-app operation; clearing site storage is the more complete browser-side cleanup.
+**Clear All Data** removes every record from the `statements`, `transactions`, `imports`, `reviewNotes`, and `attachments` IndexedDB tables, including stored demo data and orphaned notes and attachments. The separate sixth `settings` table is not included, so application settings may remain. Demo examples are generated in memory; clearing persisted records does not permanently disable or remove the demo feature.
+
+In-app cleanup applies to app records; it cannot guarantee that browser-managed storage or device media has been physically erased or made unrecoverable. Manually clearing this site's browser data can also remove its IndexedDB data and application settings. Downloaded JSON/ZIP backups, original files saved outside the browser, and other copies are not deleted by in-app cleanup. Back up anything you need to keep before deleting data.
 
 ## Repository layout
 
