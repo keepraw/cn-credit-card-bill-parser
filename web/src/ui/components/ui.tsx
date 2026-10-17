@@ -136,23 +136,34 @@ export function ReconciliationChecks({ statement }: { statement: Statement }) {
 export function BarChart({
   data,
   formatValue,
+  ariaLabel,
 }: {
-  data: Array<{ label: string; value: number; caption?: string }>
+  data: Array<{ id: string; label: string; value: number; caption?: string; accessibleLabel?: string }>
   formatValue: (value: number) => string
+  ariaLabel: string
 }) {
   const max = Math.max(1, ...data.map((entry) => entry.value))
   return (
-    <div className="bar-chart">
-      {data.map((entry) => (
-        <div className="bar-col" key={entry.label} title={`${entry.label} ${formatValue(entry.value)}`}>
-          <span className="bar-value">{formatValue(entry.value)}</span>
-          <div className="bar-stack">
-            <div className="bar" style={{ height: `${Math.max(2, (entry.value / max) * 100)}%` }} />
+    <div className="bar-chart-scroll" role="region" aria-label={ariaLabel} tabIndex={0}>
+      <div className="bar-chart">
+        {data.map((entry) => (
+          <div
+            className="bar-col"
+            key={entry.id}
+            data-testid="monthly-bar"
+            data-chart-key={entry.id}
+            role="group"
+            aria-label={entry.accessibleLabel ?? `${entry.label}，${formatValue(entry.value)}`}
+          >
+            <span className="bar-value">{formatValue(entry.value)}</span>
+            <div className="bar-stack">
+              <div className="bar" style={{ height: `${Math.max(2, (entry.value / max) * 100)}%` }} />
+            </div>
+            <span className="bar-label">{entry.label}</span>
+            {entry.caption ? <span className="bar-label bar-caption">{entry.caption}</span> : null}
           </div>
-          <span className="bar-label">{entry.label}</span>
-          {entry.caption ? <span className="bar-label">{entry.caption}</span> : null}
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
@@ -169,12 +180,12 @@ export function HorizontalBars({
   return (
     <div>
       {data.map((entry) => (
-        <div className="hbar" key={entry.label}>
-          <span className="subtle nowrap">{entry.label}</span>
+        <div className="hbar" key={entry.label} data-label={entry.label} data-value={entry.value}>
+          <span className="subtle hbar-label">{entry.label}</span>
           <span className="hbar-track">
             <span className="hbar-fill" style={{ width: `${Math.max(2, (entry.value / max) * 100)}%` }} />
           </span>
-          <span className="bar-value">{formatValue(entry.value)}</span>
+          <span className="bar-value hbar-value">{formatValue(entry.value)}</span>
         </div>
       ))}
     </div>

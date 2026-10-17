@@ -8,9 +8,14 @@ import { BarChart, Badge, DemoBadge, EmptyState, HorizontalBars, Stat } from '..
 
 const BANKS: BankId[] = ['boc', 'bocom', 'icbc', 'ccb', 'abc', 'citic']
 
+type TrendView = 'recent' | 'year'
+
 export function DashboardPage() {
   const { visibleTransactions, visibleStatements, state } = useApp()
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
+  const [trendView, setTrendView] = useState<TrendView>('recent')
+  const [selectedTrendYear, setSelectedTrendYear] = useState('')
+  const [showAllCards, setShowAllCards] = useState(false)
 
   const trusted = useMemo(() => {
     const untrusted = new Set(
@@ -44,11 +49,21 @@ export function DashboardPage() {
     [visibleTransactions],
   )
   const months = useMemo(() => trend.map((entry) => entry.month), [trend])
+  const trendYears = useMemo(() => [...new Set(trend.map((entry) => entry.month.slice(0, 4)))].sort().reverse(), [trend])
+  const effectiveTrendYear = trendYears.includes(selectedTrendYear) ? selectedTrendYear : (trendYears[0] ?? '')
+  const displayedTrend = useMemo(
+    () => trendView === 'recent' ? trend.slice(-12) : trend.filter((entry) => entry.month.startsWith(`${effectiveTrendYear}-`)),
+    [effectiveTrendYear, trend, trendView],
+  )
+  const trendRange = displayedTrend.length > 0
+    ? `${displayedTrend[0]!.month} 至 ${displayedTrend[displayedTrend.length - 1]!.month}`
+    : '暂无月份数据'
   const selectedMonth =
     filters.from && filters.to && filters.from.slice(0, 7) === filters.to.slice(0, 7) ? filters.from.slice(0, 7) : ''
 
   const hasData = visibleTransactions.length > 0
   const pendingStatements = visibleStatements.filter((s) => s.status !== 'reconciled' && s.status !== 'imported').length
+  const displayedCards = showAllCards ? byCard : byCard.slice(0, 10)
 
   return (
     <>
@@ -61,6 +76,7 @@ export function DashboardPage() {
           {months.length > 0 ? (
             <select
               className="select"
+              aria-label="总览月份筛选"
               value={selectedMonth}
               onChange={(event) => {
                 const value = event.target.value
@@ -81,6 +97,7 @@ export function DashboardPage() {
           ) : null}
           <select
             className="select"
+            aria-label="总览银行筛选"
             value={filters.banks[0] ?? ''}
             onChange={(event) => setFilters((prev) => ({ ...prev, banks: event.target.value ? [event.target.value as BankId] : [] }))}
           >
@@ -93,6 +110,7 @@ export function DashboardPage() {
           </select>
           <select
             className="select"
+            aria-label="总览卡片筛选"
             value={filters.cards[0] ?? ''}
             onChange={(event) => setFilters((prev) => ({ ...prev, cards: event.target.value ? [event.target.value] : [] }))}
           >
@@ -176,7 +194,7 @@ export function DashboardPage() {
             </div>
           ) : null}
 
-          <div className="grid grid-2">
+          <div className="grid grid-2 dashboard-grid">
             <div className="card">
               <div className="card-head">
                 <div>
@@ -190,11 +208,51 @@ export function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <div className="card-pad">
-                <BarChart
-                  data={trend.map((entry) => ({ label: entry.month.slice(5), value: entry.spending, caption: entry.refund > 0 ? `退 ${formatMinor(entry.refund)}` : undefined }))}
-                  formatValue={(value) => formatMinor(value)}
-                />
+              <div className="card-pad stack chart-panel">
+                {displayedTrend.length > 0 ? (
+                  <>
+                    <div className="chart-toolbar">
+                      <div>
+                        <p className="chart-range" data-testid="monthly-trend-range" aria-live="polite">覆盖时间：{trendRange}</p>
+                        <p className="subtle">默认显示最近 12 个有记录月份；可按年份浏览历史，图表区域可横向滚动。</p>
+                      </div>
+                      <div className="row chart-selectors">
+                        <select
+                          className="select"
+                          aria-label="消费趋势显示范围"
+                          value={trendView}
+                          onChange={(event) => setTrendView(event.target.value as TrendView)}
+                        >
+                          <option value="recent">最近 12 个月</option>
+                          <option value="year">按年份查看</option>
+                        </select>
+                        {trendView === 'year' ? (
+                          <select
+                            className="select"
+                            aria-label="消费趋势年份"
+                            value={effectiveTrendYear}
+                            onChange={(event) => setSelectedTrendYear(event.target.value)}
+                          >
+                            {trendYears.map((year) => <option key={year} value={year}>{year} 年</option>)}
+                          </select>
+                        ) : null}
+                      </div>
+                    </div>
+                    <BarChart
+                      ariaLabel="月度消费趋势，可横向滚动查看各月金额"
+                      data={displayedTrend.map((entry) => ({
+                        id: entry.month,
+                        label: entry.month,
+                        value: entry.spending,
+                        caption: `退款 ${formatMinor(entry.refund)}`,
+                        accessibleLabel: `${entry.month}，消费金额 ${formatMinor(entry.spending)} 元，退款金额 ${formatMinor(entry.refund)} 元`,
+                      }))}
+                      formatValue={(value) => formatMinor(value)}
+                    />
+                  </>
+                ) : (
+                  <EmptyState title="暂无人民币消费或退款月份" />
+                )}
               </div>
             </div>
 
@@ -214,11 +272,31 @@ export function DashboardPage() {
               <div className="card-head">
                 <div>
                   <h2>卡片消费分布</h2>
-                  <p>银行 · 卡尾号</p>
+                  <p>按银行与卡尾号分组 · {byCard.length} 个统计项</p>
                 </div>
+                {byCard.length > 10 ? (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    aria-expanded={showAllCards}
+                    aria-controls="dashboard-card-distribution"
+                    onClick={() => setShowAllCards((expanded) => !expanded)}
+                  >
+                    {showAllCards ? '收起' : `查看全部 (${byCard.length})`}
+                  </button>
+                ) : null}
               </div>
               <div className="card-pad">
-                <HorizontalBars data={byCard} formatValue={(v) => `¥${formatMinor(v)}`} />
+                <p className="subtle card-count" data-testid="card-distribution-count">参与本次消费统计的卡片项：{byCard.length}（按银行与尾号分组）</p>
+                <div
+                  id="dashboard-card-distribution"
+                  className={showAllCards && byCard.length > 10 ? 'card-list-scroll' : undefined}
+                  role={showAllCards && byCard.length > 10 ? 'region' : undefined}
+                  aria-label={showAllCards && byCard.length > 10 ? '全部卡片消费分布，可纵向滚动查看' : undefined}
+                  tabIndex={showAllCards && byCard.length > 10 ? 0 : undefined}
+                >
+                  <HorizontalBars data={displayedCards} formatValue={(v) => `¥${formatMinor(v)}`} />
+                </div>
               </div>
             </div>
 
