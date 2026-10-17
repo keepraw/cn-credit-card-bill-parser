@@ -1,223 +1,442 @@
 # Keepraw-Ledger Comprehensive Repository Audit
 
-**Audit date:** 2026-10-17 (Asia/Shanghai)
+**Audit and independent revision date:** 2026-10-17 (Asia/Shanghai; execution timestamps below are UTC)
 **Repository:** [keepraw/keepraw-ledger](https://github.com/keepraw/keepraw-ledger)
-**Audited `main` SHA:** `98d6ead1852b0134c560b39db04b33e8ae10d7a2`
-**Audit branch:** `audit/full-repository-2026-10`
-**Scope:** Read-only engineering audit; this change adds this report only.
+**Audited application SHA:** `98d6ead1852b0134c560b39db04b33e8ae10d7a2`
+**PR:** [#32](https://github.com/keepraw/keepraw-ledger/pull/32), `audit/full-repository-2026-10` → `main`
+**Original report/PR head:** `164210edf359d8d002c8bf8fda2281912de865f5`
+**Change boundary:** This Markdown report only. No application, formal test, dependency declaration, lockfile, schema, CI, deployment, or main-branch changes.
 
 ## 1. Executive Summary
 
-The audit examined the current `main` commit identified above, not an unpushed local tree. The repository is a local-first React/TypeScript credit-card ledger with browser-side parsing and IndexedDB persistence. The strongest existing controls are integer-minor-unit money handling, explicit parsing and reconciliation states, exact-field transaction deduplication, validated V1/V2 backup input, atomic restore transactions, selective data cleanup, and a deployment workflow that publishes the artifact built and validated by the same successful run.
+The independent audit confirms material correctness and isolation defects in the specified baseline. **The revised distribution is 0 P0, 4 P1, 8 P2, 1 P3, and 1 Recommendation.** Thirteen defects are Confirmed; the CSP recommendation is not a vulnerability. The original AUD-001–003 identifiers are retained. Findings are grouped by risk below, with new identifiers AUD-004–014.
 
-**Findings:** **0 P0, 0 P1, 2 P2, and 1 Recommendation.** No evidence was found of an incorrect financial total, silent loss of a real transaction, broken database upgrade, partial backup restore, or exploitable frontend injection in the reviewed paths. Two bounded issues are supported by evidence:
+The highest-priority problems are stale statement reconciliation after review/history changes, conflicting derived state after concurrent imports, omitted transactions when merchant text matches parser footer rules, and debit purchases classified as cashback from merchant keywords. These are demonstrated paths to incorrect trusted totals or incomplete imported records, despite the existing tests passing. Demo isolation also fails in both directions: demonstration notes enter real backups, and real notes remain visible in the purportedly fictional view.
 
-1. **Demo Mode review notes cross the real-data persistence boundary.** A synthetic Chromium reproduction showed that a note saved against an in-memory demo transaction is written to the production `reviewNotes` IndexedDB store, remains after Demo Mode is turned off, and is included in a JSON V2 backup even though no transaction row was persisted. This is a data-lifecycle/isolation defect, not a demonstrated change to financial totals.
-2. **The 100k transaction list still performs whole-set filtering and sorting on the main thread.** Only 50 rows are rendered, but filtering and sorting operate on the full list. An archived deterministic benchmark measured a median 486.5 ms for a 100k description sort; the benchmark's `TransactionsPage.tsx` source hash matches the audited file. The rest of the historical benchmark stack is not identical to this SHA, so the measurement is a scale indicator rather than a current full-stack performance certification.
+The strongest existing controls remain valid: integer-minor-unit parsing, conservative exact-field/occurrence matching, transactional database upgrades and restore, bounded JSON/ZIP validation, original-file hash checks, and deployment from the artifact validated in the same workflow. Those controls do not repair the confirmed cross-module defects. No P0, remote code execution, demonstrated external exfiltration, or irreversible loss of the original uploaded evidence was established.
 
-The sole Recommendation is to add a carefully tested Content-Security-Policy defense-in-depth control at the hosting boundary. The observed public response had no CSP header, but no current XSS sink or exploit was identified.
+The independent revision preserves Manus's supported findings and positive observations, but **withdraws the original blanket statement that no incorrect financial total or silently omitted real transaction was found**. Six bank parser families, three history adapters, all 56 tracked files under `web/src`, persistence, exports, tooling, tests, configuration, and deployment workflow were inspected by dependency/data flow. This is a repository-wide engineering review, not a claim that every format, execution path, browser, or adversarial input has been dynamically exhausted.
 
-At the time checked, `main` had a successful GitHub Actions Validation run, a non-expired `github-pages` artifact, and a successful Pages deployment for the same SHA; the public site returned HTTP 200. The local audit also passed typecheck, lint, the full unit suite, build, high-severity dependency audit, and Chromium E2E. These are positive engineering signals, not proof that all bank formats, browsers, devices, or financial edge cases are defect-free. Users should continue to reconcile imported results against official bank records.
+## 2. Baseline, Independence, and Evidence Provenance
 
-## 2. Audit Baseline and Scope
+### Baseline checks
 
-### Baseline and environment
+Before reading Manus's Findings, GitHub and Git were queried independently:
 
-- The GitHub remote was freshly queried before review. `main` resolved to `98d6ead1852b0134c560b39db04b33e8ae10d7a2`, matching the supplied reference SHA. A second remote SHA check at the end of the code review returned the same value.
-- The audit branch was created from a fresh clone of `origin/main`; the initial worktree was clean. No local changes from other working directories were used.
-- The repository inventory contained **191 tracked files**. The inventory covered the application source, tests, E2E tests, scripts, bank golden fixtures, documentation, benchmark artifacts, and workflow configuration. High-risk source and test modules were reviewed by domain rather than by sampling only recent PRs.
-- Local environment: Ubuntu 24.04, Node.js `v24.19.0`, npm `11.17.0`, Playwright Chromium. The repository's GitHub workflow uses Node.js 22; local/CI runtime differences are noted in the limitations.
-- Recent PRs #27–#31 were consulted only to understand the current design and historical test/benchmark claims. Findings below are based on the actual audited tree at `98d6ead…d7a2`, not a repeat review of those PR approvals.
+| Item | Observed value |
+| --- | --- |
+| `main`, PR base | `98d6ead1852b0134c560b39db04b33e8ae10d7a2` |
+| PR head | `164210edf359d8d002c8bf8fda2281912de865f5` |
+| PR state | Open; mergeable; no merge or auto-merge requested |
+| Changed files | Only `docs/audits/2026-10-17-full-repository-audit.md`, originally 223 added lines |
+| Initial PR CI | [Validation #39008207333](https://github.com/keepraw/keepraw-ledger/actions/runs/39008207333): web success; deploy skipped |
+| Baseline inventory | 191 tracked files; PR head adds this report, with no application difference |
 
-### CI, Pages artifact, and deployment snapshot
+No newer application revision was substituted. The baseline worktree was clean. A second remote-ref check immediately before preparing publication returned the same main and original PR-head SHAs. The revision is appended to that PR head without rebasing or changing the application baseline.
 
-- [Validation run #39007313053](https://github.com/keepraw/keepraw-ledger/actions/runs/39007313053), for `98d6ead1852b0134c560b39db04b33e8ae10d7a2`, completed successfully. The `web` job's typecheck, lint, unit tests, build, `npm audit --audit-level=high`, Chromium E2E, and validated-artifact upload steps all succeeded.
-- The run produced one non-expired `github-pages` artifact (870,447 bytes). The dependent `deploy` job completed successfully. Pages deployment `7135457084` targeted the same SHA and reported `state: success`, with environment URL `http://ledger.keepraw.com/`.
-- A read-only request to [https://ledger.keepraw.com/](https://ledger.keepraw.com/) returned HTTP/2 200; its `Last-Modified` value matched the 2026-10-17 deployment window. This confirms the observed deployment snapshot, not a continuing availability guarantee.
-- At the same request time, the response had no `Content-Security-Policy` header. This is recorded only as a defense-in-depth Recommendation; no exploit was demonstrated.
+The first pass mapped architecture and read implementation/tests without opening the original report or consulting its finding list. A preliminary independent finding ledger and 16 synthetic experiments were completed before the original 223-line report was read. The four supplied prior suspicions were treated as leads, not a complete list or an oracle. The expanded parser, classification, concurrency, resource, and tooling findings arose from tracing implementation and composing modules.
 
-### Scope and method
+### Evidence labels
 
-The review prioritized financial correctness, recovery, data lifecycle, security/privacy, performance, and maintainability in that order. It included:
+- **I — Independent:** source review, newly designed experiments, fresh execution of the locked baseline, browser verification, and current scale measurements in this revision.
+- **M — Manus:** original report claims, retained only with attribution or independent corroboration. Identical test counts corroborate the baseline, not the existence of Manus's unretained local logs.
+- **H — Historical:** checked-in benchmark/retirement/golden evidence from earlier commits. Historical results are not current performance measurements or current private-statement acceptance.
+- **Confirmed:** dynamically reproduced, or equivalent direct observation proves the claim. Each finding states what was actually exercised.
+- **Source-verified:** an explicit defect path is proven in implementation but not executed. Related unexecuted bank variants are labeled this way within findings and are not counted again.
+- **Suspected:** plausible but not confirmed; excluded from defect totals.
 
-- Core money, date, identity, deduplication, ingest, classification, data-quality, analytics, and reconciliation logic.
-- The six registered bank parser flows (BOC, ICBC, ABC, CCB, BOCOM, CITIC), parser registry/extraction/HTML handling, and the three supported historical XLSX adapters.
-- Dexie schema versions, repository transactions, migrations, import/edit paths, Demo Mode, review notes, attachments, data deletion, JSON/ZIP validation and recovery.
-- React state/UI paths relevant to import, review, ledger display, Dashboard, and large-history behavior; unit/integration/E2E tests; benchmark methodology and artifacts; dependency manifest/lockfile; GitHub Actions and Pages deployment configuration.
-- README and relevant backup-safety, evidence-lifecycle, transaction-identity, historical-migration, dependency-security, and benchmark documentation.
+### Environment and remote snapshot
 
-The review was read-only with respect to application source, schema, tests, dependencies, and CI. No real or private statement was opened, imported, uploaded, or used. Dynamic verification used only a fresh isolated browser profile and a synthetic note marker. The report is an engineering assessment, not a formal proof, financial certification, penetration test, or guarantee of physical erasure from browser-managed storage.
+Independent runs used Linux, Node `v24.19.0`, npm `11.9.0`, locked Vitest `4.1.11`, Vite `6.4.4`, SheetJS `0.20.3`, Playwright `1.64.0`, and Chromium `156.0.8078.4`. The container's CPU quota was four cores and memory limit 16 GiB; benchmark metadata reports five visible CPUs on an AMD EPYC 9V74 host. CI uses Node 22. Browser contexts/profiles and fixtures were newly generated; no existing private browser profile, personal statement, production ledger, or credential value was opened.
 
-## 3. Architecture Overview
+The preinstalled `node_modules` initially contained Vitest 3.2.7 and SheetJS 0.18.5 despite the lockfile. Those preliminary runs are **not** the release-validation evidence. `npm ci` installed the locked dependencies without changing either manifest or lockfile, followed by complete reruns. An initial sandbox subprocess denial and initially absent Chromium binary were environmental failures; they were resolved before the accepted results.
 
-Keepraw-Ledger is a static, local-first React 18 / TypeScript application built with Vite. It has no application backend or server-side financial database. The major runtime dependencies include Dexie/IndexedDB, JSZip, `pdfjs-dist`, `postal-mime`, and SheetJS (`xlsx`); tests and builds use Vitest, Playwright, TypeScript, ESLint, and Vite. The repository describes this boundary in the [README](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/README.md).
+Independent read-only checks corroborated [baseline Validation #39007313053](https://github.com/keepraw/keepraw-ledger/actions/runs/39007313053), its successful web/deploy jobs, its non-expired 870,447-byte `github-pages` artifact, and successful deployment `7135457084` of the same SHA. A 2026-10-17 06:21:59 UTC request to [the public site](https://ledger.keepraw.com/) returned HTTP 200 without a CSP header. These are timestamped observations, not continuing availability or security guarantees. No deployment was performed.
 
-### Financial-data flow
+## 3. Architecture and Audit Coverage
 
-1. The user supplies a PDF or EML statement, or a recognized historical XLSX workbook. Parser selection is explicit; parsing and validation run in the browser. The six bank parser families and supported legacy schemas are finite, documented formats rather than a promise to accept every bank template.
-2. Parser results pass through core ingest, money/date validation, identity and occurrence assignment, duplicate review, classification, and reconciliation logic. `AppStore` coordinates imports and serializes state-changing operations; persisted rows are written through the repository layer.
-3. Dexie defines six IndexedDB stores: `statements`, `transactions`, `imports`, `settings`, `reviewNotes`, and `attachments`. Transactions and statements are the financial ledger; review notes are keyed independently by transaction ID; raw evidence is stored separately by file hash when the browser permits it. See [`db.ts`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/db.ts#L48-L85).
-4. Analytics consume ledger rows and statement trust state. Dashboard totals use integer minor units and explicit currency/type/review rules; non-CNY settlement rows are retained but are not converted into RMB totals.
-5. JSON V2 contains ledger records, settings, and independent review notes; ZIP V2 adds available original files and a manifest. Parsing, structural/resource validation, file/hash checks, and identity/conflict checks precede a single IndexedDB write transaction. The recovery design is documented in [`repository.ts`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L178-L265) and [`archive.ts`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/backup/archive.ts#L147-L230).
+### Module inventory and dependencies
 
-### Data-integrity boundaries and maintainability
+| Area | Inventory and responsibility | Interfaces examined |
+| --- | --- | --- |
+| Core | 12 files: types, money, dates, classify, identity, dedupe, ingest, migrationAudit, reconcile, reconciliation, analytics, dataQuality | Currency/sign/type → identity → trust → aggregate invariants; duplicate versus review semantics |
+| Parsers | 11 files: six banks, extract, html, pdfLayout, registry, types | PDF coordinates, MIME decoding, inert HTML tables, bank selection, row recognition, summaries, dates, directions, parse failures |
+| Historical import | 6 files: three adapters, legacyImport, workbook, types | XLSX decode → strict sheet/header detection → row anomalies/preview → fresh planning → persistence |
+| Persistence/state | `db.ts`, `repository.ts`, `AppStore.tsx` | Six-store schema; upgrade; import/edit/note/clear/restore transaction scopes; queue; React snapshots; cross-tab behavior |
+| Backup/export | 4 backup files and 2 export files | JSON V1/V2, ZIP manifest V1 with database V1/V2, attachment hashes, conflict handling, bounds, CSV/XLSX formulas and monetary text |
+| Demo/UI/entry | 2 demo files, 11 UI files, `main.tsx` | All seven routes; theme/router; dashboard, list, review, quality, reconciliation, import and settings; visible versus persisted state |
+| Golden/tooling | 4 golden files; 13 scripts/readmes | Normalization/redaction, comparison oracle, CLI generation/migration audit, synthetic benchmark fixture/probe/runner methodology |
+| Tests/config/docs | 53 files under tests, 7 E2E files, one workflow, build/test/TS/lint/lock configuration; 23 baseline docs and 25 golden files | Business assertions versus implementation mirrors; fixture scope; skipped private acceptance; build provenance and historical evidence |
 
-- Core money and identity logic are separated from React presentation; parsers feed typed ingest results rather than performing persistence themselves.
-- A key integrity boundary is the distinction between a candidate fingerprint and a true duplicate: deduplication compares a JSON-encoded tuple of the fingerprint and full business fields, then allocates occurrences. The reviewed path does not silently merge on hash equality alone.
-- Database upgrades retain object stores and primary keys; V3 removes unused secondary indexes rather than rewriting stored business rows. Cleanup and restore paths use Dexie transactions.
-- Demo transactions are generated in memory and are not part of the real transaction snapshot. The note-writing path is not similarly mode-isolated; this mismatch is AUD-001.
-- The main maintainability risk is that the application keeps complete snapshots in React state and performs list filtering/sorting in the browser. Pagination limits rendered rows, not the amount of data processed; this is the basis for AUD-002, not evidence that the local-first architecture should be replaced.
+The counts describe an inventory, not a line-coverage percentage. All runtime module implementations and important callers were examined. Test suites were executed and risk-relevant assertions/fixtures reviewed; no new branch/statement coverage percentage is claimed. Existing desensitized golden artifacts are regression references, not newly supplied private financial evidence. The retired Python runtime and historical SQLite artifacts are not in this application's active tree; no unavailable historical database was fabricated or certified.
 
-## 4. Audit Coverage Matrix
+### Data flow, persistence boundaries, and state transitions
 
-| Domain | Key code/tests examined | Validation performed | Coverage/result | Confirmed finding count | Residual risk |
-|---|---|---|---|---:|---|
-| Financial correctness | `web/src/core/{money,types,analytics,reconcile,reconciliation,dates}.ts`; `financialIntegrity`, `currencyPersistence`, `excelMoney`, reconciliation tests | Full Vitest suite; Chromium financial-integrity and Excel-money E2E | Detailed review of minor-unit parsing, signed legs, CNY inclusion, trust filters, installment/refund/credit handling; no current incorrect-total path confirmed | 0 | Synthetic statements do not prove every issuer template or future edge case; real statements were not used |
-| Transaction identity / deduplication | `core/{identity,dedupe,ingest,migrationAudit}.ts`; identity, cross-source, pipeline, golden tests | Full Vitest; 100k identity smoke test and 100k Chromium/IndexedDB synthetic E2E | Checked ID/fingerprint/occurrence, exact-field matching, repeated legitimate rows, suspected-duplicate review; collision concern not elevated because current dedup path compares the complete tuple | 0 | Hash collisions remain theoretically possible; no silent-loss path was found in the reviewed allocation/matching logic |
-| Import and parsing | `web/src/parsers/`, `web/src/importers/`; six bank fixtures/tests, parser registry, legacy-import tests | Full Vitest and Chromium E2E; 18.5k synthetic legacy-import test | Registered BOC/ICBC/ABC/CCB/BOCOM/CITIC paths and recognized XLSX adapters reviewed; invalid/unknown inputs have explicit failure paths | 0 | No independent testing against current live issuer formats; real-statement acceptance tests were skipped |
-| IndexedDB and migration | `db/db.ts`, `db/repository.ts`, `AppStore.tsx`; upgrade, migration, ledger-state tests and upgrade E2E | Full Vitest and Chromium database-upgrade E2E | V1/V2→V3 store/key preservation, transaction scopes, serialized writes, rollback and failure paths reviewed | 0 | No actual user profile, cross-tab stress, or real quota exhaustion test |
-| Backup and recovery | `web/src/backup/{json,validation,archive,zipSafety}.ts`, repository persistence, backup safety/V2/large-backup tests | Full Vitest, backup/restore E2E, static ordering/transaction review | V1/V2 compatibility, review-note conflicts, ZIP paths/limits, hashes, attachments, idempotence, and rollback protections reviewed; no confirmed defect | 0 | No full 100k restore/peak-memory run at this exact SHA; no exhaustive differential fuzzing of all ZIP parser edge cases |
-| Deletion and Demo isolation | `clearAllData`, `purgeDemoRows`, `clearDemoData`, `AppStore`, `ReviewPage`; demo-isolation/residue/evidence tests | Full Vitest plus isolated synthetic Chromium reproduction and JSON V2 export check | Deletion transactions/shared-file rules reviewed; Demo Mode review note crosses into the real `reviewNotes` store and backup | **1 P2** | Note is user text, not a persisted financial row; it can be cleared by explicit real-data cleanup, but is not isolated on Demo exit |
-| Frontend security / privacy | React UI, HTML/PDF/file parsing, exports, backup input validation, dependency lockfile, `web/index.html`, deployed response | Static sink/network scan, `npm audit --audit-level=high`, public response-header check | No dangerous HTML sink or current XSS path confirmed; no npm high-level audit finding; observed hosted response lacked CSP | **1 Recommendation** | No penetration test; same-origin scripts/extensions/device malware remain outside the app boundary; CSP absence is not an exploit |
-| Performance | Transactions list, analytics, store/snapshot behavior, legacy import, benchmark docs/raw JSON | Full Vitest, Chromium E2E including 100k synthetic IndexedDB scenario, static complexity analysis, historical benchmark/source-hash comparison | Current code still filters/sorts the full list; historical 100k UI timings are disclosed and scoped, not presented as a current full-stack certification | **1 P2** | No low-memory-device or exact-SHA UI heap/latency campaign; backup/archive code differs from historical stress benchmark |
-| Maintainability | Full application module inventory, core/UI/store boundaries, docs, scripts and test layout | Repository inventory plus architecture and dependency-flow review | Responsibilities are generally separated; no rewrite-level architecture concern or independent maintainability defect supported by evidence | 0 | Whole-app manual architectural review cannot establish absence of all coupling or future maintenance costs |
-| Tests / CI / deployment | `web/tests/`, `web/e2e/`, `.github/workflows/ci.yml`, GitHub run/artifact/deployment APIs | Local full validation; live remote status/artifact/deployment check | Main Validation, Pages artifact and dependent deployment all succeeded for the exact baseline SHA; no CI bypass or artifact substitution found | 0 | Deployment ordering has a small unavoidable interval after the current-SHA check; only the observed run is certified here |
+1. **Bank import:** File → complete buffer/hash/evidence copy → extraction → explicit parser → typed rows/summary → occurrence assignment/exact matching → reconciliation → atomic financial-row/import commit → separate best-effort attachment writes → React reload. Parsing failures retain readable bytes too. The late size check matters in AUD-014.
+2. **History import:** XLSX → one of three fixed adapters → preview/anomalies → replan against a new snapshot → atomic statement/import/new-row commit → reload. Existing statement summaries and trust are copied, creating AUD-004; the snapshot and commit are not one cross-tab atomic planning operation, creating AUD-005.
+3. **Review:** `ok/pending` → `confirmed/rejected`; confirmation clears flags, rejection changes inclusion. `patchTransaction` changes only the row. Dashboard/quality consume stored statement status, whereas the reconciliation page recomputes a different net-total check. The Review recompute button discards its result. Thus row, persisted statement, and UI trust can disagree.
+4. **Storage:** `statements(id)`, `transactions(id, statementId)`, `imports(id)`, `settings(key)`, `reviewNotes(transactionId)`, `attachments(fileHash)`. V1 creates the first five stores; V2 adds evidence; V3 removes unused secondary indexes without rewriting business objects. Transaction ownership, independent notes, and the lack of database foreign keys require application invariants.
+5. **Backup:** one read transaction captures financial rows/settings/notes; ZIP then reads evidence, validates hashes, and derives the manifest from the captured imports. Restore validates/decompresses before one write transaction (including attachments for ZIP). V1 preserves local notes; V2 merges notes and rejects conflicting content. Complete new statements preserve recorded decisions; partial/existing statements receiving rows are recalculated.
+6. **Demo:** a preference selects a cached memory snapshot for visible financial rows while the real snapshot and notes remain loaded. Imports check committed preferences. Edit and note APIs do not select an independent demo state. Backup/restore/clear operate on real storage even when the demo view is active; XLSX uses the visible snapshot. Settings clearly identifies real-data deletion, so that explicit deletion is not mislabeled as an unauthorized operation.
+7. **Concurrency:** the promise queue serializes operations within one `AppProvider`. Dexie serializes individual write transactions. Neither is a lock across read/plan/write operations in different tabs, and no live-query/BroadcastChannel refresh synchronizes their React snapshots.
+
+### Risk coverage and limits
+
+| Domain | Independent verification | Remaining boundary |
+| --- | --- | --- |
+| Money/business | Six-bank regressions, 6,000 deterministic money roundtrips, merchant classification mutation, negative balances, trust-state transitions | All issuer fee/refund/netting/installment variations not proven; extreme aggregate overflow not stress-tested |
+| Identity/integrity | Exact-match/collision regressions, repeated import/restore, delete/reimport, 100k overlap scenario, concurrent disjoint import plans | Same fields on disjoint sources cannot establish real-world identity; card-tail ambiguity remains |
+| Parsing/import | All six implementations and three adapters; synthetic malformed amounts/currencies/dates and footer mutation; BOC layout currency experiment | Current private issuer files, OCR, arbitrary MIME/PDF/XLSX fuzzing excluded |
+| Database/lifecycle | Real Chromium v1/v2→v3 and abort E2E, note-write fault injection, independent cross-tab experiments | Physical storage failure, actual quota exhaustion, crash/power-loss recovery and eviction not tested |
+| Backup/recovery | V1/V2 JSON/ZIP tests, conflicts, invalid schema, late rollback, repeated restore, 100k campaign below | No full differential ZIP fuzzer or low-memory browser guarantee |
+| Demo/privacy/security | Real notes shown in demo, demo notes exported, no-op review, inert malicious HTML/network observation, dependency/sink scan | No remote exploit established; extensions, device compromise and a genuine sharing incident not tested |
+| Performance/architecture | Current production-build 18k/100k campaign; source complexity and state-ownership review; bounded oversized-input failure | One host/browser; no latency SLA, mobile/low-memory certification or rewrite recommendation |
+| Tests/CI/deployment | Locked clean install, types/lint/tests/build/E2E, CI/artifact/deployment APIs | Main deployment and rollback were inspected, not executed; required branch protection not certified |
+
+## 4. Severity Standards and Finding Register
+
+- **P0 — Critical:** broadly reachable catastrophic integrity loss, unrecoverable destruction, or active severe compromise requiring emergency containment. None established.
+- **P1 — High:** a concrete supported workflow silently produces materially wrong trusted financial data or omits transaction records, warranting a priority correctness fix. Frequency and recoverability are stated; P1 does not imply irreversible loss.
+- **P2 — Medium:** bounded privacy/isolation, backup availability, parsing/financial-display or scale defects with narrower preconditions, visible review/failure signals, or a viable alternative recovery path.
+- **P3 — Low:** broken demonstration behavior/usability without demonstrated real financial modification.
+- **Recommendation:** defense in depth or an improvement without an established current exploit/defect of that severity.
+
+| ID | Severity | Status | Finding | Origin |
+| --- | --- | --- | --- | --- |
+| AUD-004 | P1 | Confirmed | Review/history changes leave persisted reconciliation and trust stale | I |
+| AUD-005 | P1 | Confirmed | Concurrent import plans overwrite statement metadata with stale counts/trust | I |
+| AUD-008 | P1 | Confirmed | Footer recognition inspects transaction text and silently truncates records | I |
+| AUD-011 | P1 | Confirmed | Merchant keywords classify a debit purchase as cashback in trusted history | I |
+| AUD-001 | P2 | Confirmed | Demo and real notes share storage and display, contaminating backups and exposing real notes | M + I, expanded |
+| AUD-002 | P2 | Confirmed | Whole-list main-thread work remains a measured large-ledger interaction bottleneck | M + H + I |
+| AUD-007 | P2 | Confirmed | Amount sorting uses lexical comparison; regression oracle preserves the bug | I |
+| AUD-009 | P2 | Confirmed | ABC slash-form short dates select the wrong year across New Year | I |
+| AUD-010 | P2 | Confirmed | Negative opening balances are converted to positive debt | I |
+| AUD-012 | P2 | Confirmed | BOC foreign-currency summary rows are labeled and reconciled as CNY | I |
+| AUD-013 | P2 | Confirmed | Golden “desensitization” retains identifying text and formatted card numbers | I |
+| AUD-014 | P2 | Confirmed | Rejected oversized input is archived and makes full backups fail | I |
+| AUD-006 | P3 | Confirmed | Demo confirmation, exclusion and categorization have no effective target | I |
+| AUD-003 | Recommendation | Observed missing control | Hosting response lacks CSP; no current XSS demonstrated | M + I |
+
+Counts are **13 Confirmed defects: P1=4, P2=8, P3=1**, plus **1 Recommendation**. Related variants, test gaps, and suspected risks are not counted separately.
 
 ## 5. Findings
 
-### P0 — Critical
+### AUD-004 — Review/history changes leave persisted reconciliation and trust stale
 
-**None identified.** No evidence-supported critical financial integrity, loss, recovery, or security defect was found in the audited paths.
+**P1; Confirmed; high confidence.** Locations: [repository patch](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L76-L85), [Review recompute](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/ui/pages/ReviewPage.tsx#L47-L62), [history statement reuse](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/importers/legacyImport.ts#L229-L242), [dashboard trust](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/ui/pages/DashboardPage.tsx#L21-L29).
 
-### P1 — High
+**Trigger and reproduction (I-A01/A02):** Create a synthetic statement with two debit rows of 12,880 minor units but bank debit/current balance 12,880. Import yields `needs_review`. Reject one duplicate and click “重新计算对账结果”. The pure detailed reconciler now returns `passed`; IndexedDB still says `needs_review`, and default trusted spending remains **0 instead of 12,880**. Conversely, import a balanced one-row statement, then a valid `标准字段` workbook with a different description but the same bank/card/cycle and another 12,880 debit. The two-row statement retains `reconciled`; trusted spending becomes **25,760**, although a fresh reconcile reports `mismatch` against bank debit 12,880.
 
-**None identified.** The confirmed issues below are bounded lifecycle/performance defects and do not meet the P1 threshold on the evidence available.
+**Expected/actual:** Changes affecting financial inclusion must atomically update or invalidate derived reconciliation. Instead, the patch transaction excludes statements; the button calculates a result then executes `void result`; the legacy plan copies prior reconciliation/status and only changes count. Reloading reads the stale persisted result. The independent React/Dexie test used the actual provider and Review button, not a mocked store.
 
-### P2 — Medium / Low
+**Impact/severity:** Legitimate corrections can remain excluded, and inconsistent additions can enter default trusted totals. Backup preserves this state too. This is high-priority financial correctness, not proof that money rows themselves were erased.
 
-#### AUD-001 — Demo Mode review notes persist in the real IndexedDB store and V2 backups
+**Fix/regression:** Give statement derivation one repository-owned transaction/API; recompute after rejection/restoration and appended rows, retaining the intentional historical `imported` semantics without forging bank reconciliation. Test both directions, page navigation, reload, backup roundtrip, and concurrent edits. Do not “fix” it by merely setting every reviewed statement to passed. Unexecuted type/amount edits are not needed for this reproduction.
 
-- **Severity:** P2
-- **Confidence:** Confirmed (reproduced with synthetic data in isolated Chromium)
-- **Affected files:** [`ReviewPage.tsx` (Demo warning, note editor, and conditional note display)](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/ui/pages/ReviewPage.tsx#L273-L330); [`AppStore.tsx` (unconditional `saveNote` path)](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/app/AppStore.tsx#L319-L327); [`AppStore.tsx` (Demo rows are an in-memory snapshot)](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/app/AppStore.tsx#L385-L401); [`repository.ts` (note persistence and V2 export)](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L99-L110) and [V2 note export](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L147-L164).
-- **Trigger conditions:** Demo Mode is enabled; a user opens Review → Transaction Review, enters a note for the first flagged in-memory demo transaction, and selects **Save note**. The user later disables Demo Mode or exports a JSON V2 backup.
-- **Evidence:** The page supplies a demo transaction ID to `saveNote`; `AppStore.saveNote` calls `setReviewNote` without checking `demoMode` or confirming a persisted real transaction exists. `setReviewNote` writes directly to `db.reviewNotes`. Demo transactions are supplied from `getDemoSnapshot()` while the real snapshot is held separately. `exportDataBackup()` exports every row in `reviewNotes`, including orphans. The repository's Demo isolation test asserts that demo statements/transactions/imports stay out of Dexie, but does not exercise saving a Demo review note ([test](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/tests/demoIsolation.test.ts#L44-L61)); the existing E2E review flow also does not cover this case ([test](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/e2e/app.spec.ts#L124-L147)).
-- **Synthetic reproduction:** In a new Playwright Chromium context with no real records, save the marker `AUDIT-SYNTHETIC-ONLY-demo-note` in Demo Mode. IndexedDB contained **0 transaction rows and 1 review-note row**. After turning Demo Mode off, IndexedDB still contained 0 transaction rows and the same note. The UI-exported JSON V2 backup included the note. No real statement, note, or financial data was used. The note is not necessarily visible in Review after Demo exit when there are no flagged real transactions, because the notes panel is nested under the flagged-transaction condition; this makes the persisted orphan easier to miss.
-- **Expected behavior:** Demo-only review content should remain isolated from the real ledger and ordinary backups, or be stored in an explicitly separate Demo-only store with a clear lifecycle. A saved note should not silently become an unlinked real-ledger record.
-- **Actual behavior:** A note keyed to a demo transaction is written to the production `reviewNotes` table. It is not automatically removed on Demo exit, can remain without a matching transaction, and is included in JSON V2 export.
-- **Impact:** Orphaned user text pollutes the real ledger's note store and backup. The text could itself contain sensitive information. No transaction amount, count, or persisted financial row was changed in the reproduction; no external transmission was observed. `Clear Real Data` removes notes without a surviving demo transaction, but it is a manual cleanup action ([cleanup path](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L313-L335)).
-- **Suggested remediation:** Enforce the Demo/real boundary at the persistence API: either keep Demo notes in memory/separate Demo state and omit them from real backups, or reject persisted note writes unless the transaction ID is a valid real-ledger transaction. A UI-only disabled control would not protect callers or queued operations.
-- **Regression tests:** With a fresh isolated IndexedDB, save a note against a Demo transaction and assert that the real `reviewNotes` table and JSON/ZIP V2 exports remain unchanged; turn Demo Mode off and confirm no orphan remains. Also assert that a note for a real persisted transaction still saves, reloads, and round-trips through V2, and that clear/restore semantics remain atomic.
-- **Limitations:** The issue was reproduced only with a synthetic note and empty synthetic ledger. The Review page explicitly says review results are saved in local IndexedDB; the defect is the lack of Demo provenance/isolation and resulting orphan/backup behavior, not the mere fact that data is stored locally. Cross-tab races and user-authored sensitive note contents were not tested.
+### AUD-005 — Concurrent import plans overwrite statement metadata with stale counts/trust
 
-#### AUD-002 — 100k transaction-list filtering and sorting remain unbounded main-thread work
+**P1; Confirmed; high confidence.** Locations: [per-provider queue and snapshot planning](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/app/AppStore.tsx#L96-L105), [import planning](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/app/AppStore.tsx#L145-L190), [financial commit](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L41-L54), [history commit](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L57-L72).
 
-- **Severity:** P2
-- **Confidence:** Confirmed (current code path and archived measurement; environment-dependent user impact)
-- **Affected files:** [`TransactionsPage.tsx`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/ui/pages/TransactionsPage.tsx#L12-L56); [`analytics.ts` filtering](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/core/analytics.ts#L26-L36); [large-ledger benchmark report](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/docs/benchmarks/large-ledger-optimization-report.md#L83-L110); [benchmark source metadata](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/docs/benchmarks/large-ledger/after.json#L1-L23).
-- **Trigger conditions:** A ledger near 100,000 transactions is open and the user searches, changes filters, or sorts by a text/date/amount field.
-- **Evidence:** `applyFilters` scans the supplied full transaction array; the page then applies a further full-array search filter. `sortTransactions` clones and sorts the entire filtered array. Only after those operations does `rows.slice(...)` choose 50 rows to render. The archived deterministic benchmark reports, for 100k rows, median UI search of 134.5 ms and median UI description sort of 486.5 ms. The benchmark's recorded SHA-256 for `TransactionsPage.tsx` equals the audited file. However, its run was on benchmark commit `06800f20039bab2ebbc3cdb301d53645e8d1b699`; `AppStore`, `repository`, and archive source hashes differ from the audited SHA, so the report does not treat those figures as a full current-stack certification.
-- **Expected behavior:** Normal list interactions should remain responsive at the project's supported large-history scale; visible-row pagination should not be mistaken for bounded compute.
-- **Actual behavior:** Filtering and sorting are client-side over the complete list, with O(N) scans and O(N log N) sorting plus array copies. The 50-row page size reduces DOM work only.
-- **Impact:** The archived reference run shows a noticeable delay—about half a second for a 100k description sort—on the recorded 5-vCPU Xeon test host. Slower or memory-constrained client devices may fare worse. No data corruption or financial miscalculation was observed.
-- **Suggested remediation:** No architectural rewrite is warranted by this evidence. If 100k ledgers are a target workload, profile representative current builds and devices, then evaluate bounded/indexed filtering or off-main-thread sorting while preserving current sort order, filters, and full-history semantics.
-- **Regression tests:** Retain deterministic synthetic 18k/100k datasets; verify full result parity, sort stability and financial semantics, and add an explicitly scoped browser interaction latency/memory budget. Keep expensive full-scale tests bounded and separate from routine CI if necessary.
-- **Limitations:** The full 100k UI benchmark was not rerun on the entire current SHA, and no low-memory device or heap-pressure test was performed. The local 100k Chromium E2E scenario exercises ingest/identity/IndexedDB correctness, not the transaction-list UI. Archived timings are hardware- and browser-specific.
+**Trigger/reproduction (I-A03):** Two contexts read an empty ledger and plan imports for the same bank/card/cycle, each with a distinct 12,880 purchase and a balanced one-row summary. Commit both plans. Different IDs avoid the `bulkAdd` collision protection. The database contains **two transactions**, but the last statement write records **count 1, status `reconciled`**; recomputation yields `mismatch`. The controlled interleaving proves the read/plan/write race without needing timing luck. The same interleaving was independently repeated in two actual Chromium tabs sharing native IndexedDB, using the production planner/repository imports: `{rows: 2, storedCount: 1, storedStatus: "reconciled", recomputed: "mismatch"}`. This was a deterministic API-level browser experiment, not an automated simultaneous file-picker gesture. Separate Chromium tabs also demonstrate stale UI: after one tab changes a category, the other keeps the previous category until reload.
 
-### Recommendation — Improvement
+**Expected/actual:** Concurrent imports must reconcile against all committed rows or reject stale plans. Existing transactions are preserved, but `statements.put` unconditionally replaces derived metadata calculated from the earlier snapshot. A provider-local queue is not cross-tab serialization; transaction atomicity does not make pretransaction reads current.
 
-#### AUD-003 — Add a restrictive CSP as hosting-level defense in depth
+**Impact/severity:** Trusted statistics and counts can disagree with committed data, with no primary-key exception or mismatch warning. This merits P1 despite requiring overlapping operations. No overwrite of an unrelated transaction was demonstrated; same-ID collision abort remains a positive control.
 
-- **Severity:** Recommendation (not a confirmed vulnerability)
-- **Confidence:** Confirmed that the observed response lacked the header; no current exploit was established.
-- **Affected files / surface:** [`web/index.html`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/index.html#L1-L17); deployed [https://ledger.keepraw.com/](https://ledger.keepraw.com/).
-- **Trigger conditions:** A future XSS, compromised dependency/static asset, or unsafe content-rendering path is introduced.
-- **Evidence:** A read-only `curl -fsSI https://ledger.keepraw.com/` on 2026-10-17 returned HTTP/2 200 without a `Content-Security-Policy` response header. The HTML includes a `no-referrer` meta policy but no CSP meta policy. Static review did not find `dangerouslySetInnerHTML`, direct `innerHTML` sinks, `eval`, or an equivalent untrusted-HTML rendering path; the EML parser strips dangerous elements/attributes.
-- **Expected behavior:** The deployed static origin should apply a compatible CSP that limits executable/resource origins and blocks unnecessary object/embed or base-URL behavior, providing a containment layer if a future injection defect appears.
-- **Actual behavior:** No CSP header was present in the sampled response. This is a missing defense-in-depth control only; the audit did not find an exploitable XSS.
-- **Impact:** A future injection or compromised resource would have fewer browser-enforced constraints. No current sensitive-data exfiltration was demonstrated.
-- **Suggested remediation:** Determine which CSP controls are supported by the chosen static-hosting boundary, add the narrowest compatible policy (including the PDF worker's legitimate needs), and verify the deployed response rather than assuming a repository meta tag covers header-only directives.
-- **Regression tests:** Add a deployment-level header assertion and a browser smoke test that confirms required local app/PDF-worker resources work while unexpected external script/connect sources are blocked.
-- **Limitations:** Only the public response at the audit timestamp was sampled; CDN/hosting configuration can change. CSP is not a substitute for safe rendering, dependency review, or browser/device security.
+**Fix/regression:** Revalidate/rebuild the plan under a cross-context lock or a suitable atomic read/modify/write transaction; publish committed snapshot changes to other tabs. Exercise disjoint and overlapping IDs, simultaneous import/clear, failed commits, and independently mounted providers. Keep expensive extraction outside the write transaction, but verify its planning preconditions inside the consistency boundary.
 
-## 6. Validation and Test Evidence
+### AUD-008 — Footer recognition inspects transaction text and silently truncates records
 
-| Command / evidence | Result | Notes |
-|---|---|---|
-| Fresh clone, fetch, checkout `audit/full-repository-2026-10`; `git rev-parse HEAD`; final `git ls-remote origin refs/heads/main` | Pass; all resolved to `98d6ead1852b0134c560b39db04b33e8ae10d7a2` | Initial worktree was clean. |
-| `npm ci` in `web/` | Pass; 331 packages installed; 0 vulnerabilities reported during install | npm printed upstream package deprecation notices; no dependency was changed. |
-| `npm run typecheck` | Pass | Local Node.js 24.19.0. |
-| `npm run lint` | Pass with 0 errors, 2 warnings | Existing `no-console` warnings at `web/scripts/generate-golden.ts:91-92`. |
-| `npm test -- --reporter=dot` | Pass: 42 test files passed, 1 skipped; 608 tests passed, 6 skipped | The skipped acceptance tests use the existing opt-in real-statement fixture policy. No real fixture was opened. |
-| `npm run build` | Pass | Production Vite build completed. |
-| `npm audit --audit-level=high` | Pass; 0 vulnerabilities reported | No `npm audit fix` or package update was run. |
-| `npm run test:e2e` | Pass: 24 passed, 2 skipped | The two opt-in real-statement import tests were skipped. The 100,000 synthetic transaction Chromium/real-IndexedDB scenario passed in 18.8 seconds; this is test duration, not a UI-sort benchmark. |
-| Synthetic Demo-note Chromium reproduction | Confirmed | Fresh isolated profile; 0 persisted transaction rows / 1 persisted review note after Demo save; after leaving Demo the note remained and was present in the UI-exported JSON V2 backup. The temporary synthetic download was removed; no script or test was committed. |
-| `curl -fsSI --max-time 20 https://ledger.keepraw.com/` | HTTP/2 200 | Read-only availability/header sample; no CSP response header at that time. |
-| `git diff --check` (after adding this report) | Pass | No whitespace errors. |
-| Final `git status` / diff review | Only `docs/audits/2026-10-17-full-repository-audit.md` is tracked as a change | Generated `web/node_modules/`, `web/dist/`, and Playwright test output were ignored; no product code, test, lockfile, or workflow changes. |
+**P1; Confirmed for CCB; high confidence.** Locations: [CCB footer pattern](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/ccb.ts#L18-L19), [CCB row loop](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/ccb.ts#L267-L286), [currency-scoped reconcile](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/core/reconcile.ts#L26-L40). Similar transaction-text footer paths exist in [ABC](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/abc.ts#L342-L370), [BOCOM](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/bocom.ts#L215-L242), [ICBC](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/icbc.ts#L309-L320), and [CITIC](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/citic.ts#L313-L327); these variants are Source-verified, not separately reproduced incidents.
 
-The latest remote Validation run independently passed all configured CI steps and the Pages deployment for the baseline SHA. Local results complement, but do not replace, that remote evidence.
+**Trigger/reproduction (I-A06):** In `SYNTHETIC_CCB_HTML` (14 valid rows), insert three valid eight-cell USD/USD debit rows before the true footer, dated `2026-08-10`, card `5678`, amount `10.00` on both legs. Use descriptions `消费 audit before`, `消费 The End Store`, `消费 audit after`. Expected: 17 records, with the USD rows retained outside CNY totals. Actual: **15 records**; the marker-containing row and subsequent row vanish, and ingest reports **`reconciled`**. Existing CNY totals are unchanged, so reconciliation cannot detect those omissions. CCB's footer vocabulary even includes `违约金`, also a legitimate transaction type token.
 
-## 7. Performance and Scalability Assessment
+**Expected/actual:** Footer detection should require structural/footer-row evidence, not a substring in a date-bearing transaction description. The loop tests all joined cell text before row parsing and executes `break`. No omitted-row anomaly is emitted.
 
-### Current-audit measurements
+**Impact/severity:** A successful import can silently omit legitimate records and its file hash then blocks ordinary repeat import from recovering them. Raw evidence remains archived if retention succeeds; this is not claimed as irreversible source loss. Financial data completeness justifies P1.
 
-- The full Vitest suite emitted a synthetic legacy-import measurement for 18,500 rows: preview 4,500 ms, plan 866 ms, write 730 ms, total 6,096 ms in the local test environment. This is a test-harness measurement, not a bank-file benchmark.
-- Synthetic 50,000-row aggregation tests reported 22 ms for data-quality aggregation and 32 ms for reconciliation. A 100,000-existing / 100,001-incoming identity smoke test reported 1,814 ms.
-- The Chromium E2E test wrote and read a 100,000-row synthetic ledger through real IndexedDB and verified 100,001 distinct IDs after overlap handling; the test completed in 18.8 seconds. Its objective is identity/storage correctness, not an isolated UI interaction or memory benchmark.
-- The current transaction-list source scans and sorts complete arrays before taking a 50-row page; details and scale impact are recorded under AUD-002.
+**Fix/regression:** Recognize valid transaction shape first; constrain footer rules to structural rows/sections and account for every candidate row. Test marker words in merchants, fee/credit rows, repeated headers, multiple tables, and foreign/zero-net/installment rows that bank totals cannot expose.
 
-### Historical benchmark evidence (not represented as a new run)
+### AUD-011 — Merchant keywords classify a debit purchase as cashback in trusted history
 
-The repository contains repeatable 18k/100k synthetic benchmark artifacts and an explanatory report. The archived after dataset is dated 2026-10-14 and identifies benchmark commit `06800f20039bab2ebbc3cdb301d53645e8d1b699`. Its `TransactionsPage.tsx` source hash matches the audited file; several other measured source hashes do not. It reported 100k UI search median 134.5 ms and description sort median 486.5 ms. The report also documents a historical 100k JSON restore around 22.8 seconds, ZIP restore around 27.9 seconds, and a measured Chromium aggregate RSS peak around 2.815 GiB with shared-page double counting caveats. Those restore/heap numbers are **not** claimed as current results because backup/archive code changed after that benchmark.
+**P1; Confirmed; high confidence.** Locations: [type regexes and fallback](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/core/classify.ts#L16-L39), [history classifier call/flags](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/importers/legacyKeeprawExportV1.ts#L120-L131), [imported trust](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/importers/legacyImport.ts#L237-L255), [financial aggregation](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/core/reconcile.ts#L268-L295).
 
-### Conclusions and unverified scale
+**Trigger/reproduction (I-A09):** Create a fixed-schema `交易明细` workbook with bank 中国银行, card `1234`, valid dates, description `示例优惠超市`, CNY/CNY, and **positive 100.00** in both amount columns. Preview, plan, and persist through the real adapter. The row becomes `{type: 'cashback', direction: 'debit', reviewStatus: 'ok', flags: []}`. Its historical statement is `imported`, so default analytics trusts it. Result: **actual spending 0, displayed cashback -100.00, billing debit 100.00**.
 
-- The tests and historical artifacts support functional operation on large synthetic datasets and identify the remaining full-list UI cost; they do not establish a universal 18k/100k performance guarantee.
-- No full 100k JSON/ZIP export-and-restore or peak-memory stress campaign was run against the complete audited SHA. The documented historical limits (including whole-document JSON parsing, memory overhead, and browser-dependent storage) remain relevant, but current resource behavior should be measured before treating old timings as an SLA.
-- No unbounded stress test, production data test, or low-memory device test was performed.
+**Expected/actual:** An ordinary merchant name must not override signed debit evidence into an incompatible credit business type without review. The regex alternatives such as `优惠`, `还款`, `服务费` are not uniformly anchored, and `inferTransactionType('', description, direction)` scans merchant text before direction fallback. The source comment saying “never merchant-name guessing” is not the implemented behavior.
 
-## 8. Positive Findings
+**Impact/severity:** Valid everyday history can silently understate spending and misstate refund/cashback/payment breakdowns. This is P1 even though the signed stored amount remains intact. Net billing and spending are distinct metrics; preserving one does not make the other correct.
 
-1. **Money representation and validation:** monetary amounts are represented as integer minor units, with checks for unsafe numeric inputs and unsupported precision rather than silent precision guessing. Core tests cover signed amount legs and invalid monetary inputs. See [`money.ts`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/core/money.ts#L108-L143).
-2. **Explicit financial semantics:** types distinguish purchases, refunds, payments, fees, interest, and installment originals/payments. Analytics use CNY settlement rows for RMB totals, exclude rejected rows where appropriate, and filter unreconciled statements by default while treating imported historical statements as an explicit exception. See [`analytics.ts`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/core/analytics.ts#L54-L105) and [trust filtering](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/core/analytics.ts#L123-L153).
-3. **Deduplication does not rely on the hash alone:** `exactKey()` includes the fingerprint and full identifying/business fields. The matching path consumes only exact matches; same-day/amount but non-identical rows are candidates for human review, not automatic deletion. See [`dedupe.ts`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/core/dedupe.ts#L67-L75) and [duplicate matching](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/core/dedupe.ts#L118-L172).
-4. **Parser and data-quality boundaries:** supported parsers are registered explicitly; malformed/unrecognized input is not reported as a successful import. EML HTML is parsed inertly and strips unsafe elements/attributes rather than rendering source HTML ([`html.ts`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/html.ts#L11-L26)).
-5. **Recovery protections:** JSON pre-validation limits bytes, nesting, tokens, containers, and record shape. ZIP handling checks archive paths/counts/declared and actual extracted size; available raw evidence is hash-checked. Restore merges by stable identifiers and performs conflict checks before writes in a transaction; tests cover rollback and idempotence.
-6. **Database and deletion semantics:** V3 preserves existing stores/primary keys while removing unused indexes. Clear operations and legacy demo-row cleanup use transaction scopes across related tables; shared real/demo attachment hashes receive explicit protection. The remaining Demo-note defect is separate from these protections.
-7. **Deployment provenance:** pull requests run validation but do not upload Pages artifacts; deployment is gated on the successful Web job and reuses its artifact. Main deployment is serialized and checks whether the validated commit is still current before deploying. See [`.github/workflows/ci.yml`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/.github/workflows/ci.yml#L1-L90).
-8. **Privacy boundaries are documented:** the application is local-first and does not have a ledger backend. The app does not encrypt exported backups, and browser storage is not an encrypted vault; the README documents these limitations rather than claiming server-side protection or physical erasure.
+**Fix/regression:** Separate structured bank tokens from arbitrary descriptions; require compatible sign/type semantics or mark ambiguous rows for review. Test merchant strings containing each keyword in the middle, genuine cashback/refund tokens, debit fee cases, and trusted history/dashboard results. The same helper is shared by other adapters/parsers, but this finding's dynamic proof is the Keepraw history path.
 
-## 9. Recommended Remediation Roadmap
+### AUD-001 — Demo and real notes share storage and display
 
-### P0 — Immediate
+**P2; Confirmed; high confidence.** Manus's original finding is retained and expanded. Locations: [real note loading](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/app/AppStore.tsx#L105-L113), [unconditional note save](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/app/AppStore.tsx#L319-L327), [note display](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/ui/pages/ReviewPage.tsx#L286-L333), [all-note export](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L147-L164), [provenance-based purge](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L290-L307).
 
-- **None.** No evidence supports a P0 response or emergency change.
+**Trigger/reproduction (M; independently I-A04/browser):** Store a real synthetic statement with note `SYNTHETIC REAL NOTE`, enable Demo, and open Review. The **real note remains visible** while the shell says current pages are fictional and real bills are hidden. Save `SYNTHETIC DEMO NOTE` against a flagged demo row. It enters real `reviewNotes`, appears in V2 JSON, and survives demo regeneration/purge because no persisted demo transaction proves its provenance. Independent Chromium observed both note markers in the backup with **zero demo transaction rows**. Manus's earlier empty-ledger reproduction (0 stored transactions/1 note) is consistent with this behavior.
 
-### P1 — Priority independent fix
+**Expected/actual:** Both reads and writes of demonstration notes should use isolated state. Instead, `state.notes` is real storage in either mode; the component enumerates every note and merely says “transaction no longer exists” when its real transaction is hidden. The panel appears only when flagged visible transactions exist, which is true for the demo fixture.
 
-- **None.** No confirmed P1 issue was identified. Do not create urgency beyond the demonstrated impact.
+**Impact/severity:** Sensitive user text can be exposed during a demonstration; demo text contaminates real backups and becomes hard to identify. P2 reflects the local demonstration precondition and no demonstrated network disclosure, rather than denying the privacy impact. No transaction amount was changed.
 
-### P2 — Normal-priority follow-up PRs
+**Fix/regression:** Isolate note read/write ownership at the state/persistence boundary, including queued mode switches. Preserve legitimate orphan notes and existing V2 recovery; do not delete arbitrary orphans based only on an ID pattern. Test real-note invisibility in Demo, demo-note exclusion from JSON/ZIP, exit/regeneration/reload, and real-note persistence/conflicts.
 
-1. **AUD-001 (first priority):** isolate Demo review notes from the real `reviewNotes` store and real backup contract, with the repository-layer guard and integration/E2E coverage described above. Preserve real transaction note persistence and restore atomicity.
-2. **AUD-002:** if 100k histories remain an intended workload, profile the current full stack on representative supported devices. Only then decide whether to add indexed/paged querying or move comparison work off the main thread. Any change must preserve filter behavior, stable ordering, transaction identity, and financial totals.
+### AUD-002 — Whole-list work remains a large-ledger interaction bottleneck
 
-### Recommendation — Improvement
+**P2; Confirmed; high confidence in the path, host-dependent impact.** Locations: [filter/sort before page slice](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/ui/pages/TransactionsPage.tsx#L17-L57), [filter scan](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/core/analytics.ts#L26-L36), [snapshot loading](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L27-L34), [current benchmark runner](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/scripts/large-ledger/run.mjs#L275-L294).
 
-- **AUD-003:** add a compatible CSP at the static hosting boundary and verify the deployed response and PDF worker behavior. This is defense in depth, not a blocker based on an existing exploit.
+**Trigger/expected/actual:** Search or change sort order with 100,000 records. A 50-row rendered page should not be interpreted as a 50-row query: the application retains the complete snapshot, scans it, clones and sorts all matching rows, then slices. Main-thread work is O(N) plus O(N log N), with multiple full-array allocations. Independent current-build measurements are in §8; the original historical 486.5 ms description-sort result is retained only as H evidence.
 
-No code fix, schema change, dependency update, test modification, CI change, or automatic PR merge is included in this audit. Follow-up fixes should be separate reviewed PRs.
+**Impact/severity:** Noticeable input delay at the supported stress scale, with higher resource pressure on weaker devices. This is P2 responsiveness, not a claim of data corruption or proof that 100k records always fail. The independent oversized-input backup failure is separately AUD-014; it is not inferred from latency alone.
 
-## 10. Residual Risks and Audit Limitations
+**Fix/regression:** Profile complete visible interactions, then consider worker-based comparison, indexed queries, or narrower state subscriptions. Preserve numeric correctness (AUD-007), stable ties, filters, exact identities and full-history semantics. Keep bounded multi-profile 18k/100k benchmarks and a declared device/latency budget. No rewrite is justified solely by a large component or this single host. Low-memory/mobile limits remain unverified.
 
-- The two real-statement acceptance tests/files are opt-in and were not run or opened; six unit acceptance cases and two E2E real-statement cases were skipped. Bank parser conclusions therefore rely on synthetic fixtures, regression tests, and documented supported formats—not live/current issuer statements.
-- E2E coverage was Chromium on this Linux environment. Firefox, WebKit/Safari, mobile browsers, multiple browser profiles, cross-tab races, private browsing, and actual device storage eviction were not tested.
-- No full 100k backup/restore or low-memory-browser peak-heap test was run at the audited SHA. Historical measurements have explicit source/runtime scope and are not substituted for current measurements.
-- Dependency audit reports known advisories at the time and threshold used; `npm audit --audit-level=high` does not establish that all dependency or supply-chain risks are absent. Dependency versions were not changed.
-- No application penetration test, malicious-input fuzzing campaign, formal verification, or adversarial PDF/ZIP parser differential test was performed. Static review cannot prove that every untrusted-input path is safe.
-- IndexedDB is origin-local browser storage, not application-level encryption. Browser extensions, malware, shared device accounts, downloaded copies, and physical-media recovery are outside the app's control; this report does not claim data erasure or confidentiality guarantees beyond the reviewed code/documentation.
-- GitHub Actions and Pages status, artifact, deployment state, and public HTTP response were snapshots taken during this audit. They can change after this report is written.
+### AUD-007 — Amount sorting uses strings; the existing test preserves the error
 
-This report evaluates the software at `98d6ead1852b0134c560b39db04b33e8ae10d7a2`. It is not an absolute safety certification and should not replace statement reconciliation, independent backups, or future review of material code changes.
+**P2; Confirmed; high confidence.** Locations: [comparator](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/ui/pages/TransactionsPage.tsx#L17-L27), [existing oracle](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/tests/ledgerState.test.tsx#L113-L130).
+
+**Trigger/reproduction (I-A05):** Sort same-currency minor amounts `[-10000, -200, 200, 10000, 3000]` ascending. Actual: `[-10000, -200, 10000, 200, 3000]`; **100.00 appears before 2.00**. Expected: numeric monotonic order. The comparator uses `collator.compare(String(left), String(right))` for money. The regression test constructs the same historical string comparator, so all supported-key assertions pass while financial ordering is wrong.
+
+**Impact/severity:** Users selecting largest/smallest transactions or exported sorted rows can be misled. This changes order, not sums, hence P2. Cross-currency ordering needs a declared policy but is not required to reproduce the defect.
+
+**Fix/regression:** Numeric comparison for amounts, explicit date/text comparators, retained null placement/stability. Assert numeric monotonicity independently using negative, zero, different-width, equal and boundary values; do not freeze a defective comparator as the expected result.
+
+### AUD-009 — ABC slash-form dates choose the wrong year
+
+**P2; Confirmed; high confidence.** Location: [ABC date resolution](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/abc.ts#L276-L320), used by [row parsing](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/abc.ts#L378-L389).
+
+**Trigger/reproduction (I-A07):** Cycle `2025-12-15`–`2026-01-14`: `resolveAbcDate('1220', cycle)` gives `2025-12-20`, but `resolveAbcDate('12/20', cycle)` gives **`2026-12-20`**. Both denote the same short date in the supported resolver. The slash branch always chooses the cycle-end year, unlike the compact branch's cycle search.
+
+**Expected/actual and impact:** Preserve the cycle-consistent date or flag ambiguity. Instead a valid date eleven months after cycle close can enter the transaction, fingerprint and monthly/yearly statistics. Monetary reconciliation does not validate the year. P2 reflects a narrow representation/year-boundary precondition; no actual private statement was tested.
+
+**Fix/regression:** Share the existing cycle-aware short-date resolution, including adjacent posting dates and leap days. Test MMDD/MM/DD/MM.DD equivalence across December/January, end-of-month, missing-cycle and invalid-date cases through parser→ingest, not only the helper.
+
+### AUD-010 — Credit opening balances become positive debt
+
+**P2; Confirmed for CCB; high confidence.** Locations: [CCB absolute previous balance](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/ccb.ts#L165-L185); analogous [ICBC opening/current balance](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/icbc.ts#L211-L236) and [CITIC opening balance](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/citic.ts#L195-L214) are Source-verified variants.
+
+**Trigger/reproduction (I-A08):** In the synthetic CCB summary use previous **-3000.00**, debit 6500.00, credit 7200.00, current **-3700.00**; retain the matching transaction details. The correct equation is -3000 + 6500 - 7200 = -3700. Parser output changes previous to **+3000.00** via `Math.abs`, retains current -3700.00, and reports mismatch.
+
+**Expected/actual and impact:** A balance is signed debt/credit, unlike a magnitude-only charge subtotal. The parser discards explicit credit-balance sign, producing misleading balance details and excluding an otherwise valid statement. P2 rather than P1 because this tested path fails reconciliation visibly; no false passed total was demonstrated here.
+
+**Fix/regression:** Model signed balances separately from positive debit/credit aggregates. Test overpayments/credit balances and negative carry-forward across consecutive statements for each bank, including qualifiers and fallback summary tables. Confirm the actual bank template semantics before changing all `abs` calls indiscriminately.
+
+### AUD-012 — BOC foreign summaries are relabeled CNY
+
+**P2; Confirmed in a synthetic PDF-layout experiment; high confidence in implementation, limited format prevalence evidence.** Location: [summary row selection and currency assignment](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/boc.ts#L204-L251); BOC transaction output is [fixed CNY](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/boc.ts#L437-L445).
+
+**Trigger/reproduction (I-A10):** Build `buildSyntheticBocPdf()`, change the summary account label `人民币/RMB` to `美元/USD`, retain the RMB detail section and numeric layout, and parse. Every resulting summary component is labeled **CNY** and the statement still **reconciles**. The selector explicitly accepts RMB/USD/HKD rows, takes the first suitable one in layout order, then writes `currency: 'CNY'` regardless of the matched account label.
+
+**Expected/actual and impact:** Currency-scoped reconciliation must compare RMB details with an RMB summary, or mark the required summary unavailable. The current path can compare unrelated currency-account numbers and display a mislabeled balance. P2 reflects the specific altered/multi-account-layout precondition and absence of current private-format evidence; this experiment proves the unsafe acceptance, not its frequency among bank PDFs.
+
+**Fix/regression:** Bind summary and detail sections to explicit account/currency scope; unsupported non-RMB sections must not be coerced. Test USD/HKD/RMB summary order permutations, identical numeric totals across accounts, and missing RMB summaries through extracted PDF layouts.
+
+### AUD-013 — Golden desensitization retains identifying source text
+
+**P2; Confirmed with synthetic text; high confidence.** Locations: [raw-text masker](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/golden/normalize.ts#L110-L150), [generator's default redaction/output](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/scripts/generate-golden.ts#L17-L30), [normalization and JSON write](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/scripts/generate-golden.ts#L78-L92).
+
+**Trigger/reproduction (I-A11):** `desensitizeRawText('消费合成姓名测试商户 4111-1111-1111-1111')` retains the synthetic identifying phrase and grouped test card number. A CJK run containing any structural keyword is returned verbatim; the digit regex masks only contiguous runs of at least 16 digits. `normalizeWebStatement` stores this raw text while setting `desensitized: true` by default.
+
+**Expected/actual and impact:** Generated material advertised as desensitized and intended for golden fixtures should not keep an entire identifying phrase just because it contains `消费`, or a formatted full card number. Publication could disclose sensitive source content. No actual private data was inspected and no existing published leak is asserted. P2 is conditional tooling/privacy risk, not remote compromise of the ledger app.
+
+**Fix/regression:** Prefer an allowlist of structural output fields; remove raw text from shareable fixtures or tokenize/mask nonstructural content robustly. Treat dates/amounts/tails/hash pseudonyms as potentially identifying too. Test synthetic names embedded beside every allowed keyword, Chinese/Latin names and spaced/hyphenated card formats, and require human review before publishing fixtures. Do not claim irreversible anonymization from simple hashing.
+
+### AUD-014 — Rejected oversized files still enter evidence storage and block full backup
+
+**P2; Confirmed; high confidence.** Locations: [read/hash/copy before extraction](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/app/AppStore.tsx#L156-L169), [failed-result evidence retention](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/app/AppStore.tsx#L199-L240), [25 MiB extraction check](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/parsers/extract.ts#L48-L57), [64 MiB ZIP entry rejection](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/backup/archive.ts#L72-L80), [uncaught full-backup UI rejection](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/ui/pages/SettingsPage.tsx#L214-L233).
+
+**Trigger/reproduction (I-A15):** Supply a synthetic 65 MiB `application/pdf` file backed by an `ArrayBuffer` to the real AppProvider import API. Parsing correctly reports failed/over 25 MiB, but the file is read, hashed, copied and **all 65 MiB are archived**. Subsequent `buildFullBackupZip()` rejects with `原始文件过大，无法生成可恢复备份` because originals are capped at 64 MiB. The experiment used bounded synthetic memory, not a malicious decompression bomb.
+
+**Expected/actual and impact:** Reject oversized input before allocating/retaining it, or explicitly use a retention policy compatible with backup budgets. The failed import currently makes every full ZIP export fail; there is no per-attachment removal UI, and the Settings handler lacks a rejection message. JSON data-only backup remains available and financial rows are preserved, so this is P2 availability/recovery risk, not total unrecoverability. The observed failure is stronger evidence than a speculative “large files may be slow” claim.
+
+**Fix/regression:** Enforce file size before `arrayBuffer`, bound aggregate batch retention, harmonize import/evidence/export limits, and surface backup failures. Test limits at 25/64 MiB, oversized failed/unsupported inputs, multi-file budgets, missing-evidence manifests and quota failures without discarding valid financial data.
+
+### AUD-006 — Demo transaction controls have no effective mutation target
+
+**P3; Confirmed; high confidence.** Locations: [patch API](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/app/AppStore.tsx#L307-L317), [missing-row return](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/db/repository.ts#L76-L85), [memory-only demo](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/demo/demoStore.ts#L14-L24), [active demo review controls](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/src/ui/pages/ReviewPage.tsx#L254-L281).
+
+**Trigger/reproduction (I-A04/browser):** On a fresh demo view, select Confirm on the first review row. Independent Chromium observed **13 rows before and 13 after**; the transaction/flags were unchanged. Exclude and category controls use the same missing-database-row path. Expected: edit the demo snapshot or clearly disable editing. Actual: the API looks only in real Dexie transactions, finds no demo row, and silently returns. The notice nevertheless promises locally persisted review results.
+
+**Impact/fix/regression:** Broken demonstration and misleading interaction, with no demonstrated real financial edit; hence P3. Use isolated mutable demo state or honest disabled controls, and test confirmation/exclusion/category changes, regeneration, mode transitions, and the invariant of zero real writes. A real-record editing E2E test is not coverage for this path.
+
+### AUD-003 — Add a compatible hosting CSP as defense in depth
+
+**Recommendation; independently observed missing control; no exploit established.** Surface: [HTML entry](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/web/index.html#L1-L19) and [public hosting response](https://ledger.keepraw.com/).
+
+The independent HTTP 200 response lacked `Content-Security-Policy`; HTML contains `no-referrer` but no CSP meta policy. Source review found no application fetch/telemetry upload, untrusted HTML rendering sink, `eval`, or `dangerouslySetInnerHTML`. The independent malicious HTML probe (script, event handler, external image/iframe, JavaScript link) executed no marker and produced zero external requests in Chromium. These are bounded negative observations, not an XSS proof.
+
+A future injection or compromised static dependency would have fewer browser-enforced constraints. Add the narrowest compatible hosting policy, including legitimate PDF worker needs, then verify real headers and browser functionality. Test external script/connect rejection and local worker loading. CSP absence alone is not P1/P2 and does not establish current exfiltration.
+
+## 6. Challenge to Manus's Original Report
+
+| Original claim/finding | Independent disposition |
+| --- | --- |
+| AUD-001 demo note persistence, P2 | **Retained and reproduced.** Expanded to real-note display in Demo, failed cleanup provenance, and populated-ledger/browser proof. P2 remains appropriate; no financial-row mutation was observed. |
+| AUD-002 whole-list filtering/sorting, P2 | **Retained.** Current measurements supplement historical timing. “Unbounded” means proportional to the full dataset, not infinite execution. Correct numeric order must replace the suggested preservation of all historical sort behavior. |
+| AUD-003 absent CSP, Recommendation | **Retained and independently sampled.** No current XSS demonstrated; no severity inflation. |
+| P0=0 | **Retained as an evidence-limited finding**, not a safety certificate. |
+| P1=0; no incorrect total or silent transaction omission | **Overturned** by AUD-004/005/008/011. Passing financial tests did not cover these transitions/input mutations. |
+| Complete Demo isolation for financial views | **Qualified.** Memory-only transaction generation works, but notes cross both display/storage boundaries and controls are ineffective. |
+| Typed parser/error boundaries mean malformed inputs do not look successful | **Narrowed.** Unknown/recognized malformed money fail as tested; row-recognition omissions can still yield a reconciled subset. |
+| Exact-field dedupe protects against hash-only merging | **Retained.** Exact tuple and occurrence allocation are real controls; the concurrency failure is statement metadata, not a fabricated FNV collision exploit. |
+| Restore atomicity, conflict checks, migrations/deletion | **Retained with expanded tests and current scale evidence.** Does not imply recovery availability after every import; AUD-014 is a different failure. |
+| Historical source-hash/timing distinction | **Retained as accurate.** Sorter hash matches `after.json`; other source hashes differ. Historical 2.815 GiB RSS and restore times are not relabeled current. |
+| Local 608/6 and 24/2 test results | **Independently corroborated after `npm ci`.** Original machine timings/npm version remain attributed to Manus; this report uses the independent environment for new evidence. |
+| No remote frontend injection found | **Retained only for examined paths/probes.** Does not cover demo note disclosure or golden output redaction. |
+| Generally separated modules, no rewrite warranted | **Retained, but state ownership is materially incomplete.** Derived trust, notes, and cross-tab state require coordinated fixes. File length/language choice is not itself a defect. |
+
+The four prior leads are all supported, with scope clarified: review reconciliation is stale; numeric sorting is lexical; demo confirm/exclude have no in-memory mutation; demo notes persist/export. They were not used as an upper bound on investigation.
+
+## 7. Validation Evidence and Reproduction Ledger
+
+### Accepted baseline executions (I)
+
+| Command/experiment | Result | Interpretation |
+| --- | --- | --- |
+| `cd web && npm ci` | 331 packages installed; declaration/lockfile unchanged | Replaced stale preinstalled dependencies; deprecation notices are not suppressed |
+| `npm run verify` | Types pass; lint 0 errors/2 existing `no-console` warnings; tests **608 passed/6 skipped**, 42 files passed/1 skipped; production build pass | Six opt-in private-statement unit cases skipped, as required by data boundary |
+| `npm audit --json` | 0 known reported vulnerabilities | Lockfile/advisory snapshot; no `audit fix`; not a guarantee against unknown supply-chain flaws |
+| `npm run test:e2e` | **24 passed/2 skipped, 42.2 s** | Chromium real IndexedDB; two private-statement E2E cases skipped |
+| Existing 100k identity/IndexedDB E2E | Plan 475.2 ms; write 4,489.5 ms; read 1,644.5 ms; overlap plan 661.9 ms; total measured 8,959.1 ms | 100,001 distinct IDs, one new occurrence, total minor units 1,288,012,880; test duration 11.1 s is a different metric |
+| Temporary independent Vitest suite | **16/16 passed under Vitest 4.1.11** | Diagnostic assertions prove actual defects plus controls; “pass” does not mean fixed behavior |
+| Temporary independent Chromium UI/security and two-tab persistence probes | Passed their assertions | Real/demo note crossing, 13→13 no-op confirm, stale peer category until reload, inert HTML and 0 external requests; AUD-005 repeated on native IndexedDB in two tabs |
+| New scale campaigns | See §8 | Production-built baseline, isolated generated profiles, real IndexedDB, local-only browser requests |
+
+All temporary tests/probes/downloads/logs are outside the committed report diff. Reproductions below and in each finding are the durable evidence description; private data or inaccessible local logs are not prerequisites for understanding a finding.
+
+### Independent synthetic experiment ledger
+
+| Test | Inputs and assertions | Finding/control |
+| --- | --- | --- |
+| I-A01 | Two 12,880 debits; summary 12,880; reject one using actual provider; click actual recompute button; compare fresh calculation/DB/trusted totals | AUD-004: passed calculation, stale needs_review, trusted 0 |
+| I-A02 | Balanced native one-row ledger; `workbookBytes('标准字段', LEGACY_UNIFIED_COLUMNS, [historyRow({description:'消费 appended'})])`; preview→plan→persist | AUD-004: trusted 25,760 versus bank 12,880 |
+| I-A03 | Two distinct-description balanced plans from the same empty snapshot; commit via `Promise.all` | AUD-005: 2 rows, stored count 1, reconciled versus fresh mismatch |
+| I-A04 | Real fixture/note, enable demo, actual Review, confirm and save demo note, export and purge | AUD-001/006: real text displayed, demo no-op and note survives/exported |
+| I-A05 | Same-currency amounts `[-10000,-200,200,10000,3000]`; production `sortTransactions` | AUD-007: lexical order differs from numeric oracle |
+| I-A06 | Three valid USD rows inserted into synthetic CCB before true footer; middle merchant contains `The End` | AUD-008: 17 expected, 15 actual, reconciled |
+| I-A07 | ABC cycle 2025-12-15–2026-01-14, `1220` versus `12/20` | AUD-009: one-year divergence |
+| I-A08 | CCB summary -3000 + 6500 - 7200 = -3700 | AUD-010: previous sign lost, mismatch |
+| I-A09 | Keepraw fixed-schema XLSX, positive CNY100, merchant `示例优惠超市` | AUD-011: trusted debit cashback; spending 0 |
+| I-A10 | Synthetic BOC layout summary label RMB→USD with RMB detail retained | AUD-012: summary relabeled CNY and passed |
+| I-A11 | Synthetic CJK identity text adjoining `消费`, grouped test card digits | AUD-013: both survive masker |
+| I-A12 | CNY/USD/JPY, integer `i*997` for -1000≤i<1000; minor→decimal→parse | Control: 6,000 exact roundtrips |
+| I-A13 | Backup mutations: fractional minor, February 30, orphan transaction, duplicate ID, blank note | Control: validation/restore rejects; no row written |
+| I-A14 | Valid V2 payload; inject `reviewNotes.bulkAdd` rejection during restore | Control: all six tables remain empty after rollback |
+| I-A15 | Real provider imports a synthetic 65 MiB buffer/file; full ZIP export attempted | AUD-014: failed import retains attachment; full backup rejects |
+| I-A16 | Import→data backup→clear real→reimport→restore same backup twice | Control: exact original transaction IDs/count retained |
+
+To reconstruct the function/provider experiments without modifying formal tests, put a temporary `.test.tsx` outside the repository, import the named `web/src` modules and synthetic `web/tests/fixtures` helpers by absolute path, use a temporary Vitest configuration rooted at `web` with `environment: 'jsdom'`, JSX automatic mode, and `web/tests/setup.ts`, and clear all six fake-indexeddb stores between cases. I-A01/A04/A15 use `AppProvider`/`useApp` with React Testing Library `act` and await `state.ready`; real records are seeded before mounting, and settings select the required mode. I-A06/A08 feed UTF-8 HTML through `buildSourceDocument` and `ccbParser.parse`; I-A10 feeds the provided synthetic PDF-layout object through `bocParser.parse`. The findings give exact mutations and expected/actual values, so a regression should invert the defective assertions, not copy them as desired behavior.
+
+### Test and CI blind spots
+
+- `ledgerState.test.tsx:113–130` compares sorting to an implementation-equivalent string oracle; it is a demonstrated false assurance for numeric business semantics.
+- `financialReview.test.tsx` mocks the store and primarily verifies display; `e2e/app.spec.ts:125–147` verifies removal/persistence of a confirmed row, not statement reconciliation/trusted totals afterward.
+- Demo isolation tests inspect financial tables and mode visibility but did not exercise real-note visibility, demo note writes, or effective demo mutations.
+- Collision abort tests protect transaction keys; they do not cover different-ID concurrent plans writing the same statement. Serial provider tests do not cover multiple providers/tabs.
+- Financial parser tests catch invalid recognized amount rows; they do not ensure every date-bearing source row survives footer/header recognition. Matching totals cannot expose omitted foreign, net-zero, or informational installment rows.
+- CI's build and artifact/deploy gating are meaningful. Action tags are not immutable commit pins, SheetJS installation depends on its upstream CDN/integrity, and branch/hosting settings are external controls. These are maintenance/supply-chain residuals, not newly alleged compromises.
+
+## 8. Performance and Resource Assessment
+
+### Current baseline measurements (I)
+
+Both campaigns completed successfully on the exact audited application SHA: performance at **2026-10-17 06:23:45 UTC**, backup at **06:26:39 UTC**. Timings below are milliseconds; operation/UI medians use five samples, import/startup/download medians use three. Different columns measure different scopes and must not be added as if independently timed stages.
+
+| Current metric | 18,000 rows | 100,000 rows |
+| --- | ---: | ---: |
+| History preview | 1,382.3 | 7,651.4 |
+| Import confirmation | 1,282.0 | 8,719.2 |
+| Entire preview/confirm workflow | 2,682.3 | 16,655.5 |
+| Median longest main-thread task per import | 1,346 | 7,570 |
+| Startup | 334.4 | 1,301.0 |
+| Full snapshot read | 174.3 | 961.8 |
+| Pure description sort | 30.0 | 272.9 |
+| UI search completion | 31.6 | 73.9 |
+| UI date sort completion | 40.5 | 176.9 |
+| UI description sort completion | 54.5 | 287.1 |
+| Single edit to paint | 33.0 | 195.3 |
+| Full refresh to paint | 192.7 | 1,144.7 |
+| Actual data-only JSON download | 357.8 | 1,988.2 |
+
+All six import profiles produced exactly the intended valid row count with zero reported anomalies. Single-edit samples incurred **zero full database reads**, preserving the existing incremental-state optimization; rendering still scales with the snapshot. The 100k import's longest tasks ranged **7,445–7,759 ms**, showing a significant UI freeze in this workload even though imports completed. Pure sort, UI completion, database write and full workflow timings are distinct observations.
+
+The separate 100k backup campaign included **576 statements, 5,000 review notes and one original attachment**. V2 JSON was **94,556,798 bytes**, exported in **2,016.9 ms**; ZIP was **125,806,977 bytes**, exported in **3,049.4 ms**. One fresh profile per format gave initial JSON/ZIP restore times **11,008.6 / 12,731.4 ms**. Two subsequent restores in each profile took JSON **4,399.8 / 4,414.6 ms**, ZIP **4,799.6 / 5,198.2 ms**. These initial restore values are single samples, not medians or population estimates.
+
+Existing-ledger restore, export→clear→restore, JSON/ZIP V1 compatibility and repeated V2 restore succeeded. **Eleven final snapshot comparisons reported zero mismatches** across counts, IDs, amounts, currencies, duplicate relationships, statements, imports, review states, notes, attachments and settings. A nonempty note conflict was rejected with destination state preserved. A native IndexedDB late attachment-write fault (`synthetic late quota error`) rolled back all imported stores: zero statements/transactions/imports/notes/attachments, with the two pre-existing settings preserved. This is injected failure evidence, not actual disk-quota exhaustion. JSON intentionally omits attachment bytes; ZIP restored them, reconstructing the documented timestamp rather than claiming byte-for-byte timestamp identity.
+
+Peak summed Chromium-process RSS was **3.066 GiB** in the source campaign, **3.041 GiB** in fresh JSON, and **2.535 GiB** in fresh ZIP; the Node benchmark harness separately peaked at **2.110 GiB** across the campaign. These measurements include browser/process overhead and potentially shared-page double counting; they do not establish a minimum RAM requirement or prove behavior under a 2 GiB limit. No OOM, partial committed restore, or record mismatch occurred in these bounded runs.
+
+The current campaign uses the existing deterministic fixture seed `1263684657`, unmodified production modules, locally compiled Vite assets, fresh generated Chromium profiles, and browser request blocking outside the temporary local origin. Both phases have a 600-second process deadline. Performance runs use 18,000 and 100,000 rows, three import profiles per size, five operation samples and three actual JSON downloads on the first profile. Backup runs use 100,000 rows and one fresh profile per format with three restores each, plus existing-ledger and V1 compatibility cases. These are scoped repeatable experiments, not independent samples of every user device.
+
+Reproduce from the locked baseline, with `CHROMIUM_PATH` pointing to the installed Chromium binary and all outputs in temporary directories:
+
+```sh
+LEDGER_MODE=performance LEDGER_SIZES=18000,100000 \
+LEDGER_OUTPUT=/tmp/keepraw-performance.json \
+CHROMIUM_PATH=/path/to/chromium timeout 600 node web/scripts/large-ledger/run.mjs
+
+LEDGER_MODE=backup LEDGER_SIZES=100000 LEDGER_FRESH_PROFILES=1 \
+LEDGER_OUTPUT=/tmp/keepraw-backup.json \
+CHROMIUM_PATH=/path/to/chromium timeout 600 node web/scripts/large-ledger/run.mjs
+```
+
+The runner creates and removes temporary probe sources; none belong in the PR. Its backup-mode RSS samples sum browser-process RSS and can double-count shared pages; they are not a measured JS heap limit. Repeated large imports, full snapshots, workbook parsing and backup serialization retain substantial object graphs. Workbook detection may decode the same file for successive adapter checks, and PDF row grouping repeatedly scans row arrays. These source costs motivate bounded worker/budget investigation; they are not additional performance defects without a representative failure or timing case.
+
+### Historical measurements (H; retained, not rerun labels)
+
+[Archived `after.json`](https://github.com/keepraw/keepraw-ledger/blob/98d6ead1852b0134c560b39db04b33e8ae10d7a2/docs/benchmarks/large-ledger/after.json) identifies `06800f20039bab2ebbc3cdb301d53645e8d1b699`, 2026-10-14, Xeon host, with 100k UI search median **134.5 ms**, description sort **486.5 ms**. Its `TransactionsPage.tsx` SHA-256 `401841575c0dbd079803d259777b9838450ff22948f002547eb7f5e7dea1a81e` matches this baseline; other relevant source hashes differ. Historical JSON/ZIP restore around **22.8/27.9 s** and aggregate Chromium RSS **2.815 GiB** remain historical observations with the original measurement caveats. They are not the new campaign's numbers or a current SLA.
+
+Manus correctly disclosed those historical limits; the independent revision strengthens evidence rather than pretending the old numbers were wrongly labeled. AUD-014 additionally demonstrates a concrete persistent backup-availability failure at a bounded input size, which aggregate performance timings alone would miss.
+
+## 9. Positive Findings Retained and Qualified
+
+1. **Minor-unit parsing is a real control.** Safe-integer input and currency precision checks, malformed-amount rejection and exact decimal export are implemented and tested; 6,000 independent roundtrips passed. This does not prove every aggregate is overflow-checked or every type/date/currency is semantically correct.
+2. **Explicit financial categories and CNY aggregation prevent basic mixing.** Refund/payment/fee/installment types exist; rejected rows and installment originals are excluded where intended; foreign settlement rows are disclosed instead of FX-converted. AUD-004/011/012 identify upstream truth/assignment failures, not a reason to remove these distinctions.
+3. **Deduplication uses exact fields and occurrence counts.** Lossy normalized descriptions/hash equality alone cannot consume mismatched business rows. `bulkAdd` prevents silent primary-key overwrites. Delete/reimport and repeated restore controls preserved IDs. Disjoint identical real-world transactions remain fundamentally ambiguous without better source identifiers.
+4. **Input HTML is handled inertly, not displayed as executable markup.** The tested Chromium payload did not execute or request external resources. PDF extraction disables eval and uses a local worker. This evidence is narrower than a claim that all malicious PDFs/HTML are safe.
+5. **Restore atomicity/conflict handling is substantial.** V1/V2 compatibility, independent notes/orphans, financial conflicts, hash/path/decompression budgets and failure rollback have meaningful tests. The independent note-failure control and current scale campaign add evidence; complete recovery still depends on having an export within supported limits.
+6. **Schema/deletion behavior preserves deliberate boundaries.** V3 removes indexes rather than rewriting identities; related-store deletion is transactional; explicit real/demo shared evidence is protected. Orphan preservation is intentional and should not be weakened to erase the symptoms of AUD-001.
+7. **Deployment provenance is sound in the reviewed workflow.** PRs validate without deploying; main deployment consumes the same run's validated artifact, is serialized, and checks current main. This was inspected and observed, not exercised by a new production deployment.
+8. **Local-first and backup limitations are documented.** No application ledger backend/upload path was found; exported backups are unencrypted and browser storage is not a vault. These architectural facts do not guarantee demo display isolation, safe golden publication, or protection against compromised same-origin code.
+
+## 10. Remediation Roadmap
+
+**First three priorities:**
+
+1. **AUD-004 — establish repository-owned reconciliation/trust updates.** It affects ordinary review and history workflows in both undercount and overtrust directions. Fixing only the Review button would leave the migration path broken.
+2. **AUD-008 — make parser completeness a checked invariant.** Prevent successful truncated imports; bank totals cannot independently validate foreign or net-zero/informational rows. Preserve original evidence and provide a deliberate recovery/reparse plan for already-imported hashes.
+3. **AUD-011 — separate merchant text from authoritative business type.** A positive purchase currently disappears from trusted spending without a review flag. Add actual adapter→persist→dashboard tests before changing the classifier.
+
+Address **AUD-005** in the same priority integrity workstream with cross-context stale-plan detection and notification, while keeping it a separately reviewed product fix. No P0 emergency action is justified by current evidence.
+
+Next address P2 **AUD-001** (both note reads and writes), **AUD-014** (early/batch resource budgets and export-error feedback), and **AUD-013** (safe shareable golden output) to protect privacy and recovery availability. Fix **AUD-007/009/010/012** with representation-specific tests. Profile **AUD-002** against a declared device budget, without preserving incorrect numeric sorting. Resolve the P3 demo controls **AUD-006** through isolated state or explicit disabling. Add CSP **AUD-003** as a tested defense in depth, alongside considered dependency/action maintenance.
+
+All product changes, data repair/migration decisions, schema changes and new committed regression tests belong in subsequent independent PRs. This audit makes none of those changes and authorizes no automatic merge or deployment.
+
+## 11. Rejected Claims, Suspicions, and Residual Risks
+
+### Not established / deliberately not counted
+
+- **Hash-only silent merge:** rejected as a finding for the examined current path; full-field equality and occurrence consumption protect mismatched rows. No practical stable-hash collision exploit was demonstrated.
+- **Partial committed V2 restore on injected late write failure:** not reproduced; transaction rollback controls passed. Input validation and atomicity should be retained.
+- **Raw HTML XSS/external tracking during the tested extraction:** not reproduced. Unsafe elements/attributes were removed and no request/execution occurred in the tested Chromium case. Lack of CSP is not itself evidence of XSS.
+- **Permanent loss of original bank files:** not established by the parser omission case; readable source evidence is retained best effort. Transaction omissions are nevertheless real, and same-file deduplication can obstruct a routine retry.
+- **Every Demo operation must target only fictional data:** rejected as a blanket claim. The explicitly labeled real backup/restore/clear tools intentionally access real storage; the proven note/display/control inconsistencies are narrower.
+- **Historical performance equals current performance:** rejected. Source identity, hardware, dependency, browser and workload provenance are explicitly separated.
+
+### Suspected/unquantified risks requiring further work
+
+| ID | Evidence and uncertainty | Required verification |
+| --- | --- | --- |
+| S-01 | XLSX path reads the full buffer and calls `XLSX.read` without application file/expanded-cell/time budgets (`legacyImport.ts:300`, `workbook.ts:16–26`). Resource exhaustion is plausible beyond AUD-014, but no hostile workbook crash was induced. | Bounded sparse-range/shared-string/compression corpus, worker timeout/cancellation, measured memory and no partial writes |
+| S-02 | PDF text/page budgets do not bound every decompressed object or processing time; open-failure cleanup is weaker than the successful `finally` path (`extract.ts:139–187`). No accumulating worker leak or malicious PDF exploit was demonstrated. | Repeated failed-open and pathological small-PDF profiling, worker lifecycle/memory instrumentation |
+| S-03 | Most aggregation/reconciliation additions use JS numbers directly, whereas `sumMinor` is checked. Individual safe integers do not prove safe totals. Typical consumer-ledger bounds make exploitability/likelihood uncertain. | Explicit aggregate range policy and positive/negative cancellation cases near `MAX_SAFE_INTEGER` |
+| S-04 | V2 restore validates shapes/references but preserves complete new statements' recorded trust; it does not authenticate financial JSON against an issuer. Stronger semantic consistency checks may help, but arbitrary user-edited backups are not automatically a remote security vulnerability. | Specify backup trust contract, then mutate sign/type/status/count relationships and assess false-success handling |
+| S-05 | CSV leading-control/whitespace formula interpretation varies across spreadsheet applications. Direct formula-like text has existing protections; no Excel/LibreOffice exploit was reproduced. | Actual supported spreadsheet application/version tests, including leading newlines/tabs/whitespace |
+
+These are not included in the thirteen Confirmed defects. Unknown future bank layouts, full multilingual/encoding variants, BOC geometry variations and refund/fee/netting semantics still require independent issuer-format evidence. Synthetic tests establish the demonstrated paths, not their prevalence in all real statements.
+
+No Firefox, WebKit/Safari, mobile/private-mode storage, real quota exhaustion, browser eviction, power-loss/process-kill durability, low-memory-device stress, or exhaustive PDF/EML/XLSX/ZIP fuzzing was completed. The 100k campaign is one machine/browser, not a universal capacity guarantee. No current private statements or historical personal SQLite database were used; six unit/two browser private acceptance cases remain skipped. Existing golden agreement can preserve a shared error and is not an independent financial oracle.
+
+Dependency advisory checks are snapshots, and static/finite dynamic review cannot exclude unknown vulnerabilities. Browser extensions, shared OS accounts, device malware, same-origin asset compromise, downloaded copies and physical-media erasure are beyond this app's isolation mechanisms. GitHub/Pages status can change after this snapshot. The report supports merging **the corrected audit document**, not declaring the product fully safe or merging product fixes without review.
